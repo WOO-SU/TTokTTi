@@ -8,9 +8,9 @@ chmod +x backend/entrypoint.sh
 pip install -r requirements.txt
 ```
 
-## Backend docker build
+## Backend docker build (always build from root)
 ```bash
-docker build -t riskpulse-backend -f backend/Dockerfile backend/
+docker build -t riskpulse-backend -f ./Dockerfile ./
 ```
 
 after that, test by
@@ -22,6 +22,8 @@ If you ran container detached, view logs with
 ```bash
 docker logs -f riskpulse-backend
 ```
+
+## Frontend docker build (build from frontend root)
 
 ## todos
 TODO 1 : nvidia-container-toolkit installed on your Linux host for this to work. (worker)
