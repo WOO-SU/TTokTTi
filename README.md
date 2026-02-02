@@ -158,5 +158,10 @@ erDiagram
         date created_at
     }
 ```
+
+### System Architecture
+#### 1. compute risk score
+<img width="1160" height="598" alt="RiskPulseSystemArchitecture_flow drawio" src="https://github.com/user-attachments/assets/71ad07b7-717d-4a2a-ba2d-6c4a7301deeb" />
+
 ---
-Last Updated: Feb 1, 2026
+Last Updated: Feb 2, 2026
