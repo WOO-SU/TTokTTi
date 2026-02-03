@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -28,9 +28,6 @@ const C = {
   black: '#000000',
 };
 
-// ── Tab Data ──
-const TABS = ['심박수', 'HRV', 'VO2', '걸음수'];
-
 // ── Chart Data Points (normalized 0-1 for 90-180 range) ──
 const CHART_DATA = [
   0.0, 0.05, 0.15, 0.35, 0.45, 0.42, 0.38, 0.33,
@@ -40,29 +37,6 @@ const CHART_DATA = [
 ];
 
 // ── Components ──
-
-function TabBar({
-  selected,
-  onSelect,
-}: {
-  selected: number;
-  onSelect: (i: number) => void;
-}) {
-  return (
-    <View style={styles.tabBar}>
-      {TABS.map((tab, i) => (
-        <TouchableOpacity
-          key={tab}
-          style={[styles.tab, i === selected && styles.tabSelected]}
-          onPress={() => onSelect(i)}>
-          <Text style={[styles.tabText, i === selected && styles.tabTextSelected]}>
-            {tab}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-}
 
 function ChartLine() {
   const chartWidth = SCREEN_WIDTH - 24 - 24 - 50; // container padding + y-axis space
@@ -252,11 +226,24 @@ type Props = {
   navigation: NativeStackNavigationProp<any>;
 };
 
-export default function StatusDetailScreen({navigation}: Props) {
-  const [selectedTab, setSelectedTab] = useState(0);
+function BackIcon() {
+  return (
+    <View style={{width: 24, height: 24, justifyContent: 'center', alignItems: 'center'}}>
+      <Text style={{fontSize: 20, color: C.darkText}}>{'‹'}</Text>
+    </View>
+  );
+}
 
+export default function StatusDetailScreen({navigation}: Props) {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header with Back Button */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <BackIcon />
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -264,7 +251,7 @@ export default function StatusDetailScreen({navigation}: Props) {
 
         {/* Chart Section (blue background) */}
         <View style={styles.chartSection}>
-          <TabBar selected={selectedTab} onSelect={setSelectedTab} />
+          <Text style={styles.sectionTitle}>위험도 경향</Text>
           <Chart />
         </View>
 
@@ -286,17 +273,17 @@ export default function StatusDetailScreen({navigation}: Props) {
 
           {/* Description */}
           <Text style={styles.descriptionText}>
-            체력적으로 힘든 하루였어요. 충분히 휴식을 취하면 될 것입니다.
+            주의가 필요합니다
           </Text>
 
           {/* Blood Pressure Section */}
           <View style={styles.bpSection}>
-            <Text style={styles.bpTitle}>혈압</Text>
+            <Text style={styles.bpTitle}>상세분석</Text>
             <View style={styles.bpStatusContainer}>
               <Text style={styles.bpStatusText}>
-                현재 상태: 🟡 주의
+                심장 변이도(HRV)가 낮아 스트레스 지수가 높습니다.
               </Text>
-              <Text style={styles.bpStatusText}>최근 2시간 위험지속</Text>
+              <Text style={styles.bpStatusText}>가벼운 휴식을 권장 합니다</Text>
             </View>
           </View>
 
@@ -325,15 +312,35 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
 
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: C.lightBlue,
+  },
+  backButton: {
+    padding: 4,
+  },
+
   // Chart Section
   chartSection: {
     backgroundColor: C.lightBlue,
     paddingHorizontal: 12,
-    paddingTop: 16,
+    paddingTop: 8,
     paddingBottom: 0,
   },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: C.darkText,
+    fontFamily: 'Inter',
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
 
-  // Tab Bar
+  // Tab Bar (unused but kept for reference)
   tabBar: {
     flexDirection: 'row',
     backgroundColor: C.white,

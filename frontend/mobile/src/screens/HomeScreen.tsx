@@ -230,7 +230,7 @@ function WeatherButton() {
     <View style={styles.weatherFrame}>
       <TouchableOpacity style={styles.weatherButton}>
         <SparkleIcon />
-        <Text style={styles.weatherButtonText}>그날의 근무장 환경</Text>
+        <Text style={styles.weatherButtonText}>오늘의 근무장 환경</Text>
       </TouchableOpacity>
     </View>
   );
@@ -343,12 +343,22 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}>
 
         {/* Banner - 컨디션 카드 (터치 시 상태 자세히보기로 이동) */}
-        <TouchableOpacity
-          style={styles.sectionPadding}
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate('StatusDetail')}>
-          <BannerCard mascot={mascotHappy} label="컨디션 최고!" score={94} />
-        </TouchableOpacity>
+        <View style={styles.sectionPadding}>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('StatusDetail')}>
+            <BannerCard mascot={mascotHappy} label="컨디션 최고!" score={94} />
+          </TouchableOpacity>
+
+          {/* 추가된 상세 점수 텍스트 섹션 */}
+          <View style={styles.scoreDetailContainer}>
+            <Text style={styles.scoreDetailTitle}>종합 건강 점수 상세</Text>
+            <Text style={styles.scoreDetailText}>
+              평상시보다 <Text style={{fontWeight: 'bold', color: '#FF6B6B'}}>6점</Text> 올랐어요!{"\n"}
+              충분한 휴식이 컨디션에 좋은 영향을 주었습니다.
+            </Text>
+          </View>
+        </View>
 
         {/* Weather Button */}
         <WeatherButton />
@@ -627,4 +637,31 @@ const styles = StyleSheet.create({
   calendarDayTextSelected: {
     color: COLORS.white,
   },
+
+  scoreDetailContainer: {
+    backgroundColor: '#FFFFFF', // 흰색 배경
+    marginTop: 12,              // 배너 카드와의 간격
+    padding: 16,
+    borderRadius: 16,           // 카드의 둥근 모서리와 일치
+    borderWidth: 1,
+    borderColor: '#F0F0F0',     // 아주 연한 테두리
+    // 그림자 효과 (필요 시)
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  scoreDetailTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333333',
+    marginBottom: 6,
+  },
+  scoreDetailText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#666666',
+  },
+  
 });
