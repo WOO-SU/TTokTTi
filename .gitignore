@@ -1,6 +1,9 @@
 .env*
 .venv
 
+# IDE
+.idea/
+
 # Python
 *.pyc
 **/__pycache__/
@@ -11,3 +14,11 @@ db.sqlite3
 .deployment
 
 **/node_modules/
+
+# Android build artifacts
+app/build/
+build/
+.gradle/
+.cxx/
+*.apk
+*.so
