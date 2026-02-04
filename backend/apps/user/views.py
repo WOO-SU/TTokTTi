@@ -8,6 +8,9 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.exceptions import AuthenticationFailed
 
+from drf_yasg.utils import swagger_auto_schema
+from .serializers import LogoutSerializer, ChangePasswordSerializer
+
 
 # user_name 필드를 로그인 아이디로 사용
 class UserNameTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -25,6 +28,11 @@ class LoginView(TokenObtainPairView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
+@swagger_auto_schema(
+    method='post',
+    request_body=LogoutSerializer,
+    responses={200: 'OK'}
+)
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def logout(request):
@@ -45,6 +53,11 @@ def logout(request):
     return Response({"ok": True})
 
 # password 변경
+@swagger_auto_schema(
+    method='post',
+    request_body=ChangePasswordSerializer,
+    responses={200: 'OK'}
+)
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def change_password(request):
