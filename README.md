@@ -8,14 +8,14 @@ chmod +x backend/entrypoint.sh
 pip install -r requirements.txt
 ```
 
-## Backend docker build (always build from root)
+## Backend docker build (build from backend root)
 ```bash
 docker build -t riskpulse-backend -f ./Dockerfile ./
 ```
 
 after that, test by
 ```bash
-docker run --rm -it -p 8000:8000 riskpulse-backend web
+docker run --rm -it --env-file .env  -p 8000:8000 riskpulse-backend web
 ```
 
 If you ran container detached, view logs with
