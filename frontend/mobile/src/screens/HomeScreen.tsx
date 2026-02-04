@@ -347,15 +347,14 @@ export default function HomeScreen() {
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => navigation.navigate('StatusDetail')}>
-            <BannerCard mascot={mascotHappy} label="컨디션 최고!" score={94} />
+            <BannerCard mascot={mascotHappy} label="컨디션 최고!" score={20} />
           </TouchableOpacity>
 
           {/* 추가된 상세 점수 텍스트 섹션 */}
           <View style={styles.scoreDetailContainer}>
-            <Text style={styles.scoreDetailTitle}>종합 건강 점수 상세</Text>
+            <Text style={styles.scoreDetailTitle}>점수 상세</Text>
             <Text style={styles.scoreDetailText}>
-              평상시보다 <Text style={{fontWeight: 'bold', color: '#FF6B6B'}}>6점</Text> 올랐어요!{"\n"}
-              충분한 휴식이 컨디션에 좋은 영향을 주었습니다.
+             모든 생체 신호가 안정적입니다. 심박수가 규칙적인 리듬을 유지하고 있으며, HRV 지표 또한 신체 회복력이 높은 수준임을 보여줍니다.
             </Text>
           </View>
         </View>
@@ -492,11 +491,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   bannerMascot: {
-    width: 80,
-    height: 80,
+    width: 120,
+    height: 120,
+    margin : -20,
+    marginLeft : -10,
   },
   bannerTextArea: {
-    marginLeft: 12,
+    marginLeft: 60,
     alignItems: 'center',
   },
   bannerLabel: {

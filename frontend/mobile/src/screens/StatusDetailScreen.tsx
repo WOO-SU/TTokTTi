@@ -12,7 +12,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
-const mascotNeutral = require('../assets/mascot_neutral.png');
+const mascotNeutral = require('../assets/mascot_image4.png');
 
 // ── Colors ──
 const C = {
@@ -192,18 +192,18 @@ function Chart() {
 }
 
 function SendIcon() {
-  return (
-    <View style={{width: 20, height: 20, justifyContent: 'center', alignItems: 'center'}}>
-      <View
-        style={{
-          width: 0,
-          height: 0,
-          borderLeftWidth: 10,
-          borderBottomWidth: 6,
-          borderTopWidth: 6,
-          borderLeftColor: C.blue,
-          borderBottomColor: 'transparent',
-          borderTopColor: 'transparent',
+                   return (
+                     <View style={{width: 20, height: 20, justifyContent: 'center', alignItems: 'center'}}>
+                       <View
+                         style={{
+                           width: 0,
+                           height: 0,
+                           borderLeftWidth: 10,
+                           borderBottomWidth: 6,
+                           borderTopWidth: 6,
+                           borderLeftColor: C.blue,
+                           borderBottomColor: 'transparent',
+                           borderTopColor: 'transparent',
           transform: [{rotate: '-30deg'}],
         }}
       />
@@ -257,33 +257,25 @@ export default function StatusDetailScreen({navigation}: Props) {
 
         {/* Details Section (white background) */}
         <View style={styles.detailsSection}>
-          {/* Date + Send Icon */}
+          {/* Date + Mascot */}
           <View style={styles.titleRow}>
             <View>
               <Text style={styles.dateText}>2026/02/01</Text>
-              <View style={styles.riskRow}>
-                <Text style={styles.riskText}>중위험</Text>
-                <Image source={mascotNeutral} style={styles.riskMascot} resizeMode="contain" />
-              </View>
+              <Text style={styles.riskText}>
+              저위험 <Text style={{color: 'red'}}> 20</Text> 점
+              </Text>
+              <Text style={styles.descriptionText}>좋아요. 지금 상태를 유지하세요!</Text>
             </View>
-            <TouchableOpacity>
-              <SendIcon />
-            </TouchableOpacity>
+            <Image source={mascotNeutral} style={styles.titleMascot} resizeMode="contain" />
           </View>
-
-          {/* Description */}
-          <Text style={styles.descriptionText}>
-            주의가 필요합니다
-          </Text>
 
           {/* Blood Pressure Section */}
           <View style={styles.bpSection}>
             <Text style={styles.bpTitle}>상세분석</Text>
             <View style={styles.bpStatusContainer}>
               <Text style={styles.bpStatusText}>
-                심장 변이도(HRV)가 낮아 스트레스 지수가 높습니다.
+                모든 생체 신호가 안정적입니다. 심박수가 규칙적인 리듬을 유지하고 있으며, HRV 지표 또한 신체 회복력이 높은 수준임을 보여줍니다. 현재의 컨디션은 복잡하고 정밀한 작업을 수행하기에 매우 적합한 상태입니다. 지금의 페이스를 유지하시되, 정기적인 수분 섭취로 건강 상태를 관리하세요..
               </Text>
-              <Text style={styles.bpStatusText}>가벼운 휴식을 권장 합니다</Text>
             </View>
           </View>
 
@@ -482,10 +474,15 @@ const styles = StyleSheet.create({
     color: C.darkText,
     fontFamily: 'Inter',
     lineHeight: 22,
+    marginTop: 6,
   },
   riskMascot: {
     width: 35,
     height: 35,
+  },
+  titleMascot: {
+    width: 120,
+    height: 120,
   },
 
   // Description
@@ -496,12 +493,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
     letterSpacing: 0.12,
     lineHeight: 16,
-    marginTop: 24,
+    marginTop: 6,
   },
 
   // Blood Pressure
   bpSection: {
-    marginTop: 40,
+    marginTop: 0,
     gap: 8,
   },
   bpTitle: {
