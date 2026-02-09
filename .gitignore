@@ -3,6 +3,10 @@
 
 # IDE
 .idea/
+frontend/.idea/
+frontend/mobile/.idea/
+*.swp
+*.patch
 
 # Python
 *.pyc
@@ -22,3 +26,41 @@ build/
 .cxx/
 *.apk
 *.so
+
+# Node / Metro cache
+node_modules/
+frontend/mobile/node_modules/
+.expo/
+*.log
+.metro/
+
+# Security (절대 올라가면 안 되는 파일)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+frontend/mobile/android/app/*.keystore
+!frontend/mobile/android/app/debug.keystore # 디버그용만 허용하고 싶을 때
+
+# --- Ruby / CocoaPods (현재 프로젝트의 주요 용량 원인) ---
+frontend/mobile/vendor/
+frontend/mobile/.bundle/
+frontend/mobile/ios/Pods/
+frontend/mobile/ios/build/
+frontend/mobile/ios/Podfile.lock
+frontend/mobile/ios/.xcode.env.local
+
+# --- 추가적인 Android 부산물 ---
+frontend/mobile/android/.gradle/
+frontend/mobile/android/app/build/
+frontend/mobile/android/build/
+frontend/mobile/android/.cxx/
+frontend/mobile/android/*.iml
+
+# --- React Native 캐시 보완 ---
+frontend/mobile/.expo/
+frontend/mobile/*.log
+frontend/mobile/npm-debug.log*
+frontend/mobile/yarn-debug.log*
+frontend/mobile/yarn-error.log*
