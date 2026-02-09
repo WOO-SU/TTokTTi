@@ -1,0 +1,144 @@
+name: CI
+
+on:
+  push:
+    branches: [ "develop" ]
+  pull_request:
+    branches: [ "develop" ]
+
+env:
+  # Using GitHub Container Registry (ghcr.io) for simplicity.
+  # You can switch to Docker Hub if preferred.
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ------------------------------------------------------------------
+  # JOB 1: TEST BACKEND (Django + Redis)
+  # ------------------------------------------------------------------
+  test-backend:
+    runs-on: ubuntu-latest
+    # Only run this job if files in 'backend' change
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    steps:
+      - uses: actions/checkout@v4
+
+      # Only run if backend files changed (Manual path filter logic for steps if needed, 
+      # but usually separating jobs by 'paths' in the 'on' trigger is cleaner. 
+      # Here we run tests on every PR to main just to be safe).
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12' 
+          cache: 'pip'
+
+      # We need Redis because your backend has 'celery.py' and 'consumers.py' (Channels)
+      - name: Start Redis
+        uses: supercharge/redis-github-action@1.7.0
+
+      - name: Install Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install flake8
+
+      - name: Lint with Flake8
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          flake8 backend --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Run Tests
+        env:
+          # Use a standard secret or dummy key for CI
+          SECRET_KEY: "django-insecure-test-key-ci-only" 
+          DEBUG: "True"
+          # Ensure your settings.py looks for this env var for Redis host
+          REDIS_URL: "redis://localhost:6379/0" 
+        run: |
+          cd backend
+          python manage.py test
+
+  # ------------------------------------------------------------------
+  # JOB 2: BUILD & PUSH BACKEND
+  # ------------------------------------------------------------------
+  build-backend:
+    needs: test-backend
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    # Only run on push to main (deploy), or if you want to test builds on PRs too
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  # ------------------------------------------------------------------
+  # JOB 3: BUILD & PUSH WORKER
+  # ------------------------------------------------------------------
+  build-worker:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    # Optimization: Only run if 'worker' folder changed
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2 # To check file changes
+
+      - name: Check for changes in worker directory
+        id: check_changes
+        run: |
+          git diff --name-only HEAD^ HEAD | grep ^worker/ || echo "no_changes"
+          if git diff --name-only HEAD^ HEAD | grep ^worker/; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Log in to the Container registry
+        if: steps.check_changes.outputs.changed == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        if: steps.check_changes.outputs.changed == 'true'
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/worker
+
+      - name: Build and push Worker Image
+        if: steps.check_changes.outputs.changed == 'true' && github.ref == 'refs/heads/develop'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./worker
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
