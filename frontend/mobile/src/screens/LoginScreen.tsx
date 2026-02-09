@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -10,11 +10,11 @@ import {
   ScrollView,
   Dimensions,
 } from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import type {RootStackParamList} from '../../App';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../App';
 
-const {width: SCREEN_WIDTH} = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const heroImage = require('../assets/login-hero.png');
 
@@ -22,7 +22,7 @@ type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Login'>;
 };
 
-export default function LoginScreen({navigation}: Props) {
+export default function LoginScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -38,7 +38,7 @@ export default function LoginScreen({navigation}: Props) {
         {/* Hero Image */}
         <Image
           source={heroImage}
-          style={[styles.heroImage, {marginTop: insets.top}]}
+          style={[styles.heroImage, { marginTop: insets.top }]}
           resizeMode="cover"
         />
 
@@ -93,7 +93,10 @@ export default function LoginScreen({navigation}: Props) {
             {/* Buttons */}
             <View style={styles.buttonsSection}>
               {/* Login Button */}
-              <TouchableOpacity style={styles.loginButton} activeOpacity={0.8}>
+              <TouchableOpacity
+                style={styles.loginButton}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('AfterLogin')}>
                 <Text style={styles.loginButtonText}>Login</Text>
               </TouchableOpacity>
 
@@ -116,21 +119,21 @@ export default function LoginScreen({navigation}: Props) {
             <View style={styles.socialButtons}>
               {/* Google */}
               <TouchableOpacity
-                style={[styles.socialButton, {backgroundColor: '#ED3241'}]}
+                style={[styles.socialButton, { backgroundColor: '#ED3241' }]}
                 activeOpacity={0.8}>
                 <GoogleIcon />
               </TouchableOpacity>
 
               {/* Apple */}
               <TouchableOpacity
-                style={[styles.socialButton, {backgroundColor: '#1F2024'}]}
+                style={[styles.socialButton, { backgroundColor: '#1F2024' }]}
                 activeOpacity={0.8}>
                 <AppleIcon />
               </TouchableOpacity>
 
               {/* Facebook */}
               <TouchableOpacity
-                style={[styles.socialButton, {backgroundColor: '#006FFD'}]}
+                style={[styles.socialButton, { backgroundColor: '#006FFD' }]}
                 activeOpacity={0.8}>
                 <FacebookIcon />
               </TouchableOpacity>
@@ -144,19 +147,19 @@ export default function LoginScreen({navigation}: Props) {
 
 /* SVG-like icon components using basic Views/Text */
 
-function EyeIcon({color}: {color: string}) {
+function EyeIcon({ color }: { color: string }) {
   return (
     <View style={iconStyles.eyeContainer}>
       <View
         style={[
           iconStyles.eyeOuter,
-          {borderColor: color},
+          { borderColor: color },
         ]}
       />
       <View
         style={[
           iconStyles.eyeInner,
-          {backgroundColor: color},
+          { backgroundColor: color },
         ]}
       />
     </View>
