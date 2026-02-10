@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import upload_result, check_update
+from .views import upload_result, check_update, request_detection
 
 app_name = "check"
 

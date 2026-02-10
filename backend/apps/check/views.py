@@ -18,16 +18,22 @@ from .serializers import ComplianceSerializer, ComplianceRequestSerializer, Comp
 @permission_classes([IsAuthenticated])
 def check_update(request):
     """
-    "/api/check/update": 탐지 결과가 나왔는지 + 나왔다면 결과까지 (프론트 - polling-> 백 -> DB)
+    "/api/check/update": 특정 탐지(compliance_id) 결과 확인
+    query params: ?compliance_id=<id>
     """
-
     user = request.user
+    compliance_id = request.query_params.get("compliance_id")
+
+    if not compliance_id:
+        return Response({"ok": False, "data": None, "detail": "compliance_id required"}, status=400)
+
     try:
-        compliance = Compliance.objects.get(user=user, is_updated=True)
+        compliance = Compliance.objects.get(id=compliance_id, employee=user)
         serializer = ComplianceSerializer(compliance)
         return Response({"ok": True, "data": serializer.data})
     except Compliance.DoesNotExist:
-        return Response({"ok": False, "data": None})
+        return Response({"ok": False, "data": None, "detail": "compliance not found"}, status=404)
+
 
 @swagger_auto_schema(
     method='post',
