@@ -1,151 +1,142 @@
-import React, {useState} from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  StatusBar,
-} from 'react-native';
-import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import type {RootStackParamList} from '../App';
+import React, { useState } from 'react';
 
-type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'ForgotPassword'>;
-};
-
-export default function ForgotPasswordScreen({navigation}: Props) {
+export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#D5DAE1" />
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        bounces={false}
-        keyboardShouldPersistTaps="handled">
-        <View style={styles.centerWrapper}>
-          <View style={styles.card}>
+    <div style={styles.container}>
+      <div style={styles.scrollContent}>
+        <div style={styles.centerWrapper}>
+          <div style={styles.card}>
             {/* Title */}
-            <View style={styles.headerSection}>
-              <Text style={styles.title}>Forgotten your password?</Text>
-              <Text style={styles.subtitle}>
+            <div style={styles.headerSection}>
+              <h2 style={styles.title}>Forgotten your password?</h2>
+              <p style={styles.subtitle}>
                 There is nothing to worry about, we'll send you a message to help
                 you reset your password.
-              </Text>
-            </View>
+              </p>
+            </div>
 
             {/* Email Field */}
-            <View style={styles.fieldContainer}>
-              <Text style={styles.fieldLabel}>Email Address</Text>
-              <View style={styles.field}>
-                <TextInput
+            <div style={styles.fieldContainer}>
+              <label style={styles.fieldLabel}>Email Address</label>
+              <div style={styles.field}>
+                <input
                   style={styles.input}
+                  type="email"
                   placeholder="Enter personal or work email address"
-                  placeholderTextColor="#8F9098"
                   value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
+                  onChange={e => setEmail(e.target.value)}
                 />
-              </View>
-            </View>
+              </div>
+            </div>
 
             {/* Send Reset Link Button */}
-            <TouchableOpacity style={styles.resetButton} activeOpacity={0.8}>
-              <Text style={styles.resetButtonText}>Send Reset Link</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
-    </View>
+            <button type="button" style={styles.resetButton}>
+              <span style={styles.resetButtonText}>Send Reset Link</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
-const styles = StyleSheet.create({
+const styles: Record<string, React.CSSProperties> = {
   container: {
-    flex: 1,
+    minHeight: '100vh',
     backgroundColor: '#D5DAE1',
   },
   scrollContent: {
-    flexGrow: 1,
+    minHeight: '100vh',
+    display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 40,
+    padding: '40px 0',
   },
   centerWrapper: {
     width: '100%',
     maxWidth: 420,
-    paddingHorizontal: 24,
+    padding: '0 24px',
+    boxSizing: 'border-box',
   },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    paddingHorizontal: 32,
-    paddingVertical: 40,
+    padding: '40px 32px',
+    display: 'flex',
+    flexDirection: 'column',
     gap: 24,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
   },
   headerSection: {
+    display: 'flex',
+    flexDirection: 'column',
     gap: 12,
   },
   title: {
-    fontFamily: 'Inter',
-    fontWeight: '700',
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 700,
     fontSize: 22,
     color: '#1F2024',
+    margin: 0,
   },
   subtitle: {
-    fontFamily: 'Inter',
-    fontWeight: '400',
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 400,
     fontSize: 13,
     color: '#71727A',
-    lineHeight: 20,
+    lineHeight: '20px',
+    margin: 0,
   },
   fieldContainer: {
+    display: 'flex',
+    flexDirection: 'column',
     gap: 6,
   },
   fieldLabel: {
-    fontFamily: 'Inter',
-    fontWeight: '600',
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
     fontSize: 12,
     color: '#2E3036',
   },
   field: {
     height: 48,
-    borderWidth: 1,
-    borderColor: '#C5C6CC',
+    border: '1px solid #C5C6CC',
     borderRadius: 12,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
+    padding: '0 16px',
+    display: 'flex',
     alignItems: 'center',
+    boxSizing: 'border-box',
   },
   input: {
     flex: 1,
-    fontFamily: 'Inter',
-    fontWeight: '400',
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 400,
     fontSize: 14,
     color: '#1F2024',
+    border: 'none',
+    outline: 'none',
     padding: 0,
     height: '100%',
+    backgroundColor: 'transparent',
+    width: '100%',
   },
   resetButton: {
     width: '100%',
     height: 48,
     backgroundColor: '#006FFD',
     borderRadius: 12,
+    display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
+    border: 'none',
+    cursor: 'pointer',
   },
   resetButtonText: {
-    fontFamily: 'Inter',
-    fontWeight: '600',
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
     fontSize: 14,
     color: '#FFFFFF',
   },
-});
+};

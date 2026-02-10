@@ -1,312 +1,280 @@
-import React, {useState} from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  StatusBar,
-} from 'react-native';
-import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import type {RootStackParamList} from '../App';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'SignUpFree'>;
-};
-
-function EyeIcon({color}: {color: string}) {
+function EyeIcon({ color }: { color: string }) {
   return (
-    <View style={iconStyles.eyeContainer}>
-      <View style={[iconStyles.eyeOuter, {borderColor: color}]} />
-      <View style={[iconStyles.eyeInner, {backgroundColor: color}]} />
-    </View>
+    <div style={{ width: 16, height: 16, position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      <div style={{ width: 14, height: 10, border: `1.5px solid ${color}`, borderRadius: 7 }} />
+      <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: color, position: 'absolute' }} />
+    </div>
   );
 }
 
-export default function SignUpFreeScreen({navigation}: Props) {
+export default function SignUpFreeScreen() {
+  const navigate = useNavigate();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [secureText, setSecureText] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#D5DAE1" />
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        bounces={false}
-        keyboardShouldPersistTaps="handled">
-        <View style={styles.centerWrapper}>
-          <View style={styles.card}>
+    <div style={styles.container}>
+      <div style={styles.scrollContent}>
+        <div style={styles.centerWrapper}>
+          <div style={styles.card}>
             {/* Header */}
-            <View style={styles.headerSection}>
-              <Text style={styles.title}>Sign Up Free</Text>
-              <Text style={styles.subtitle}>
-                14 day free access to unlimited resources
-              </Text>
-            </View>
+            <div style={styles.headerSection}>
+              <h2 style={styles.title}>Sign Up Free</h2>
+              <p style={styles.subtitle}>14 day free access to unlimited resources</p>
+            </div>
 
             {/* Form */}
-            <View style={styles.form}>
+            <div style={styles.form}>
               {/* First Name / Last Name Row */}
-              <View style={styles.nameRow}>
-                <View style={[styles.fieldContainer, styles.halfField]}>
-                  <Text style={styles.fieldLabel}>First Name</Text>
-                  <View style={styles.field}>
-                    <TextInput
+              <div style={styles.nameRow}>
+                <div style={{ ...styles.fieldContainer, flex: 1 }}>
+                  <label style={styles.fieldLabel}>First Name</label>
+                  <div style={styles.field}>
+                    <input
                       style={styles.input}
+                      type="text"
                       placeholder="Placeholder"
-                      placeholderTextColor="#8F9098"
                       value={firstName}
-                      onChangeText={setFirstName}
-                      autoCapitalize="words"
+                      onChange={e => setFirstName(e.target.value)}
                     />
-                  </View>
-                </View>
-                <View style={[styles.fieldContainer, styles.halfField]}>
-                  <Text style={styles.fieldLabel}>Last Name</Text>
-                  <View style={styles.field}>
-                    <TextInput
+                  </div>
+                </div>
+                <div style={{ ...styles.fieldContainer, flex: 1 }}>
+                  <label style={styles.fieldLabel}>Last Name</label>
+                  <div style={styles.field}>
+                    <input
                       style={styles.input}
+                      type="text"
                       placeholder="Placeholder"
-                      placeholderTextColor="#8F9098"
                       value={lastName}
-                      onChangeText={setLastName}
-                      autoCapitalize="words"
+                      onChange={e => setLastName(e.target.value)}
                     />
-                  </View>
-                </View>
-              </View>
+                  </div>
+                </div>
+              </div>
 
               {/* Email */}
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Email</Text>
-                <View style={styles.field}>
-                  <TextInput
+              <div style={styles.fieldContainer}>
+                <label style={styles.fieldLabel}>Email</label>
+                <div style={styles.field}>
+                  <input
                     style={styles.input}
+                    type="email"
                     placeholder="Placeholder"
-                    placeholderTextColor="#8F9098"
                     value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
+                    onChange={e => setEmail(e.target.value)}
                   />
-                </View>
-              </View>
+                </div>
+              </div>
 
               {/* Password */}
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Password</Text>
-                <View style={styles.field}>
-                  <TextInput
-                    style={[styles.input, styles.passwordInput]}
+              <div style={styles.fieldContainer}>
+                <label style={styles.fieldLabel}>Password</label>
+                <div style={styles.field}>
+                  <input
+                    style={{ ...styles.input, paddingRight: 8 }}
+                    type={showPassword ? 'text' : 'password'}
                     placeholder="Placeholder"
-                    placeholderTextColor="#8F9098"
                     value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry={secureText}
+                    onChange={e => setPassword(e.target.value)}
                   />
-                  <TouchableOpacity
-                    onPress={() => setSecureText(!secureText)}
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
                     style={styles.eyeIconContainer}>
                     <EyeIcon color="#8F9098" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
+                  </button>
+                </div>
+              </div>
+            </div>
 
             {/* Terms Checkbox */}
-            <TouchableOpacity
+            <button
+              type="button"
               style={styles.termsRow}
-              onPress={() => setAgreeTerms(!agreeTerms)}
-              activeOpacity={0.7}>
-              <View
-                style={[
-                  styles.checkbox,
-                  agreeTerms && styles.checkboxChecked,
-                ]}>
-                {agreeTerms && <Text style={styles.checkmark}>✓</Text>}
-              </View>
-              <Text style={styles.termsText}>
+              onClick={() => setAgreeTerms(!agreeTerms)}>
+              <div style={{ ...styles.checkbox, ...(agreeTerms ? styles.checkboxChecked : {}) }}>
+                {agreeTerms && <span style={styles.checkmark}>✓</span>}
+              </div>
+              <span style={styles.termsText}>
                 Vestibulum faucibus odio vitae erat auctor lectus.
-              </Text>
-            </TouchableOpacity>
+              </span>
+            </button>
 
             {/* Sign Up Button */}
-            <TouchableOpacity style={styles.signUpButton} activeOpacity={0.8}>
-              <Text style={styles.signUpButtonText}>Button Text</Text>
-            </TouchableOpacity>
+            <button type="button" style={styles.signUpButton}>
+              <span style={styles.signUpButtonText}>Button Text</span>
+            </button>
 
             {/* Divider */}
-            <View style={styles.dividerSection}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>Or sign up with</Text>
-              <View style={styles.dividerLine} />
-            </View>
+            <div style={styles.dividerSection}>
+              <div style={styles.dividerLine} />
+              <span style={styles.dividerText}>Or sign up with</span>
+              <div style={styles.dividerLine} />
+            </div>
 
             {/* Social Buttons */}
-            <View style={styles.socialButtons}>
-              <TouchableOpacity
-                style={[styles.socialButton, styles.googleButton]}
-                activeOpacity={0.8}>
-                <Text style={styles.socialButtonIcon}>G</Text>
-                <Text style={styles.socialButtonText}>Google</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.socialButton, styles.appleButton]}
-                activeOpacity={0.8}>
-                <Text style={styles.socialButtonIcon}>{'\uF8FF'}</Text>
-                <Text style={styles.socialButtonText}>Apple</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.socialButton, styles.twitterButton]}
-                activeOpacity={0.8}>
-                <Text style={styles.socialButtonIcon}>T</Text>
-                <Text style={styles.socialButtonText}>Twitter</Text>
-              </TouchableOpacity>
-            </View>
+            <div style={styles.socialButtons}>
+              <button type="button" style={styles.socialButton}>
+                <span style={styles.socialButtonIcon}>G</span>
+                <span style={styles.socialButtonText}>Google</span>
+              </button>
+              <button type="button" style={styles.socialButton}>
+                <span style={styles.socialButtonIcon}>{'\uF8FF'}</span>
+                <span style={styles.socialButtonText}>Apple</span>
+              </button>
+              <button type="button" style={styles.socialButton}>
+                <span style={styles.socialButtonIcon}>T</span>
+                <span style={styles.socialButtonText}>Twitter</span>
+              </button>
+            </div>
 
             {/* Already have account */}
-            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.loginLink}>Already have an account?</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
-    </View>
+            <button
+              type="button"
+              style={styles.loginLinkBtn}
+              onClick={() => navigate('/login')}>
+              <span style={styles.loginLink}>Already have an account?</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
-const iconStyles = StyleSheet.create({
-  eyeContainer: {
-    width: 16,
-    height: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  eyeOuter: {
-    width: 14,
-    height: 10,
-    borderWidth: 1.5,
-    borderRadius: 7,
-  },
-  eyeInner: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    position: 'absolute',
-  },
-});
-
-const styles = StyleSheet.create({
+const styles: Record<string, React.CSSProperties> = {
   container: {
-    flex: 1,
+    minHeight: '100vh',
     backgroundColor: '#D5DAE1',
   },
   scrollContent: {
-    flexGrow: 1,
+    minHeight: '100vh',
+    display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 40,
+    padding: '40px 0',
   },
   centerWrapper: {
     width: '100%',
     maxWidth: 420,
-    paddingHorizontal: 24,
+    padding: '0 24px',
+    boxSizing: 'border-box',
   },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    paddingHorizontal: 32,
-    paddingVertical: 40,
+    padding: '40px 32px',
+    display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
     gap: 20,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
   },
   headerSection: {
+    display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
     gap: 8,
   },
   title: {
-    fontFamily: 'Inter',
-    fontWeight: '700',
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 700,
     fontSize: 22,
     color: '#1F2024',
+    margin: 0,
   },
   subtitle: {
-    fontFamily: 'Inter',
-    fontWeight: '400',
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 400,
     fontSize: 13,
     color: '#71727A',
+    margin: 0,
   },
   form: {
     width: '100%',
+    display: 'flex',
+    flexDirection: 'column',
     gap: 16,
   },
   nameRow: {
+    display: 'flex',
     flexDirection: 'row',
     gap: 12,
   },
-  halfField: {
-    flex: 1,
-  },
   fieldContainer: {
+    display: 'flex',
+    flexDirection: 'column',
     gap: 6,
   },
   fieldLabel: {
-    fontFamily: 'Inter',
-    fontWeight: '600',
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
     fontSize: 12,
     color: '#2E3036',
   },
   field: {
     height: 48,
-    borderWidth: 1,
-    borderColor: '#C5C6CC',
+    border: '1px solid #C5C6CC',
     borderRadius: 12,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
+    padding: '0 16px',
+    display: 'flex',
     alignItems: 'center',
+    boxSizing: 'border-box',
   },
   input: {
     flex: 1,
-    fontFamily: 'Inter',
-    fontWeight: '400',
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 400,
     fontSize: 14,
     color: '#1F2024',
+    border: 'none',
+    outline: 'none',
     padding: 0,
     height: '100%',
-  },
-  passwordInput: {
-    paddingRight: 8,
+    backgroundColor: 'transparent',
+    width: '100%',
   },
   eyeIconContainer: {
     width: 24,
     height: 24,
+    display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: 0,
   },
   termsRow: {
+    display: 'flex',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     width: '100%',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: 0,
+    textAlign: 'left',
   },
   checkbox: {
     width: 20,
     height: 20,
     borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#C5C6CC',
+    border: '1px solid #C5C6CC',
+    display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
+    boxSizing: 'border-box',
+    flexShrink: 0,
   },
   checkboxChecked: {
     backgroundColor: '#006FFD',
@@ -315,12 +283,11 @@ const styles = StyleSheet.create({
   checkmark: {
     color: '#FFFFFF',
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: 700,
   },
   termsText: {
-    flex: 1,
-    fontFamily: 'Inter',
-    fontWeight: '400',
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 400,
     fontSize: 12,
     color: '#71727A',
   },
@@ -329,16 +296,20 @@ const styles = StyleSheet.create({
     height: 48,
     backgroundColor: '#006FFD',
     borderRadius: 12,
+    display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
+    border: 'none',
+    cursor: 'pointer',
   },
   signUpButtonText: {
-    fontFamily: 'Inter',
-    fontWeight: '600',
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
     fontSize: 14,
     color: '#FFFFFF',
   },
   dividerSection: {
+    display: 'flex',
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
@@ -350,12 +321,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0E0E0',
   },
   dividerText: {
-    fontFamily: 'Inter',
-    fontWeight: '400',
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 400,
     fontSize: 12,
     color: '#71727A',
   },
   socialButtons: {
+    display: 'flex',
     flexDirection: 'row',
     gap: 12,
     width: '100%',
@@ -364,38 +336,35 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 40,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    flexDirection: 'row',
+    border: '1px solid #D5DAE1',
+    display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 6,
     backgroundColor: '#FFFFFF',
-  },
-  googleButton: {
-    borderColor: '#D5DAE1',
-  },
-  appleButton: {
-    borderColor: '#D5DAE1',
-  },
-  twitterButton: {
-    borderColor: '#D5DAE1',
+    cursor: 'pointer',
   },
   socialButtonIcon: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: 700,
     color: '#1F2024',
   },
   socialButtonText: {
-    fontFamily: 'Inter',
-    fontWeight: '600',
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
     fontSize: 12,
     color: '#1F2024',
   },
+  loginLinkBtn: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: 0,
+  },
   loginLink: {
-    fontFamily: 'Inter',
-    fontWeight: '600',
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
     fontSize: 12,
     color: '#006FFD',
   },
-});
+};

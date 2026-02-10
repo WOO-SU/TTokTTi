@@ -1,290 +1,160 @@
-import React, {useState} from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  StatusBar,
-} from 'react-native';
-import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import type {RootStackParamList} from '../App';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'Login'>;
-};
-
-function HeartbeatIcon() {
+function EyeIcon({ color }: { color: string }) {
   return (
-    <View style={iconStyles.heartContainer}>
-      <View style={iconStyles.heartBody}>
-        <View style={iconStyles.heartLeft} />
-        <View style={iconStyles.heartRight} />
-        <View style={iconStyles.heartBottom} />
-      </View>
-      <View style={iconStyles.pulseLineContainer}>
-        <View style={iconStyles.pulseLine} />
-        <View style={iconStyles.pulseUp} />
-        <View style={iconStyles.pulseDown} />
-        <View style={iconStyles.pulseEnd} />
-      </View>
-    </View>
+    <div style={{ width: 16, height: 16, position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      <div style={{ width: 14, height: 10, border: `1.5px solid ${color}`, borderRadius: 7 }} />
+      <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: color, position: 'absolute' }} />
+    </div>
   );
 }
 
-function EyeIcon({color}: {color: string}) {
-  return (
-    <View style={iconStyles.eyeContainer}>
-      <View style={[iconStyles.eyeOuter, {borderColor: color}]} />
-      <View style={[iconStyles.eyeInner, {backgroundColor: color}]} />
-    </View>
-  );
-}
-
-export default function LoginScreen({navigation}: Props) {
+export default function LoginScreen() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [secureText, setSecureText] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        bounces={false}
-        keyboardShouldPersistTaps="handled">
-        <View style={styles.centerWrapper}>
-          <View style={styles.card}>
+    <div style={styles.container}>
+      <div style={styles.scrollContent}>
+        <div style={styles.centerWrapper}>
+          <div style={styles.card}>
             {/* Logo */}
-            <View style={styles.logoSection}>
-              <View style={styles.logoIcon}>
-                <Text style={styles.logoHeart}>&#x2764;&#xFE0F;</Text>
-                <Text style={styles.logoPulse}>~</Text>
-              </View>
-              <Text style={styles.logoText}>riskpulse</Text>
-            </View>
+            <div style={styles.logoSection}>
+              <div style={styles.logoIcon}>
+                <span style={styles.logoHeart}>&#x2764;&#xFE0F;</span>
+                <span style={styles.logoPulse}>~</span>
+              </div>
+              <span style={styles.logoText}>riskpulse</span>
+            </div>
 
             {/* Welcome */}
-            <Text style={styles.welcomeTitle}>Welcome</Text>
+            <h2 style={styles.welcomeTitle}>Welcome</h2>
 
             {/* Form */}
-            <View style={styles.form}>
+            <div style={styles.form}>
               {/* Email */}
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Email Address</Text>
-                <View style={styles.field}>
-                  <TextInput
+              <div style={styles.fieldContainer}>
+                <label style={styles.fieldLabel}>Email Address</label>
+                <div style={styles.field}>
+                  <input
                     style={styles.input}
+                    type="email"
                     placeholder="Placeholder"
-                    placeholderTextColor="#8F9098"
                     value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
+                    onChange={e => setEmail(e.target.value)}
                   />
-                </View>
-              </View>
+                </div>
+              </div>
 
               {/* Password */}
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Password</Text>
-                <View style={styles.field}>
-                  <TextInput
-                    style={[styles.input, styles.passwordInput]}
+              <div style={styles.fieldContainer}>
+                <label style={styles.fieldLabel}>Password</label>
+                <div style={styles.field}>
+                  <input
+                    style={{ ...styles.input, paddingRight: 8 }}
+                    type={showPassword ? 'text' : 'password'}
                     placeholder="Placeholder"
-                    placeholderTextColor="#8F9098"
                     value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry={secureText}
+                    onChange={e => setPassword(e.target.value)}
                   />
-                  <TouchableOpacity
-                    onPress={() => setSecureText(!secureText)}
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
                     style={styles.eyeIconContainer}>
                     <EyeIcon color="#8F9098" />
-                  </TouchableOpacity>
-                </View>
-                <Text style={styles.passwordHint}>
+                  </button>
+                </div>
+                <span style={styles.passwordHint}>
                   It must be a combination of minimum 8 letters, numbers, and symbols.
-                </Text>
-              </View>
+                </span>
+              </div>
 
               {/* Remember Me & Forgot Password */}
-              <View style={styles.optionsRow}>
-                <TouchableOpacity
+              <div style={styles.optionsRow}>
+                <button
+                  type="button"
                   style={styles.rememberRow}
-                  onPress={() => setRememberMe(!rememberMe)}
-                  activeOpacity={0.7}>
-                  <View
-                    style={[
-                      styles.checkbox,
-                      rememberMe && styles.checkboxChecked,
-                    ]}>
-                    {rememberMe && <Text style={styles.checkmark}>✓</Text>}
-                  </View>
-                  <Text style={styles.rememberText}>Remember me</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => navigation.navigate('ForgotPassword')}>
-                  <Text style={styles.forgotText}>Forgot Password?</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+                  onClick={() => setRememberMe(!rememberMe)}>
+                  <div style={{ ...styles.checkbox, ...(rememberMe ? styles.checkboxChecked : {}) }}>
+                    {rememberMe && <span style={styles.checkmark}>✓</span>}
+                  </div>
+                  <span style={styles.rememberText}>Remember me</span>
+                </button>
+                <button
+                  type="button"
+                  style={styles.forgotBtn}
+                  onClick={() => navigate('/forgot-password')}>
+                  <span style={styles.forgotText}>Forgot Password?</span>
+                </button>
+              </div>
+            </div>
 
             {/* Login Button */}
-            <TouchableOpacity style={styles.loginButton} activeOpacity={0.8}>
-              <Text style={styles.loginButtonText}>Log In</Text>
-            </TouchableOpacity>
+            <button type="button" style={styles.loginButton} onClick={() => navigate('/home')}>
+              <span style={styles.loginButtonText}>Log In</span>
+            </button>
 
             {/* Sign Up Link */}
-            <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-              <Text style={styles.signUpText}>
-                No account yet?{' '}
-                <Text style={styles.signUpLink}>Sign Up</Text>
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
-    </View>
+            <button
+              type="button"
+              style={styles.signUpBtn}
+              onClick={() => navigate('/signup')}>
+              <span style={styles.signUpText}>
+                No account yet? <span style={styles.signUpLink}>Sign Up</span>
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
-const iconStyles = StyleSheet.create({
-  heartContainer: {
-    width: 60,
-    height: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  heartBody: {
-    width: 40,
-    height: 36,
-    position: 'relative',
-  },
-  heartLeft: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#E87C5D',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-  },
-  heartRight: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#E87C5D',
-    position: 'absolute',
-    top: 0,
-    right: 0,
-  },
-  heartBottom: {
-    width: 28,
-    height: 28,
-    backgroundColor: '#E87C5D',
-    transform: [{rotate: '45deg'}],
-    position: 'absolute',
-    bottom: -2,
-    left: 6,
-  },
-  pulseLineContainer: {
-    position: 'absolute',
-    flexDirection: 'row',
-    alignItems: 'center',
-    bottom: 14,
-  },
-  pulseLine: {
-    width: 8,
-    height: 2,
-    backgroundColor: '#FFFFFF',
-  },
-  pulseUp: {
-    width: 4,
-    height: 10,
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-    backgroundColor: 'transparent',
-    marginLeft: 1,
-    borderRadius: 1,
-    marginBottom: 6,
-  },
-  pulseDown: {
-    width: 4,
-    height: 14,
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-    backgroundColor: 'transparent',
-    marginLeft: 1,
-    borderRadius: 1,
-    marginTop: 4,
-  },
-  pulseEnd: {
-    width: 8,
-    height: 2,
-    backgroundColor: '#FFFFFF',
-    marginLeft: 1,
-  },
-  eyeContainer: {
-    width: 16,
-    height: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  eyeOuter: {
-    width: 14,
-    height: 10,
-    borderWidth: 1.5,
-    borderRadius: 7,
-  },
-  eyeInner: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    position: 'absolute',
-  },
-});
-
-const styles = StyleSheet.create({
+const styles: Record<string, React.CSSProperties> = {
   container: {
-    flex: 1,
+    minHeight: '100vh',
     backgroundColor: '#C5C6CC',
   },
   scrollContent: {
-    flexGrow: 1,
+    minHeight: '100vh',
+    display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 40,
+    padding: '40px 0',
   },
   centerWrapper: {
     width: '100%',
     maxWidth: 400,
-    paddingHorizontal: 24,
+    padding: '0 24px',
+    boxSizing: 'border-box',
   },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    paddingHorizontal: 32,
-    paddingVertical: 40,
+    padding: '40px 32px',
+    display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
     gap: 24,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
   },
   logoSection: {
+    display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
     gap: 8,
   },
   logoIcon: {
     width: 60,
     height: 60,
+    display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
   },
   logoHeart: {
     fontSize: 40,
@@ -293,85 +163,104 @@ const styles = StyleSheet.create({
     position: 'absolute',
     color: '#FFFFFF',
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: 700,
   },
   logoText: {
-    fontFamily: 'Inter',
-    fontWeight: '700',
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 700,
     fontSize: 20,
     color: '#1F2024',
     letterSpacing: 0.5,
   },
   welcomeTitle: {
-    fontFamily: 'Inter',
-    fontWeight: '700',
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 700,
     fontSize: 20,
     color: '#1F2024',
+    margin: 0,
   },
   form: {
     width: '100%',
+    display: 'flex',
+    flexDirection: 'column',
     gap: 16,
   },
   fieldContainer: {
+    display: 'flex',
+    flexDirection: 'column',
     gap: 6,
   },
   fieldLabel: {
-    fontFamily: 'Inter',
-    fontWeight: '600',
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
     fontSize: 12,
     color: '#2E3036',
   },
   field: {
     height: 48,
-    borderWidth: 1,
-    borderColor: '#C5C6CC',
+    border: '1px solid #C5C6CC',
     borderRadius: 12,
-    paddingHorizontal: 16,
+    padding: '0 16px',
+    display: 'flex',
     flexDirection: 'row',
     alignItems: 'center',
+    boxSizing: 'border-box',
   },
   input: {
     flex: 1,
-    fontFamily: 'Inter',
-    fontWeight: '400',
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 400,
     fontSize: 14,
     color: '#1F2024',
+    border: 'none',
+    outline: 'none',
     padding: 0,
     height: '100%',
-  },
-  passwordInput: {
-    paddingRight: 8,
+    backgroundColor: 'transparent',
+    width: '100%',
   },
   eyeIconContainer: {
     width: 24,
     height: 24,
+    display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: 0,
   },
   passwordHint: {
-    fontFamily: 'Inter',
-    fontWeight: '400',
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 400,
     fontSize: 10,
     color: '#8F9098',
   },
   optionsRow: {
+    display: 'flex',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   rememberRow: {
+    display: 'flex',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: 0,
   },
   checkbox: {
     width: 18,
     height: 18,
     borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#C5C6CC',
+    border: '1px solid #C5C6CC',
+    display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
+    boxSizing: 'border-box',
   },
   checkboxChecked: {
     backgroundColor: '#006FFD',
@@ -380,17 +269,23 @@ const styles = StyleSheet.create({
   checkmark: {
     color: '#FFFFFF',
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: 700,
   },
   rememberText: {
-    fontFamily: 'Inter',
-    fontWeight: '400',
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 400,
     fontSize: 12,
     color: '#71727A',
   },
+  forgotBtn: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: 0,
+  },
   forgotText: {
-    fontFamily: 'Inter',
-    fontWeight: '600',
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
     fontSize: 12,
     color: '#006FFD',
   },
@@ -399,24 +294,33 @@ const styles = StyleSheet.create({
     height: 48,
     backgroundColor: '#006FFD',
     borderRadius: 12,
+    display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
+    border: 'none',
+    cursor: 'pointer',
   },
   loginButtonText: {
-    fontFamily: 'Inter',
-    fontWeight: '600',
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
     fontSize: 14,
     color: '#FFFFFF',
   },
+  signUpBtn: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: 0,
+  },
   signUpText: {
-    fontFamily: 'Inter',
-    fontWeight: '400',
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 400,
     fontSize: 12,
     color: '#71727A',
-    textDecorationLine: 'underline',
+    textDecoration: 'underline',
   },
   signUpLink: {
-    fontWeight: '600',
+    fontWeight: 600,
     color: '#006FFD',
   },
-});
+};

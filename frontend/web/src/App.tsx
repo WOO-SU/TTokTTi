@@ -1,31 +1,22 @@
 import React from 'react';
-import {NavigationContainer} from '@react-navigation/native';
-import {createNativeStackNavigator} from '@react-navigation/native-stack';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LoginScreen from './screens/LoginScreen';
 import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
 import SignUpScreen from './screens/SignUpScreen';
 import SignUpFreeScreen from './screens/SignUpFreeScreen';
-
-export type RootStackParamList = {
-  Login: undefined;
-  ForgotPassword: undefined;
-  SignUp: undefined;
-  SignUpFree: undefined;
-};
-
-const Stack = createNativeStackNavigator<RootStackParamList>();
+import HomeScreen from './screens/HomeScreen';
 
 export default function App() {
   return (
-    <NavigationContainer>
-      <Stack.Navigator
-        initialRouteName="Login"
-        screenOptions={{headerShown: false}}>
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-        <Stack.Screen name="SignUp" component={SignUpScreen} />
-        <Stack.Screen name="SignUpFree" component={SignUpFreeScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<LoginScreen />} />
+        <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
+        <Route path="/signup" element={<SignUpScreen />} />
+        <Route path="/signup-free" element={<SignUpFreeScreen />} />
+        <Route path="/home" element={<HomeScreen />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
