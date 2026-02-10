@@ -1,26 +1,49 @@
-# vision/main.py
+# vision_fullcam/main.py
 import time
 import cv2
 
 from vision_fullcam.config import Config
 from vision_fullcam.stream.reader import FrameReader
-from vision_fullcam.detection.yolo_detector import YoloDetector, Detection
+
+# detector
+from vision_fullcam.detection.yolo_detector import YoloDetector
+from vision_fullcam.detection.fake_detector import FakeDetector
+
+# tracking / state
 from vision_fullcam.tracking.simple_tracker import SimpleTracker, Tracked
 from vision_fullcam.state.state_buffer import StateBuffer
+from vision_fullcam.state.task_state import TaskState
+from vision_fullcam.state.ppe_observer import PPEObserver
+
+# rules
 from vision_fullcam.rules.base import RuleContext
-from vision_fullcam.rules.ppe_rules import HelmetNotWornRule, SafetyVestNotWornRule, SafetyShoesNotWornRule
+from vision_fullcam.rules.ppe_rules import (
+    HelmetNotWornRule,
+    SafetyVestNotWornRule,
+    SafetyShoesNotWornRule,
+)
 from vision_fullcam.rules.worker_count import InsufficientWorkerCountRule
-from vision_fullcam.rules.ladder_rules import LadderTiltRule, LadderMovementWithPersonRule
+from vision_fullcam.rules.ladder_rules import (
+    LadderTiltRule,
+    LadderMovementWithPersonRule,
+)
 from vision_fullcam.rules.height_rule import HeightLadderViolationRule
-from vision_fullcam.rules.ladder_rules import OuttriggerNotDeployedRule
-from vision_fullcam.rules.posture_rules import ExcessiveBodyTiltRule, TopStepUsageRule
+from vision_fullcam.rules.outtrigger_not_deployed import OuttriggerNotDeployedRule
+from vision_fullcam.rules.posture_rules import (
+    ExcessiveBodyTiltRule,
+    TopStepUsageRule,
+)
+
+# events
 from vision_fullcam.events.clip_buffer import ClipBuffer
 from vision_fullcam.events.emitter import EventEmitter
 
-def main():
-    cfg = Config()
 
-    # (중요) cls_map은 너희 커스텀 YOLO 클래스 순서에 맞춰 수정
+def build_detector(cfg: Config):
+    """운영/테스트 스위치"""
+    if getattr(cfg, "use_fake_detector", True):
+        return FakeDetector(fps=cfg.fps_monitor)
+
     cls_map = {
         0: "person",
         1: "ladder",
@@ -29,93 +52,203 @@ def main():
         4: "safety_shoes",
         5: "outtrigger",
     }
+    return YoloDetector(getattr(cfg, "yolo_model_path", "yolov8n.pt"), cls_map=cls_map)
 
-    reader = FrameReader(0)
-    detector = YoloDetector("yolov8n.pt", cls_map=cls_map)
-    tracker = SimpleTracker(iou_thr=0.3)
+
+def _handle_keys(detector, task: TaskState, key: int):
+    """
+    FakeDetector 테스트 모드 키 입력 처리
+    - 창(영상 창) 클릭해서 포커스 준 뒤 키를 눌러야 먹음.
+    """
+    if key in (-1, 255):
+        return
+
+    if key == 27:  # ESC
+        raise KeyboardInterrupt
+
+    # FakeDetector만 모드 전환 지원
+    if not isinstance(detector, FakeDetector):
+        return
+
+    # 0~8: 모드 전환
+    mapping = {
+        ord("0"): ("normal",             "normal"),
+        ord("1"): ("no_helmet",          "no_helmet (2s -> helmet_not_worn)"),
+        ord("2"): ("no_vest",            "no_vest   (2s -> safety_vest_not_worn)"),
+        ord("3"): ("no_shoes",           "no_shoes  (2s -> safety_shoes_not_worn)"),
+        ord("4"): ("one_person",         "one_person(5s -> insufficient_worker_count)"),
+        ord("5"): ("ladder_move",        "ladder_move(-> ladder_movement_with_person)"),
+        ord("6"): ("tilted_ladder",      "tilted_ladder(1s -> ladder_tilt)"),
+        ord("7"): ("outtrigger_missing", "outtrigger_missing(2.5s -> outtrigger_not_deployed, task required=True)"),
+        ord("8"): ("outtrigger_deployed","outtrigger_deployed(정상 상태)"),
+    }
+
+    if key in mapping:
+        mode, desc = mapping[key]
+        detector.set_mode(mode)
+        print(f"[MODE] {desc}")
+        return
+
+    # (옵션) outtrigger_required 토글: t 키
+    if key == ord("t"):
+        task.outtrigger_required = not bool(getattr(task, "outtrigger_required", False))
+        print(f"[TASK] outtrigger_required={task.outtrigger_required}")
+        return
+
+    # (옵션) expected_height 토글: h 키 (height 룰 테스트용)
+    if key == ord("h"):
+        # 낮음(2.0) <-> 높음(4.0) 토글
+        cur = float(getattr(task, "expected_height_m", 0.0) or 0.0)
+        task.expected_height_m = 4.0 if cur < 3.5 else 2.0
+        print(f"[TASK] expected_height_m={task.expected_height_m}")
+        return
+
+
+def main():
+    cfg = Config()
+
+    # ========================
+    # 입력 / 추론 파이프라인
+    # ========================
+    reader = FrameReader(getattr(cfg, "camera_index", 0))
+    detector = build_detector(cfg)
+    tracker = SimpleTracker(iou_thr=getattr(cfg, "tracker_iou_thr", 0.3))
+
     state = StateBuffer()
+    ppe_observer = PPEObserver()
 
-    # 이벤트 버퍼/에미터
-    clip_buf = ClipBuffer(fps=cfg.fps_monitor, keep_sec=cfg.clip_pre_sec + cfg.clip_post_sec)
-    emitter = EventEmitter(out_dir="runs", clip_buffer=clip_buf)
+    # ========================
+    # 작업(Task) 상태 (앱 입력)
+    # ========================
+    task = TaskState(
+        work_mode=getattr(cfg, "work_mode", "ladder"),
+        expected_height_m=float(getattr(cfg, "expected_height_m", 2.0) or 0.0),
+        outtrigger_required=bool(getattr(cfg, "outtrigger_required", False)),
+    )
+    task.start()
 
-    # 룰 등록 (원하는 순서)
+    # ========================
+    # 이벤트 시스템
+    # ========================
+    clip_buffer = ClipBuffer(
+        fps=cfg.fps_monitor,
+        keep_sec=cfg.clip_pre_sec + cfg.clip_post_sec,
+    )
+    emitter = EventEmitter(
+        out_dir=getattr(cfg, "output_dir", "runs"),
+        clip_buffer=clip_buffer,
+    )
+
+    # ========================
+    # 룰 등록 (공용)
+    # ========================
     rules = [
-        LadderTiltRule(cfg),
-        LadderMovementWithPersonRule(cfg),
-        InsufficientWorkerCountRule(cfg),
+        # ladder / height
         HeightLadderViolationRule(cfg),
+        LadderMovementWithPersonRule(cfg),
+        LadderTiltRule(cfg),
         OuttriggerNotDeployedRule(cfg),
 
+        # PPE
         HelmetNotWornRule(cfg),
         SafetyVestNotWornRule(cfg),
         SafetyShoesNotWornRule(cfg),
 
-        ExcessiveBodyTiltRule(cfg),   # pose 붙이면 활성
-        TopStepUsageRule(cfg),        # pose 붙이면 활성
+        # people
+        InsufficientWorkerCountRule(cfg),
+
+        # posture (pose 붙이면 활성)
+        ExcessiveBodyTiltRule(cfg),
+        TopStepUsageRule(cfg),
     ]
 
-    # 작업 메타(앱에서 입력 받는 값들)
-    meta = {
-        "expected_height_m": 4.0,          # MVP 입력값
-        "outtrigger_required": False,      # 작업 타입에 따라 True
-    }
+    if isinstance(detector, FakeDetector):
+        print("=== FakeDetector Test Keys ===")
+        print("0: normal")
+        print("1: no_helmet (2s -> helmet_not_worn)")
+        print("2: no_vest   (2s -> safety_vest_not_worn)")
+        print("3: no_shoes  (2s -> safety_shoes_not_worn)")
+        print("4: one_person(5s -> insufficient_worker_count)")
+        print("5: ladder_move (-> ladder_movement_with_person)")
+        print("6: tilted_ladder (1s -> ladder_tilt)")
+        print("7: outtrigger_missing (2.5s -> outtrigger_not_deployed, task required=True)")
+        print("8: outtrigger_deployed (정상 상태)")
+        print("t: toggle outtrigger_required")
+        print("h: toggle expected_height_m (2.0 <-> 4.0)")
+        print("ESC: quit")
 
-    # 추론 루프 속도 맞추기
+    # ========================
+    # 메인 루프
+    # ========================
     dt_target = 1.0 / max(1, cfg.fps_monitor)
 
-    while True:
-        t0 = time.time()
-        frame = reader.read()
-        if frame is None:
-            break
+    try:
+        while True:
+            t0 = time.time()
+            frame = reader.read()
+            if frame is None:
+                break
 
-        # 링버퍼 push
-        clip_buf.push(frame)
+            clip_buffer.push(frame)
 
-        # detection
-        dets = detector.detect(frame)
+            # 1) detection
+            detections = detector.detect(frame)
 
-        # tracker input 만들기
-        tracked_input = [Tracked(track_id=-1, label=d.label, bbox=d.bbox, score=d.score) for d in dets]
-        tracked = tracker.update(tracked_input)
+            # 2) tracking
+            tracked_input = [
+                Tracked(track_id=-1, label=d.label, bbox=d.bbox, score=d.score)
+                for d in detections
+            ]
+            tracked = tracker.update(tracked_input)
 
-        now = time.time()
-        state.update(tracked, now)
+            # 3) state update
+            now = time.time()
+            state.update(tracked,frame, now)
 
-        # ★ PPE 히스토리 업데이트 (MVP용 매우 단순 버전)
-        # 실제는 "사람 bbox 안에 헬멧/조끼/신발이 있는가"로 person별로 매칭해야 함.
-        any_helmet = any(t.label == "helmet" for t in tracked.values())
-        any_vest = any(t.label == "safety_vest" for t in tracked.values())
-        any_shoes = any(t.label == "safety_shoes" for t in tracked.values())
-        for p in state.persons.values():
-            p.helmet_hist.append(any_helmet)
-            p.vest_hist.append(any_vest)
-            p.shoes_hist.append(any_shoes)
+            # 4) PPE / ladder observer (state 채움)
+            ppe_observer.update(
+                persons=state.persons,
+                tracked=tracked,
+                frame_shape=frame.shape[:2],
+            )
 
-        ctx = RuleContext(timestamp=now, frame=frame, state=state, meta=meta)
+            # 5) rule context
+            ctx = RuleContext(timestamp=now, frame=frame, state=state, task=task)
 
-        all_events = []
-        for rule in rules:
-            all_events.extend(rule.evaluate(ctx))
+            # 6) rule evaluation
+            events = []
+            for rule in rules:
+                events.extend(rule.evaluate(ctx))
 
-        if all_events:
-            emitter.emit(all_events, frame)
-            # 현장 경고는 여기서(진동/사운드/배너) 연결하면 됨
-            for e in all_events:
-                print(f"[EVENT] {e.label} severity={e.severity} target={e.target_id} info={e.info}")
+            # 7) emit
+            if events:
+                emitter.emit(events, frame)
+                for e in events:
+                    print(
+                        f"[EVENT] {e.label} "
+                        f"sev={e.severity} "
+                        f"target={e.target_id} "
+                        f"info={e.info}"
+                    )
 
-        cv2.imshow("monitor", frame)
-        if cv2.waitKey(1) == 27:
-            break
+            # 8) monitor + key handling (키는 여기서 딱 1번만 읽음)
+            if getattr(cfg, "show_window", True):
+                cv2.imshow("vision_fullcam", frame)
 
-        # fps 유지
-        dt = time.time() - t0
-        if dt < dt_target:
-            time.sleep(dt_target - dt)
+            key = cv2.waitKey(1) & 0xFF
+            _handle_keys(detector, task, key)
 
-    reader.release()
-    cv2.destroyAllWindows()
+            # fps sync
+            dt = time.time() - t0
+            if dt < dt_target:
+                time.sleep(dt_target - dt)
+
+    except KeyboardInterrupt:
+        pass
+    finally:
+        reader.release()
+        cv2.destroyAllWindows()
+
 
 if __name__ == "__main__":
     main()

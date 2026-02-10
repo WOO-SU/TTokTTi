@@ -1,8 +1,3 @@
-# vision/rules/ladder_rules.py 에 붙이거나 별도 파일로 분리해도 됨
-# 여기서는 별도 파일로.
-# vision/rules/height_rule.py 와 동일한 방식.
-
-# vision/rules/ladder_rules_outtrigger.py
 from typing import List
 from vision_fullcam.rules.base import Rule, RuleContext, Event, Debounce
 from vision_fullcam.config import Config

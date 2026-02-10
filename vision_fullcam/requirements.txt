@@ -1,0 +1,17 @@
+# core
+ultralytics==8.0.0
+opencv-python==4.8.0
+numpy==1.23
+
+# torch
+torch==1.13
+torchvision==0.14
+
+# pose (optional, phase 2)
+tensorflow==2.9
+tensorflow-hub==0.12
+
+# utils
+tqdm
+loguru
+Pillow

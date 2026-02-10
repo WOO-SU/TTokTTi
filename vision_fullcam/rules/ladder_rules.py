@@ -1,17 +1,20 @@
-# vision/rules/ladder_rules.py
-from typing import List, Optional
+from typing import List
 import math
 from vision_fullcam.rules.base import Rule, RuleContext, Event, Debounce
 from vision_fullcam.config import Config
 import numpy as np
 
+# -----------------------
+# utils
+# -----------------------
 def bbox_center(b):
-    x1,y1,x2,y2 = b
-    return ((x1+x2)/2.0, (y1+y2)/2.0)
+    x1, y1, x2, y2 = b
+    return ((x1 + x2) / 2.0, (y1 + y2) / 2.0)
 
 def bbox_move_px(b1, b2) -> float:
-    c1 = bbox_center(b1); c2 = bbox_center(b2)
-    return math.hypot(c2[0]-c1[0], c2[1]-c1[1])
+    c1 = bbox_center(b1)
+    c2 = bbox_center(b2)
+    return math.hypot(c2[0] - c1[0], c2[1] - c1[1])
 
 def ladder_tilt_deg(bbox):
     x1, y1, x2, y2 = bbox
@@ -20,8 +23,13 @@ def ladder_tilt_deg(bbox):
     return abs(math.degrees(math.atan2(w, h)))
 
 
+
+# -----------------------
+# Ladder Tilt Rule
+# -----------------------
 class LadderTiltRule(Rule):
     name = "ladder_tilt"
+
     def __init__(self, cfg: Config):
         self.cfg = cfg
         self.db = Debounce(cfg.ladder_tilt_sec, cfg.cooldown_sec)
@@ -33,7 +41,7 @@ class LadderTiltRule(Rule):
         now = ctx.timestamp
         events = []
         for l in ctx.state.ladders.values(): # state_buffer -> LadderState 객체
-            if l.axis_line is None:
+            if l.bbox is None:
                 continue
 
             angle = ladder_tilt_deg(l.bbox)
@@ -62,24 +70,49 @@ class LadderTiltRule(Rule):
 
         return events
 
+
+# -----------------------
+# Ladder Movement With Person Rule
+# -----------------------
 class LadderMovementWithPersonRule(Rule):
     name = "ladder_movement_with_person"
+
     def __init__(self, cfg: Config):
         self.cfg = cfg
         self.db = Debounce(cfg.ladder_move_sec, cfg.cooldown_sec)
 
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp
-        events = []
-        # MVP: "사람이 사다리 위" 판정은 2차에서 포즈/ROI로 강화
-        # 1차: 사다리 존재 + 사람 존재 상태에서 사다리가 움직이면 일단 기록
+        events: List[Event] = []
+
+        # ✅ 핵심: "사람이 사다리 위에 있는가?"
+        on_ladder_any = any(
+            (len(p.on_ladder_hist) > 0 and p.on_ladder_hist[-1])
+            for p in ctx.state.persons.values()
+        )
+
+        if not on_ladder_any:
+            return []
+
         for l in ctx.state.ladders.values():
             if len(l.bbox_hist) < 2:
                 continue
+
             b1 = l.bbox_hist[-2]
             b2 = l.bbox_hist[-1]
             move_px = bbox_move_px(b1, b2)
-            cond = (ctx.state.person_count > 0) and (move_px > self.cfg.ladder_move_px)
+
+            cond = move_px > self.cfg.ladder_move_px
+
             if self.db.check(now, cond):
-                events.append(Event(self.name, "high", l.id, now, {"move_px": move_px}))
+                events.append(
+                    Event(
+                        self.name,
+                        "high",
+                        l.id,
+                        now,
+                        {"move_px": move_px},
+                    )
+                )
+
         return events

@@ -23,7 +23,7 @@ class Rule:
     name: str
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         raise NotImplementedError
-
+        
 class Debounce: # 함수 추가 구현 필요함
     """
     condition이 duration만큼 참이면 fire.
