@@ -18,6 +18,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+COPY DigiCertGlobalRootG2.crt.pem /app/cert.pem
+
 COPY entrypoint.sh /usr/local/bin/
 RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh \
     && chmod +x /usr/local/bin/entrypoint.sh
