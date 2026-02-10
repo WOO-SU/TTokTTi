@@ -1,9 +1,9 @@
 # vision/state/state_buffer.py
 import time
 from typing import Dict, Optional
-from vision.state.person_state import PersonState
-from vision.state.ladder_state import LadderState
-from vision.detection.classes import DetLabel
+from vision_fullcam.state.person_state import PersonState
+from vision_fullcam.state.ladder_state import LadderState
+from vision_fullcam.detection.classes import DetLabel
 
 class StateBuffer:
     def __init__(self):
