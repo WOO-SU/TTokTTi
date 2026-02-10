@@ -14,11 +14,17 @@ class PersonState:
         self.shoes_hist = deque(maxlen=120)
         self.height_px_hist = deque(maxlen=10)
 
-        # 포즈(선택)
-        self.pose_hist = deque(maxlen=60)  # dict of keypoints: by movenet
+        # 발이 프레임 안 조건
+        self.feet_visible_hist=deque(maxlen=120)
+
+        # 사다리 탑승 여부
+        self.on_ladder_hist=deque(maxlen=120)
 
         # 현재 bbox
         self.bbox = None
+
+        # 포즈(선택)
+        self.pose_hist = deque(maxlen=60)  # dict of keypoints: by movenet
         self.keypoints = None
     
     @property

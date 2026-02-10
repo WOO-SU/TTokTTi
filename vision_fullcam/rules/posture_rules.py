@@ -1,4 +1,3 @@
-# vision/rules/posture_rules.py
 from typing import List, Tuple
 from vision_fullcam.rules.base import Rule, RuleContext, Event, Debounce
 from vision_fullcam.config import Config

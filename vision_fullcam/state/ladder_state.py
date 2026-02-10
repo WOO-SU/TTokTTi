@@ -1,4 +1,3 @@
-# vision/state/ladder_state.py
 from collections import deque
 import time
 import numpy as np
