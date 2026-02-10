@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 // ── Data ──
 
@@ -115,6 +116,7 @@ function TaskCardComponent({ card }: { card: TaskCard }) {
 
 export default function HomeScreen() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('Tasks');
   const [activeSidebar, setActiveSidebar] = useState('Home');
 
@@ -182,6 +184,11 @@ export default function HomeScreen() {
         {/* Header */}
         <div style={styles.header}>
           <h1 style={styles.headerTitle}>Home</h1>
+          {user && (
+            <span style={styles.headerUser}>
+              {user.userName} 님, 환영합니다
+            </span>
+          )}
         </div>
 
         {/* Tabs Row */}
@@ -435,6 +442,13 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 28,
     color: '#1F2024',
     margin: 0,
+  },
+  headerUser: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 500,
+    fontSize: 14,
+    color: '#71727A',
+    marginTop: 4,
   },
 
   // Tabs

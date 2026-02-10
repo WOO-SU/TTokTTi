@@ -1,29 +1,33 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginScreen from './screens/LoginScreen';
 import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
 import SignUpScreen from './screens/SignUpScreen';
 import SignUpFreeScreen from './screens/SignUpFreeScreen';
 import HomeScreen from './screens/HomeScreen';
-// Import the new screen
 import SafetyRegulationScreen from './screens/SafetyRegulationScreen';
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
 
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<LoginScreen />} />
-        <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
-        <Route path="/signup" element={<SignUpScreen />} />
-        <Route path="/signup-free" element={<SignUpFreeScreen />} />
-        <Route path="/home" element={<HomeScreen />} />
-        
-        {/* Added connection to the Safety Regulation Screen */}
-        <Route path="/safety" element={<SafetyRegulationScreen />} />
-        
-        {/* Default redirect to login for any unknown paths */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<LoginScreen />} />
+          <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
+          <Route path="/signup" element={<SignUpScreen />} />
+          <Route path="/signup-free" element={<SignUpFreeScreen />} />
+          <Route path="/home" element={<ProtectedRoute><HomeScreen /></ProtectedRoute>} />
+          <Route path="/safety" element={<ProtectedRoute><SafetyRegulationScreen /></ProtectedRoute>} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

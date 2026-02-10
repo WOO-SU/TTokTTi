@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 function EyeIcon({ color }: { color: string }) {
   return (
@@ -12,10 +13,30 @@ function EyeIcon({ color }: { color: string }) {
 
 export default function LoginScreen() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const auth = useAuth();
+  const [userName, setUserName] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (!userName || !password) {
+      setError('아이디와 비밀번호를 입력해주세요.');
+      return;
+    }
+    setError('');
+    setLoading(true);
+    try {
+      await auth.login(userName, password);
+      navigate('/home');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : '로그인에 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div style={styles.container}>
@@ -38,14 +59,14 @@ export default function LoginScreen() {
             <div style={styles.form}>
               {/* Email */}
               <div style={styles.fieldContainer}>
-                <label style={styles.fieldLabel}>Email Address</label>
+                <label style={styles.fieldLabel}>Username</label>
                 <div style={styles.field}>
                   <input
                     style={styles.input}
-                    type="email"
-                    placeholder="Placeholder"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
+                    type="text"
+                    placeholder="아이디를 입력하세요"
+                    value={userName}
+                    onChange={e => setUserName(e.target.value)}
                   />
                 </div>
               </div>
@@ -93,9 +114,18 @@ export default function LoginScreen() {
               </div>
             </div>
 
+            {/* Error Message */}
+            {error && (
+              <span style={styles.errorText}>{error}</span>
+            )}
+
             {/* Login Button */}
-            <button type="button" style={styles.loginButton} onClick={() => navigate('/home')}>
-              <span style={styles.loginButtonText}>Log In</span>
+            <button
+              type="button"
+              style={{ ...styles.loginButton, opacity: loading ? 0.6 : 1 }}
+              onClick={handleLogin}
+              disabled={loading}>
+              <span style={styles.loginButtonText}>{loading ? '로그인 중...' : 'Log In'}</span>
             </button>
 
             {/* Sign Up Link */}
@@ -322,5 +352,12 @@ const styles: Record<string, React.CSSProperties> = {
   signUpLink: {
     fontWeight: 600,
     color: '#006FFD',
+  },
+  errorText: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 500,
+    fontSize: 13,
+    color: '#D32F2F',
+    textAlign: 'center' as const,
   },
 };

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 // ── Types ──
 
@@ -162,8 +163,8 @@ const workerGroups: WorkerGroup[] = [
     id: 1,
     name: '사다리 작업 1조',
     members: [
-      { name: '김현수', color: '#006FFD' },
-      { name: '박지영', color: '#E87C5D' },
+      { name: '똑띠', color: '#006FFD' },
+      { name: 'TTokTTi', color: '#E87C5D' },
     ],
     regulationIds: [1, 2],
   },
@@ -171,8 +172,8 @@ const workerGroups: WorkerGroup[] = [
     id: 2,
     name: '사다리 작업 2조',
     members: [
-      { name: '이승민', color: '#22A06B' },
-      { name: '최다은', color: '#8F9098' },
+      { name: '우수연', color: '#22A06B' },
+      { name: '원인영', color: '#8F9098' },
     ],
     regulationIds: [3, 4],
   },
@@ -180,8 +181,8 @@ const workerGroups: WorkerGroup[] = [
     id: 3,
     name: '사다리 작업 3조',
     members: [
-      { name: '정우진', color: '#7B61FF' },
-      { name: '한서연', color: '#E85DBF' },
+      { name: '이민호', color: '#7B61FF' },
+      { name: '송영민', color: '#E85DBF' },
     ],
     regulationIds: [5, 6],
   },
@@ -189,8 +190,8 @@ const workerGroups: WorkerGroup[] = [
     id: 4,
     name: '사다리 작업 4조',
     members: [
-      { name: '강민호', color: '#FF8A00' },
-      { name: '윤지수', color: '#00B8D9' },
+      { name: '이재성', color: '#FF8A00' },
+      { name: '임정원', color: '#00B8D9' },
     ],
     regulationIds: [7],
   },
@@ -235,9 +236,24 @@ const statusIcons: Record<string, { emoji: string; bg: string }> = {
 
 export default function SafetyRegulationScreen() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('Tasks');
   const [expandedGroupId, setExpandedGroupId] = useState<number | null>(1);
   const [expandedRegId, setExpandedRegId] = useState<number | null>(null);
+
+  // Replace 송영민 in 3조 with the logged-in user's name
+  const groups = useMemo(() => {
+    if (!user) return workerGroups;
+    return workerGroups.map(g => {
+      if (g.id !== 3) return g;
+      return {
+        ...g,
+        members: g.members.map((m, i) =>
+          i === 1 ? { ...m, name: user.userName } : m
+        ),
+      };
+    });
+  }, [user]);
   const [checkStates, setCheckStates] = useState<Record<number, boolean[]>>(() => {
     const init: Record<number, boolean[]> = {};
     regulations.forEach(r => {
@@ -372,7 +388,7 @@ export default function SafetyRegulationScreen() {
 
         {/* Worker Group Cards */}
         <div style={styles.cardList}>
-          {workerGroups.map(group => {
+          {groups.map(group => {
             const isGroupExpanded = expandedGroupId === group.id;
             const [groupDone, groupTotal] = getGroupProgress(group);
             const groupPct = groupTotal > 0 ? (groupDone / groupTotal) * 100 : 0;
