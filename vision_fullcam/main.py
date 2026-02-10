@@ -2,20 +2,20 @@
 import time
 import cv2
 
-from vision.config import Config
-from vision.stream.reader import FrameReader
-from vision.detection.yolo_detector import YoloDetector, Detection
-from vision.tracking.simple_tracker import SimpleTracker, Tracked
-from vision.state.state_buffer import StateBuffer
-from vision.rules.base import RuleContext
-from vision.rules.ppe_rules import HelmetNotWornRule, SafetyVestNotWornRule, SafetyShoesNotWornRule
-from vision.rules.worker_count import InsufficientWorkerCountRule
-from vision.rules.ladder_rules import LadderTiltRule, LadderMovementWithPersonRule
-from vision.rules.height_rule import HeightLadderViolationRule
-from vision.rules.ladder_rules_outtrigger import OuttriggerNotDeployedRule
-from vision.rules.posture_rules import ExcessiveBodyTiltRule, TopStepUsageRule
-from vision.events.clip_buffer import ClipBuffer
-from vision.events.emitter import EventEmitter
+from vision_fullcam.config import Config
+from vision_fullcam.stream.reader import FrameReader
+from vision_fullcam.detection.yolo_detector import YoloDetector, Detection
+from vision_fullcam.tracking.simple_tracker import SimpleTracker, Tracked
+from vision_fullcam.state.state_buffer import StateBuffer
+from vision_fullcam.rules.base import RuleContext
+from vision_fullcam.rules.ppe_rules import HelmetNotWornRule, SafetyVestNotWornRule, SafetyShoesNotWornRule
+from vision_fullcam.rules.worker_count import InsufficientWorkerCountRule
+from vision_fullcam.rules.ladder_rules import LadderTiltRule, LadderMovementWithPersonRule
+from vision_fullcam.rules.height_rule import HeightLadderViolationRule
+from vision_fullcam.rules.ladder_rules import OuttriggerNotDeployedRule
+from vision_fullcam.rules.posture_rules import ExcessiveBodyTiltRule, TopStepUsageRule
+from vision_fullcam.events.clip_buffer import ClipBuffer
+from vision_fullcam.events.emitter import EventEmitter
 
 def main():
     cfg = Config()

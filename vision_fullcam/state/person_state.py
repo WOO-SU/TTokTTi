@@ -1,6 +1,7 @@
 # vision/state/person_state.py
 from collections import deque
 import time
+import numpy as np
 
 class PersonState:
     def __init__(self, track_id: int):
@@ -14,7 +15,7 @@ class PersonState:
         self.height_px_hist = deque(maxlen=10)
 
         # 포즈(선택)
-        self.pose_hist = deque(maxlen=60)  # dict of keypoints
+        self.pose_hist = deque(maxlen=60)  # dict of keypoints: by movenet
 
         # 현재 bbox
         self.bbox = None
