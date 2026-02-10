@@ -127,6 +127,13 @@ export default function RiskAssessmentScreen({ navigation }: Props) {
         {/* Bottom divider */}
         <View style={styles.divider} />
       </View>
+
+      {/* 요청보내기 Button */}
+      <View style={[styles.submitSection, { paddingBottom: insets.bottom + 16 }]}>
+        <TouchableOpacity style={styles.submitButton} activeOpacity={0.8}>
+          <Text style={styles.submitText}>요청보내기</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -294,5 +301,27 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: '#D3D5DD',
+  },
+
+  /* Submit Button */
+  submitSection: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  submitButton: {
+    width: 153,
+    height: 38,
+    borderRadius: 15,
+    backgroundColor: '#006FFD',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  submitText: {
+    fontFamily: 'Inter',
+    fontWeight: '600',
+    fontSize: 14,
+    color: '#FFFFFF',
   },
 });
