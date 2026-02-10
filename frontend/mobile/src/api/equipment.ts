@@ -1,58 +1,90 @@
 import client from './client';
 
-// TODO: 백엔드 API 완성 후 실제 엔드포인트로 교체
+// 백엔드 실제 엔드포인트
 const ENDPOINTS = {
-  SAS_TOKEN: '/equipment/sas-token/',
-  ANALYZE: '/equipment/analyze/',
-  RESULT: '/equipment/result/',
+  SAS_UPLOAD: '/user/storage/sas/upload/',
+  CHECK_START: '/check/start/',
+  CHECK_UPDATE: '/check/update/',
 };
 
-export type AnalysisStatus = 'pending' | 'completed' | 'failed';
-
-export type AnalysisResult = {
-  status: AnalysisStatus;
-  passed?: boolean;
-  message?: string;
+// 프론트 장비명 → 백엔드 target 매핑
+const TARGET_MAP: Record<string, string> = {
+  안전모: 'helmet',
+  조끼: 'safety_vest',
+  안전화: 'safety_shoes',
+  장갑: 'glove',
 };
 
-/** 1단계: Blob 업로드용 SAS 토큰 발급 */
-export async function getSasToken(): Promise<{sasUrl: string; blobPath: string}> {
-  const res = await client.get(ENDPOINTS.SAS_TOKEN);
-  return res.data;
+export type ComplianceData = {
+  id: number;
+  is_updated: boolean;
+  is_complied: boolean | null;
+  target: string;
+  original_image: string | null;
+  detected_image: string | null;
+};
+
+/** 1단계: Blob 업로드용 SAS URL 발급 */
+export async function getSasToken(contentType?: string) {
+  const res = await client.post(ENDPOINTS.SAS_UPLOAD, {
+    content_type: contentType || 'image/jpeg',
+  });
+  // 응답: { upload_url, blob_name, container, expires_at, ... }
+  return res.data as {
+    upload_url: string;
+    blob_name: string;
+    container: string;
+    expires_at: string;
+  };
 }
 
 /** 1단계: SAS URL로 Blob 스토리지에 이미지 업로드 */
-export async function uploadToBlob(
-  sasUrl: string,
+export function uploadToBlob(
+  uploadUrl: string,
   fileUri: string,
 ): Promise<void> {
-  const response = await fetch(fileUri);
-  const blob = await response.blob();
-
-  await fetch(sasUrl, {
-    method: 'PUT',
-    headers: {
-      'x-ms-blob-type': 'BlockBlob',
-      'Content-Type': 'image/jpeg',
-    },
-    body: blob,
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+      } else {
+        reject(new Error(`Blob upload failed: ${xhr.status}`));
+      }
+    };
+    xhr.onerror = () => reject(new Error('Upload network error'));
+    xhr.open('PUT', uploadUrl);
+    xhr.setRequestHeader('x-ms-blob-type', 'BlockBlob');
+    xhr.setRequestHeader('Content-Type', 'image/jpeg');
+    xhr.send({ uri: fileUri, type: 'image/jpeg', name: 'photo.jpg' } as any);
   });
 }
 
-/** 2단계: 분석 요청 (이미지 경로를 비동기 작업 큐에 전송) */
-export async function requestAnalysis(
-  blobPath: string,
-  equipmentType: string,
-): Promise<{taskId: string}> {
-  const res = await client.post(ENDPOINTS.ANALYZE, {
-    image_path: blobPath,
-    equipment_type: equipmentType,
+/** 2단계: 탐지 요청 (DB에 Compliance 레코드 생성) */
+export async function requestDetection(
+  blobName: string,
+  equipmentTitle: string,
+): Promise<number> {
+  const target = TARGET_MAP[equipmentTitle] || equipmentTitle;
+  const res = await client.post(ENDPOINTS.CHECK_START, {
+    target,
+    original_image: blobName,
   });
-  return res.data;
+  // 응답: { ok: true, compliance_id: 123 }
+  return res.data.compliance_id;
 }
 
-/** 3단계: 분석 결과 조회 (폴링용) */
-export async function fetchResult(taskId: string): Promise<AnalysisResult> {
-  const res = await client.get(`${ENDPOINTS.RESULT}${taskId}/`);
-  return res.data;
+/** 3단계: 결과 조회 (폴링용) */
+export async function fetchCheckUpdate(
+  complianceId: number,
+): Promise<{isUpdated: boolean; isComplied: boolean | null}> {
+  const res = await client.get(ENDPOINTS.CHECK_UPDATE, {
+    params: {compliance_id: complianceId},
+  });
+  // 응답: { ok: true, data: { is_updated, is_complied, ... } }
+  const data: ComplianceData = res.data.data;
+  return {
+    isUpdated: data.is_updated,
+    isComplied: data.is_complied,
+  };
 }
