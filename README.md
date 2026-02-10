@@ -23,6 +23,12 @@ If you ran container detached, view logs with
 docker logs -f riskpulse-backend
 ```
 
+If you modified backend code, then to apply that change, 
+```bash
+docker rmi riskpulse-backend
+```
+then re-build it.
+
 ## Frontend docker build (build from frontend root)
 
 ## todos
