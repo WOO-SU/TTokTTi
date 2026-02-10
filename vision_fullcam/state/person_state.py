@@ -11,9 +11,17 @@ class PersonState:
         self.helmet_hist = deque(maxlen=120)
         self.vest_hist = deque(maxlen=120)
         self.shoes_hist = deque(maxlen=120)
+        self.height_px_hist = deque(maxlen=10)
 
         # 포즈(선택)
         self.pose_hist = deque(maxlen=60)  # dict of keypoints
 
         # 현재 bbox
         self.bbox = None
+        self.keypoints = None
+    
+    @property
+    def height_px(self):
+        if not self.height_px_hist:
+            return None
+        return float(np.median(self.height_px_hist))
