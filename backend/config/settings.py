@@ -127,9 +127,9 @@ DATABASES = {
     'default': {
         'ENGINE' : 'django.db.backends.mysql',
 
-        'NAME': os.getenv('MYSQL_DATABASE', 'riskpulse'),
-        'USER': os.getenv('MYSQL_USER', 'riskpulse'),
-        'PASSWORD': os.getenv('MYSQL_PASSWORD', 'riskpulse'),
+        'NAME': os.getenv('DB_NAME', 'riskpulse'),
+        'USER': os.getenv('DB_USER', 'riskpulse'),
+        'PASSWORD': os.getenv('DB_PASSWORD', 'riskpulse'),
 
         'HOST': os.getenv('DB_HOST', 'db'),
         'PORT': os.getenv('DB_PORT', '3306'),
@@ -137,7 +137,7 @@ DATABASES = {
         'OPTIONS': {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
             'charset': 'utf8mb4',
-            # Empty table for ssl
+            'ssl': {'ca': os.environ.get('MYSQL_ATTR_SSL_CA')} if os.environ.get('MYSQL_ATTR_SSL_CA') else {'ca': None},
         },
     }
 }
