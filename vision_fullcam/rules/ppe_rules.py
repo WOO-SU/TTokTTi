@@ -6,7 +6,7 @@ from vision_fullcam.config import Config
 class HelmetNotWornRule(Rule):
     name = "helmet_not_worn"
     def __init__(self, cfg: Config):
-        self.db = Debounce(cfg.ppe_missing_sec, cfg.cooldown_sec)
+        self.db = Debounce(cfg.ppe_missing_sec, cfg.cooldown_sec) # cfg의 debounce -> 프레임 단위 초 
 
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp

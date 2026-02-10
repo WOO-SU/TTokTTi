@@ -1,8 +1,8 @@
 # vision/events/emitter.py
 import os, json, time
 from typing import List
-from vision.rules.base import Event
-from vision.events.snapshot import save_snapshot
+from vision_fullcam.rules.base import Event
+from vision_fullcam.events.snapshot import save_snapshot
 
 class EventEmitter:
     def __init__(self, out_dir: str, clip_buffer):
