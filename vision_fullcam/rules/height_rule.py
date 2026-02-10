@@ -11,8 +11,22 @@ class HeightLadderViolationRule(Rule):
 
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp
-        expected_h = float(ctx.meta.get("expected_height_m", 0.0) or 0.0)
-        cond = (expected_h > self.cfg.ladder_height_threshold_m) and ctx.state.any_ladder
+
+        expected_h = float(ctx.task.expected_height_m or 0.0)
+
+        cond = (
+            expected_h > self.cfg.ladder_height_threshold_m
+            and ctx.state.site.any_ladder
+        )
+
         if self.db.check(now, cond):
-            return [Event(self.name, "medium", None, now, {"expected_height_m": expected_h})]
+            return [
+                Event(
+                    self.name,
+                    "medium",
+                    None,
+                    now,
+                    {"expected_height_m": expected_h},
+                )
+            ]
         return []
