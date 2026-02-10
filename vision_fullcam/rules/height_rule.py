@@ -1,4 +1,3 @@
-<<<<<<< Updated upstream
 # vision/rules/height_rule.py
 from typing import List
 from vision_fullcam.rules.base import Rule, RuleContext, Event, Debounce
@@ -12,56 +11,23 @@ class HeightLadderViolationRule(Rule):
 
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp
+        events = []
 
-        expected_h = float(ctx.task.expected_height_m or 0.0)
+        for l in ctx.state.ladders.values():
+            h = l.est_height_m
+            if h is None:
+                continue
 
-        cond = (
-            expected_h > self.cfg.ladder_height_threshold_m
-            and ctx.state.site.any_ladder
-        )
-
-        if self.db.check(now, cond):
-            return [
-                Event(
+            if self.db.check(now, h >= 3.5):
+                events.append(Event(
                     self.name,
                     "medium",
-                    None,
+                    l.id,
                     now,
-                    {"expected_height_m": expected_h},
-                )
-            ]
-        return []
-=======
-# vision/rules/height_rule.py
-from typing import List
-from vision_fullcam.rules.base import Rule, RuleContext, Event, Debounce
-from vision_fullcam.config import Config
-
-class HeightLadderViolationRule(Rule):
-    name = "height_ladder_violation"
-    def __init__(self, cfg: Config):
-        self.cfg = cfg
-        self.db = Debounce(0.5, cfg.cooldown_sec)
-
-    def evaluate(self, ctx: RuleContext) -> List[Event]:
-        now = ctx.timestamp
-
-        expected_h = float(ctx.task.expected_height_m or 0.0)
-
-        cond = (
-            expected_h > self.cfg.ladder_height_threshold_m
-            and ctx.state.site.any_ladder
-        )
-
-        if self.db.check(now, cond):
-            return [
-                Event(
-                    self.name,
-                    "medium",
-                    None,
-                    now,
-                    {"expected_height_m": expected_h},
-                )
-            ]
-        return []
->>>>>>> Stashed changes
+                    {
+                        "estimated_height_m": round(h, 2),
+                        "assumed_person_height_m": 1.7
+                    }
+                ))
+        
+        return events
