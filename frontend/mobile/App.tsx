@@ -21,7 +21,7 @@ export type RootStackParamList = {
   Main: undefined;
   SelectMode: undefined;
   Camera: {mode: 'all' | 'worker'};
-  RiskAssessment: undefined;
+  RiskAssessment: { completedTitle?: string } | undefined;
   EquipmentCamera: {title: string};
 };
 

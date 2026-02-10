@@ -22,8 +22,8 @@ import type { RootStackParamList } from '../../App';
 import {
   getSasToken,
   uploadToBlob,
-  requestAnalysis,
-  fetchResult,
+  requestDetection,
+  fetchCheckUpdate,
 } from '../api/equipment';
 
 type Props = {
@@ -107,7 +107,7 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
     };
   }, []);
 
-  const startPolling = useCallback((taskId: string) => {
+  const startPolling = useCallback((complianceId: number) => {
     const startTime = Date.now();
 
     pollingRef.current = setInterval(async () => {
@@ -121,20 +121,15 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
       }
 
       try {
-        const result = await fetchResult(taskId);
+        const { isUpdated, isComplied } = await fetchCheckUpdate(complianceId);
 
-        if (result.status === 'completed') {
+        if (isUpdated) {
           if (pollingRef.current) {
             clearInterval(pollingRef.current);
           }
-          setScreenState(result.passed ? 'success' : 'failed');
-        } else if (result.status === 'failed') {
-          if (pollingRef.current) {
-            clearInterval(pollingRef.current);
-          }
-          setScreenState('failed');
+          setScreenState(isComplied ? 'success' : 'failed');
         }
-        // status === 'pending' → 계속 폴링
+        // isUpdated === false → 아직 분석 중, 계속 폴링
       } catch {
         if (pollingRef.current) {
           clearInterval(pollingRef.current);
@@ -155,16 +150,17 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
 
     try {
       // 2. SAS 토큰 발급 → Blob 업로드
-      const { sasUrl, blobPath } = await getSasToken();
-      await uploadToBlob(sasUrl, fileUri);
+      const { upload_url, blob_name } = await getSasToken();
+      await uploadToBlob(upload_url, fileUri);
 
-      // 3. 분석 요청
+      // 3. 탐지 요청 (DB에 Compliance 레코드 생성)
       setScreenState('analyzing');
-      const { taskId } = await requestAnalysis(blobPath, title);
+      const complianceId = await requestDetection(blob_name, title);
 
       // 4. 폴링 시작
-      startPolling(taskId);
-    } catch {
+      startPolling(complianceId);
+    } catch (err) {
+      console.error('handleCapture error:', err);
       setScreenState('failed');
     }
   }, [title, startPolling]);
@@ -178,7 +174,7 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
   }, []);
 
   const handleContinue = () => {
-    navigation.goBack();
+    navigation.navigate('RiskAssessment', { completedTitle: title });
   };
 
   const isProcessing = screenState === 'uploading' || screenState === 'analyzing';

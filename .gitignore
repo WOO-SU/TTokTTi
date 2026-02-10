@@ -3,7 +3,6 @@
 
 # IDE
 .idea/
-.vscode/
 frontend/.idea/
 frontend/mobile/.idea/
 *.swp
@@ -44,24 +43,3 @@ frontend/mobile/node_modules/
 frontend/mobile/android/app/*.keystore
 !frontend/mobile/android/app/debug.keystore # 디버그용만 허용하고 싶을 때
 
-# --- Ruby / bundler ---
-frontend/mobile/vendor/
-frontend/mobile/.bundle/
-
-# --- Android local config ---
-local.properties
-frontend/mobile/android/local.properties
-
-# --- 추가적인 Android 부산물 ---
-frontend/mobile/android/.gradle/
-frontend/mobile/android/app/build/
-frontend/mobile/android/build/
-frontend/mobile/android/.cxx/
-frontend/mobile/android/*.iml
-
-# --- React Native 캐시 보완 ---
-frontend/mobile/.expo/
-frontend/mobile/*.log
-frontend/mobile/npm-debug.log*
-frontend/mobile/yarn-debug.log*
-frontend/mobile/yarn-error.log*
