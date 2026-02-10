@@ -1,7 +1,7 @@
 # vision/rules/height_rule.py
 from typing import List
-from vision.rules.base import Rule, RuleContext, Event, Debounce
-from vision.config import Config
+from vision_fullcam.rules.base import Rule, RuleContext, Event, Debounce
+from vision_fullcam.config import Config
 
 class HeightLadderViolationRule(Rule):
     name = "height_ladder_violation"

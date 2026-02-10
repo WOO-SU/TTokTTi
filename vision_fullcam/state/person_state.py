@@ -12,7 +12,13 @@ class PersonState:
         self.vest_hist = deque(maxlen=120)
         self.shoes_hist = deque(maxlen=120)
 
-        # 포즈(선택)
+        # 발이 프레임 안 조건
+        self.feet_visible_hist=deque(maxlen=120)
+
+        # 사다리 탑승 여부
+        self.on_ladder_hist=deque(maxlen=120)
+
+        # 포즈, 각도 -> MoveNet 넣을 자리
         self.pose_hist = deque(maxlen=60)  # dict of keypoints
 
         # 현재 bbox

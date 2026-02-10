@@ -2,20 +2,22 @@
 import time
 import cv2
 
-from vision.config import Config
-from vision.stream.reader import FrameReader
-from vision.detection.yolo_detector import YoloDetector, Detection
-from vision.tracking.simple_tracker import SimpleTracker, Tracked
-from vision.state.state_buffer import StateBuffer
-from vision.rules.base import RuleContext
-from vision.rules.ppe_rules import HelmetNotWornRule, SafetyVestNotWornRule, SafetyShoesNotWornRule
-from vision.rules.worker_count import InsufficientWorkerCountRule
-from vision.rules.ladder_rules import LadderTiltRule, LadderMovementWithPersonRule
-from vision.rules.height_rule import HeightLadderViolationRule
-from vision.rules.ladder_rules_outtrigger import OuttriggerNotDeployedRule
-from vision.rules.posture_rules import ExcessiveBodyTiltRule, TopStepUsageRule
-from vision.events.clip_buffer import ClipBuffer
-from vision.events.emitter import EventEmitter
+from vision_fullcam.config import Config
+from vision_fullcam.stream.reader import FrameReader
+from vision_fullcam.detection.yolo_detector import YoloDetector, Detection
+from vision_fullcam.tracking.simple_tracker import SimpleTracker, Tracked
+from vision_fullcam.state.state_buffer import StateBuffer
+from vision_fullcam.rules.base import RuleContext
+from vision_fullcam.rules.ppe_rules import HelmetNotWornRule, SafetyVestNotWornRule, SafetyShoesNotWornRule
+from vision_fullcam.rules.worker_count import InsufficientWorkerCountRule
+from vision_fullcam.rules.ladder_rules import LadderTiltRule, LadderMovementWithPersonRule
+from vision_fullcam.rules.height_rule import HeightLadderViolationRule
+from vision_fullcam.rules.outtrigger_not_deployed import OuttriggerNotDeployedRule
+from vision_fullcam.rules.posture_rules import ExcessiveBodyTiltRule, TopStepUsageRule
+from vision_fullcam.events.clip_buffer import ClipBuffer
+from vision_fullcam.events.emitter import EventEmitter
+from vision_fullcam.state.task_state import TaskState
+
 
 def main():
     cfg = Config()
@@ -56,10 +58,12 @@ def main():
     ]
 
     # 작업 메타(앱에서 입력 받는 값들)
-    meta = {
-        "expected_height_m": 4.0,          # MVP 입력값
-        "outtrigger_required": False,      # 작업 타입에 따라 True
-    }
+    task = TaskState(
+        expected_height_m=4.0,
+        outtrigger_required=False,
+        work_mode="ladder"
+    )
+    task.start()
 
     # 추론 루프 속도 맞추기
     dt_target = 1.0 / max(1, cfg.fps_monitor)
@@ -93,7 +97,7 @@ def main():
             p.vest_hist.append(any_vest)
             p.shoes_hist.append(any_shoes)
 
-        ctx = RuleContext(timestamp=now, frame=frame, state=state, meta=meta)
+        ctx = RuleContext(timestamp=now, frame=frame, state=state,  task=task)
 
         all_events = []
         for rule in rules:

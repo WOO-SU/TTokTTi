@@ -4,8 +4,8 @@
 
 # vision/rules/ladder_rules_outtrigger.py
 from typing import List
-from vision.rules.base import Rule, RuleContext, Event, Debounce
-from vision.config import Config
+from vision_fullcam.rules.base import Rule, RuleContext, Event, Debounce
+from vision_fullcam.config import Config
 
 class OuttriggerNotDeployedRule(Rule):
     name = "outtrigger_not_deployed"
@@ -14,8 +14,8 @@ class OuttriggerNotDeployedRule(Rule):
 
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp
-        # meta["outtrigger_required"]=True 일 때만 체크
-        required = bool(ctx.meta.get("outtrigger_required", False))
+        # task["outtrigger_required"]=True 일 때만 체크
+        required = bool(ctx.task.get("outtrigger_required", False))
         cond = required and (not ctx.state.any_outtrigger)
         if self.db.check(now, cond):
             return [Event(self.name, "medium", None, now, {"required": required})]
