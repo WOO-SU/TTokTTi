@@ -292,10 +292,10 @@ export default function SafetyRegulationScreen() {
     <div style={styles.container}>
       {/* ── Sidebar ── */}
       <aside style={styles.sidebar}>
-        <div style={styles.sidebarLogo}>
+        <button type="button" style={styles.sidebarLogo} onClick={() => navigate('/home')}>
           <span style={{ fontSize: 22 }}>&#x2764;&#xFE0F;</span>
           <span style={styles.logoText}>RiskPulse</span>
-        </div>
+        </button>
 
         <div style={styles.sidebarIcons}>
           <button type="button" style={styles.sidebarIconBtn}>👤</button>
@@ -575,6 +575,9 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 8,
     paddingLeft: 4,
     paddingRight: 4,
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
   },
   logoText: {
     fontFamily: 'Inter, sans-serif',
