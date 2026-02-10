@@ -8,7 +8,7 @@ class RuleContext:
     timestamp: float
     frame: "object"  # np.ndarray
     state: "object"  # StateBuffer
-    meta: dict        # 작업 모드/높이 등 사용자 입력
+    task: "object"   # TaskState
 
 @dataclass
 class Event:

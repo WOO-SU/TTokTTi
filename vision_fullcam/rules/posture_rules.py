@@ -1,7 +1,7 @@
 # vision/rules/posture_rules.py
 from typing import List
-from vision.rules.base import Rule, RuleContext, Event, Debounce
-from vision.config import Config
+from vision_fullcam.rules.base import Rule, RuleContext, Event, Debounce
+from vision_fullcam.config import Config
 
 class ExcessiveBodyTiltRule(Rule):
     name = "excessive_body_tilt"

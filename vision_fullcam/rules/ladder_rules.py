@@ -1,8 +1,8 @@
 # vision/rules/ladder_rules.py
 from typing import List, Optional
 import math
-from vision.rules.base import Rule, RuleContext, Event, Debounce
-from vision.config import Config
+from vision_fullcam.rules.base import Rule, RuleContext, Event, Debounce
+from vision_fullcam.config import Config
 
 def bbox_center(b):
     x1,y1,x2,y2 = b
