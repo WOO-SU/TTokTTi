@@ -236,8 +236,13 @@ const statusIcons: Record<string, { emoji: string; bg: string }> = {
 
 export default function SafetyRegulationScreen() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('Tasks');
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
   const [expandedGroupId, setExpandedGroupId] = useState<number | null>(1);
   const [expandedRegId, setExpandedRegId] = useState<number | null>(null);
 
@@ -352,6 +357,9 @@ export default function SafetyRegulationScreen() {
       <main style={styles.main}>
         <div style={styles.header}>
           <h1 style={styles.headerTitle}>안전 규정 확인</h1>
+          <button type="button" style={styles.logoutBtn} onClick={handleLogout}>
+            Logout
+          </button>
         </div>
 
         {/* Tabs */}
@@ -638,6 +646,17 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 9,
     fontWeight: 700,
   },
+  logoutBtn: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
+    fontSize: 13,
+    color: '#71727A',
+    padding: '8px 16px',
+    borderRadius: 8,
+    background: 'none',
+    border: '1px solid #E8E9EB',
+    cursor: 'pointer',
+  },
   sidebarSearch: {
     display: 'flex',
     flexDirection: 'row',
@@ -706,6 +725,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
   header: {
     marginBottom: 16,
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
   headerTitle: {
     fontFamily: 'Inter, sans-serif',

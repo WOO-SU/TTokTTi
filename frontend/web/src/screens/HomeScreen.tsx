@@ -116,9 +116,14 @@ function TaskCardComponent({ card }: { card: TaskCard }) {
 
 export default function HomeScreen() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('Tasks');
   const [activeSidebar, setActiveSidebar] = useState('Home');
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
 
   return (
     <div style={styles.container}>
@@ -183,12 +188,17 @@ export default function HomeScreen() {
       <main style={styles.main}>
         {/* Header */}
         <div style={styles.header}>
-          <h1 style={styles.headerTitle}>Home</h1>
-          {user && (
-            <span style={styles.headerUser}>
-              {user.userName} 님, 환영합니다
-            </span>
-          )}
+          <div>
+            <h1 style={styles.headerTitle}>Home</h1>
+            {user && (
+              <span style={styles.headerUser}>
+                {user.userName} 님, 환영합니다
+              </span>
+            )}
+          </div>
+          <button type="button" style={styles.logoutBtn} onClick={handleLogout}>
+            Logout
+          </button>
         </div>
 
         {/* Tabs Row */}
@@ -367,6 +377,17 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 9,
     fontWeight: 700,
   },
+  logoutBtn: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
+    fontSize: 13,
+    color: '#71727A',
+    padding: '8px 16px',
+    borderRadius: 8,
+    background: 'none',
+    border: '1px solid #E8E9EB',
+    cursor: 'pointer',
+  },
   sidebarSearch: {
     display: 'flex',
     flexDirection: 'row',
@@ -435,6 +456,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
   header: {
     marginBottom: 16,
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
   headerTitle: {
     fontFamily: 'Inter, sans-serif',
