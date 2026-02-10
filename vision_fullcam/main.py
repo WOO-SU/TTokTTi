@@ -92,25 +92,19 @@ def _handle_keys(detector, task: TaskState, key: int):
         print(f"[TASK] expected_height_m={task.expected_height_m}")
 
 
-# --------------------------------------------------
-# main
-# --------------------------------------------------
 def main():
     cfg = Config()
 
-    # ===== input =====
     reader = FrameReader(getattr(cfg, "camera_index", 0))
     detector = build_detector(cfg)
     tracker = SimpleTracker(iou_thr=getattr(cfg, "tracker_iou_thr", 0.3))
 
-    # ===== state =====
     state = StateBuffer()
     ppe_observer = PPEObserver()
 
-    # ===== pose =====
-    pose_estimator = PoseEstimator()  # ← MoveNet 자리
+    pose_estimator = PoseEstimator() # movenet inference
 
-    # ===== task (앱 입력값) =====
+    # ===== task (앱 입력값: rule 확인시 참조) =====
     task = TaskState(
         work_mode="ladder",
         expected_height_m=float(getattr(cfg, "expected_height_m", 2.0)),
@@ -118,17 +112,16 @@ def main():
     )
     task.start()
 
-    # ===== events =====
-    clip_buffer = ClipBuffer(
+    # 이벤트 발생 시 영상 클립 저장/관리
+    clip_buffer = ClipBuffer( # 이벤트 발생 시 바로 직전과 직후 부분도 같이 저장하기 위한 버퍼
         fps=cfg.fps_monitor,
         keep_sec=cfg.clip_pre_sec + cfg.clip_post_sec,
     )
-    emitter = EventEmitter(
+    emitter = EventEmitter( # 이벤트 발생 시 버퍼로부터 가져와 영상 클립 저장
         out_dir=getattr(cfg, "output_dir", "runs"),
         clip_buffer=clip_buffer,
     )
 
-    # ===== rules =====
     rules = [
         HeightLadderViolationRule(cfg),
         LadderMovementWithPersonRule(cfg),
@@ -141,12 +134,11 @@ def main():
 
         InsufficientWorkerCountRule(cfg),
 
-        # pose 기반 (MoveNet 결과 필요)
         ExcessiveBodyTiltRule(cfg),
         TopStepUsageRule(cfg),
     ]
 
-    dt_target = 1.0 / max(1, cfg.fps_monitor)
+    dt_target = 1.0 / max(1, cfg.fps_monitor) # 1프레임 처리 목표 시간 (일정하게 맞추기 위함)
 
     try:
         while True:
