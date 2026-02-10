@@ -1,7 +1,7 @@
 # vision/rules/posture_rules.py
-from typing import List
-from vision.rules.base import Rule, RuleContext, Event, Debounce
-from vision.config import Config
+from typing import List, Tuple
+from vision_fullcam.rules.base import Rule, RuleContext, Event, Debounce
+from vision_fullcam.config import Config
 
 class ExcessiveBodyTiltRule(Rule):
     name = "excessive_body_tilt"
@@ -30,6 +30,31 @@ class TopStepUsageRule(Rule):
 
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp
-        # 2차: MoveNet 발목 + 사다리 상단 금지구간으로 구현
-        # 지금은 뼈대만
+        # Movenet으로 ankle keypoint를 추적
+        left_ankle = ctx.keypoints.get("left_ankle", None)
+        right_ankle = ctx.keypoints.get("right_ankle", None)
+
+        if not left_ankle or not right_ankle:
+            self.db.reset(ctx.track_id, now)
+            return []
+        
+        if (
+            self._in_zone(left_ankle, ctx.task.top_step_zone) or
+            self._in_zone(right_ankle, ctx.task.top_step_zone)
+        ): # 조건 판별 후 hit 호출
+            if self.db.hit(ctx.track_id, now):
+                return [Event(self.name, "top_step_usage", ctx.track_id, now, {})]
+        else:
+            # 발이 내려오면 debounce 리셋
+            self.db.reset(ctx.track_id, now)
+        
         return []
+    
+    @staticmethod
+    def _in_zone(
+        point: Tuple[float, float],
+        zone: Tuple[float]
+    ) -> bool:
+        x, y = point
+        x1, y1, x2, y2 = zone
+        return x1 <= x <= x2 and y1 <= y <= y2
