@@ -15,6 +15,10 @@ db.sqlite3
 
 **/node_modules/
 
+**/Vinci-8B-base
+**/Vinci-8B-ckpt
+**/.cache
+
 # Android build artifacts
 app/build/
 build/
