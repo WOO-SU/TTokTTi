@@ -3,6 +3,7 @@
 
 # IDE
 .idea/
+.vscode/
 frontend/.idea/
 frontend/mobile/.idea/
 *.swp
@@ -43,13 +44,13 @@ frontend/mobile/node_modules/
 frontend/mobile/android/app/*.keystore
 !frontend/mobile/android/app/debug.keystore # 디버그용만 허용하고 싶을 때
 
-# --- Ruby / CocoaPods (현재 프로젝트의 주요 용량 원인) ---
+# --- Ruby / bundler ---
 frontend/mobile/vendor/
 frontend/mobile/.bundle/
-frontend/mobile/ios/Pods/
-frontend/mobile/ios/build/
-frontend/mobile/ios/Podfile.lock
-frontend/mobile/ios/.xcode.env.local
+
+# --- Android local config ---
+local.properties
+frontend/mobile/android/local.properties
 
 # --- 추가적인 Android 부산물 ---
 frontend/mobile/android/.gradle/
