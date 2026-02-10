@@ -20,7 +20,7 @@ DEFAULT_RUNNING_LANGUAGE='eng'
 DEFAULT_VERSION="v0"
 
 # Python 启动命令
-CONDA_BASE="$(conda info --base)"
+CONDA_BASE="/home/team4/miniconda3"
 PYTHON_EXE="$CONDA_BASE/envs/$CONDA_ENV/bin/python"
 COMMAND="$PYTHON_EXE vinci-inference/app/main.py"
 LOG_FILE="vinci_inference.log"
