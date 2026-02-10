@@ -1,8 +1,10 @@
 from django.urls import path
-from .views import LoginView
+from .views import upload_result, check_update
 
 app_name = "check"
 
 urlpatterns = [
-    path("update/", LoginView.as_view(), name="login"),
+    path("update/", check_update, name="check_update"),
+    path("upload/", upload_result, name="upload_result"),
+    path("start/", request_detection, name="request_detection"),
 ]
