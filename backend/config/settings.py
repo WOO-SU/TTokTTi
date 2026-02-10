@@ -17,6 +17,7 @@ from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(BASE_DIR / "apps"))
 SECRET_KEY = "dev-secret-key-change-later" # 일단 이거 개발용으로 하고, 배포 시 .env로 빼서 사용 
 
 # Quick-start development settings - unsuitable for production
@@ -31,7 +32,22 @@ DEBUG = os.getenv("DEBUG")
 
 ALLOWED_HOSTS = ["*"]
 
+REDIS_HOST = os.getenv('REDIS_HOST', 'redis')
+REDIS_PORT = os.getenv('REDIS_PORT', '6379')
+REDIS_PASSWORD = os.getenv('REDIS_PASSWORD', '')
+if REDIS_PASSWORD:
+    # Azure (Production) usually requires SSL (rediss://) and a password
+    REDIS_BASE_URL = f"rediss://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}"
+else:
+    # Local Docker (Development) usually has no password
+    REDIS_BASE_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}"
 
+# CELERY 
+CELERY_BROKER_URL = f"{REDIS_BASE_URL}/0"
+
+# DB 1: The Results - Where return values are stored
+CELERY_RESULT_BACKEND = f"{REDIS_BASE_URL}/1"
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 # Application definition
 
 INSTALLED_APPS = [
