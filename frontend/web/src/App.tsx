@@ -7,6 +7,7 @@ import SignUpScreen from './screens/SignUpScreen';
 import SignUpFreeScreen from './screens/SignUpFreeScreen';
 import HomeScreen from './screens/HomeScreen';
 import SafetyRegulationScreen from './screens/SafetyRegulationScreen';
+import ReportScreen from './screens/ReportScreen';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/signup-free" element={<SignUpFreeScreen />} />
           <Route path="/home" element={<ProtectedRoute><HomeScreen /></ProtectedRoute>} />
           <Route path="/safety" element={<ProtectedRoute><SafetyRegulationScreen /></ProtectedRoute>} />
+          <Route path="/report" element={<ProtectedRoute><ReportScreen /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </AuthProvider>
