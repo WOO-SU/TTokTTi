@@ -1,8 +1,9 @@
 # vision/rules/ladder_rules.py
 from typing import List, Optional
 import math
-from vision.rules.base import Rule, RuleContext, Event, Debounce
-from vision.config import Config
+from vision_fullcam.rules.base import Rule, RuleContext, Event, Debounce
+from vision_fullcam.config import Config
+import numpy as np
 
 def bbox_center(b):
     x1,y1,x2,y2 = b
@@ -12,32 +13,53 @@ def bbox_move_px(b1, b2) -> float:
     c1 = bbox_center(b1); c2 = bbox_center(b2)
     return math.hypot(c2[0]-c1[0], c2[1]-c1[1])
 
-def ladder_tilt_deg(b):
-    # MVP: bbox 기반 근사. (2차에 Hough line으로 개선)
-    x1,y1,x2,y2 = b
-    dx = abs(x2-x1)
-    dy = max(1, abs(y2-y1))
-    # 수직 대비: atan(dx/dy)
-    return abs(math.degrees(math.atan2(dx, dy)))
+def ladder_tilt_deg(bbox):
+    x1, y1, x2, y2 = bbox
+    w = abs(x2 - x1)
+    h = max(1, abs(y2 - y1))
+    return abs(math.degrees(math.atan2(w, h)))
+
 
 class LadderTiltRule(Rule):
     name = "ladder_tilt"
     def __init__(self, cfg: Config):
         self.cfg = cfg
         self.db = Debounce(cfg.ladder_tilt_sec, cfg.cooldown_sec)
+        # 지속 시간 = ladder_tilt_sec, 쿨다운 = cooldown_sec
+        # 특정 각도가 지속 시간 이상 유지되면 이벤트 발생
+        # 한 번 울리면 쿨다운 동안은 울리지 않도록
 
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp
         events = []
-        for l in ctx.state.ladders.values():
-            if l.bbox is None:
+        for l in ctx.state.ladders.values(): # state_buffer -> LadderState 객체
+            if l.axis_line is None:
                 continue
+
             angle = ladder_tilt_deg(l.bbox)
+
             l.tilt_hist.append(angle)
+            angle = np.median(l.tilt_hist[-7:])
+
+            db = self.db.setdefault(
+                l.id,
+                Debounce(self.cfg.ladder_tilt_sec, self.cfg.cooldown_sec)
+            )
+
+            if angle > self.cfg.ladder_tilt_danger_deg:
+                if db.fire_immediate(now):   # 즉시 위험 알림: 지속 시간 필요 X
+                    events.append(Event(
+                        self.name, "high", l.id, now,
+                        {"tilt_deg": angle}
+                    ))
+                continue
             # warn
-            if self.db.check(now, angle > self.cfg.ladder_tilt_warn_deg):
-                sev = "high" if angle > self.cfg.ladder_tilt_danger_deg else "medium"
-                events.append(Event(self.name, sev, l.id, now, {"tilt_deg": angle}))
+            if db.check(now, angle > self.cfg.ladder_tilt_warn_deg): # 지속 시간 check
+                events.append(Event(
+                    self.name, "medium", l.id, now,
+                    {"tilt_deg": angle}
+                ))
+
         return events
 
 class LadderMovementWithPersonRule(Rule):
