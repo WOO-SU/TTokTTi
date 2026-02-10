@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 // ── Data ──
 
@@ -30,10 +31,10 @@ const alertCards: TaskCard[] = [
 ];
 
 const sidebarItems = [
-  { label: 'Home', icon: '🏠' },
-  { label: '안전 규정 확인', icon: '🛡️' },
-  { label: '근로자 위험도', icon: '👤' },
-  { label: '보고서 작성', icon: '✏️' },
+  { label: 'Home', icon: '🏠', path: '/home' },
+  { label: '안전 규정 확인', icon: '🛡️', path: '/safety' },
+  { label: '근로자 위험도', icon: '👤', path: '/risk' },
+  { label: '보고서 작성', icon: '✏️', path: '/report' },
 ];
 
 type TabItem = { label: string; badge?: string };
@@ -113,6 +114,7 @@ function TaskCardComponent({ card }: { card: TaskCard }) {
 // ── Main Component ──
 
 export default function HomeScreen() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('Tasks');
   const [activeSidebar, setActiveSidebar] = useState('Home');
 
@@ -160,7 +162,7 @@ export default function HomeScreen() {
                   ...styles.sidebarNavItem,
                   ...(isActive ? styles.sidebarNavItemActive : {}),
                 }}
-                onClick={() => setActiveSidebar(item.label)}>
+                onClick={() => { setActiveSidebar(item.label); navigate(item.path); }}>
                 <span style={{ fontSize: 16 }}>{item.icon}</span>
                 <span
                   style={{
