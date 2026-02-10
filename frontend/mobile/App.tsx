@@ -12,6 +12,8 @@ import CameraScreen from './src/screens/CameraScreen';
 import RiskAssessmentScreen from './src/screens/RiskAssessmentScreen';
 import EquipmentCameraScreen from './src/screens/EquipmentCameraScreen';
 import PersonalScreen from './src/screens/PersonalScreen';
+import SettingScreen from './src/screens/SettingScreen';
+import {AuthProvider} from './src/context/AuthContext';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -19,7 +21,7 @@ export type RootStackParamList = {
   Main: undefined;
   SelectMode: undefined;
   Camera: {mode: 'all' | 'worker'};
-  RiskAssessment: undefined;
+  RiskAssessment: { completedTitle?: string } | undefined;
   EquipmentCamera: {title: string};
 };
 
@@ -46,10 +48,6 @@ function PlaceholderScreen({title}: {title: string}) {
 
 function FavoriteScreen() {
   return <PlaceholderScreen title="Favorite" />;
-}
-
-function SettingScreen() {
-  return <PlaceholderScreen title="Setting" />;
 }
 
 const placeholderStyles = StyleSheet.create({
@@ -231,21 +229,23 @@ function MainTabs() {
 
 function App() {
   return (
-    <SafeAreaProvider>
-      <NavigationContainer>
-        <Stack.Navigator
-          initialRouteName="Login"
-          screenOptions={{headerShown: false}}>
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="SignUp" component={SignUpScreen} />
-          <Stack.Screen name="Main" component={MainTabs} />
-          <Stack.Screen name="SelectMode" component={SelectModeScreen} />
-          <Stack.Screen name="Camera" component={CameraScreen} />
-          <Stack.Screen name="RiskAssessment" component={RiskAssessmentScreen} />
-          <Stack.Screen name="EquipmentCamera" component={EquipmentCameraScreen} />
-        </Stack.Navigator>
-      </NavigationContainer>
-    </SafeAreaProvider>
+    <AuthProvider>
+      <SafeAreaProvider>
+        <NavigationContainer>
+          <Stack.Navigator
+            initialRouteName="Login"
+            screenOptions={{headerShown: false}}>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="SignUp" component={SignUpScreen} />
+            <Stack.Screen name="Main" component={MainTabs} />
+            <Stack.Screen name="SelectMode" component={SelectModeScreen} />
+            <Stack.Screen name="Camera" component={CameraScreen} />
+            <Stack.Screen name="RiskAssessment" component={RiskAssessmentScreen} />
+            <Stack.Screen name="EquipmentCamera" component={EquipmentCameraScreen} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </SafeAreaProvider>
+    </AuthProvider>
   );
 }
 
