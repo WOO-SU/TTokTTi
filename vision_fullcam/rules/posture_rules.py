@@ -2,12 +2,13 @@
 from typing import List, Tuple
 from vision_fullcam.rules.base import Rule, RuleContext, Event, Debounce
 from vision_fullcam.config import Config
+import numpy as np
 
 class ExcessiveBodyTiltRule(Rule):
     name = "excessive_body_tilt"
     def __init__(self, cfg: Config):
         self.cfg = cfg
-        self.db = Debounce(cfg.body_tilt_sec, cfg.cooldown_sec)
+        self.db = {}
 
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp
@@ -19,8 +20,17 @@ class ExcessiveBodyTiltRule(Rule):
             tilt = p.pose_hist[-1].get("tilt_deg", None)
             if tilt is None:
                 continue
-            if self.db.check(now, tilt > self.cfg.body_tilt_deg):
-                events.append(Event(self.name, "medium", p.id, now, {"tilt_deg": tilt}))
+
+            recent = [h["tilt_deg"] for h in list(p.pose_hist)[-7:]]
+            tilt = np.median(recent)
+
+            db = self.db.setdefault(
+                p.id,
+                Debounce(self.cfg.body_tilt_sec, self.cfg.cooldown_sec)
+            )
+
+            if db.check(now, tilt > self.cfg.body_tilt_deg):
+                events.append(Event(self.name, "medium", p.id, now, {"tilt_deg": float(tilt)}))
         return events
 
 class TopStepUsageRule(Rule):
