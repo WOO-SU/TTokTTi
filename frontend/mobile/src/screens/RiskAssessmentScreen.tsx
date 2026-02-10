@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,12 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
 import type { RootStackParamList } from '../../App';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'RiskAssessment'>;
+  route: RouteProp<RootStackParamList, 'RiskAssessment'>;
 };
 
 type AssessmentItem = {
@@ -21,7 +23,7 @@ type AssessmentItem = {
 };
 
 const INITIAL_ITEMS: AssessmentItem[] = [
-  { id: '1', title: '안전모', checked: true },
+  { id: '1', title: '안전모', checked: false },
   { id: '2', title: '조끼', checked: false },
   { id: '3', title: '안전화', checked: false },
   { id: '4', title: '장갑', checked: false },
@@ -58,9 +60,21 @@ function ChevronRightIcon() {
 
 /* ──────── Main Component ──────── */
 
-export default function RiskAssessmentScreen({ navigation }: Props) {
+export default function RiskAssessmentScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const [items, setItems] = useState<AssessmentItem[]>(INITIAL_ITEMS);
+
+  // 카메라 화면에서 성공 후 돌아오면 해당 항목 자동 체크
+  useEffect(() => {
+    const completedTitle = route.params?.completedTitle;
+    if (completedTitle) {
+      setItems(prev =>
+        prev.map(item =>
+          item.title === completedTitle ? { ...item, checked: true } : item,
+        ),
+      );
+    }
+  }, [route.params?.completedTitle]);
 
   const toggleItem = (id: string) => {
     setItems(prev =>
@@ -126,6 +140,13 @@ export default function RiskAssessmentScreen({ navigation }: Props) {
         ))}
         {/* Bottom divider */}
         <View style={styles.divider} />
+      </View>
+
+      {/* 요청보내기 Button */}
+      <View style={[styles.submitSection, { paddingBottom: insets.bottom + 16 }]}>
+        <TouchableOpacity style={styles.submitButton} activeOpacity={0.8}>
+          <Text style={styles.submitText}>요청보내기</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -294,5 +315,27 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: '#D3D5DD',
+  },
+
+  /* Submit Button */
+  submitSection: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  submitButton: {
+    width: 153,
+    height: 38,
+    borderRadius: 15,
+    backgroundColor: '#006FFD',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  submitText: {
+    fontFamily: 'Inter',
+    fontWeight: '600',
+    fontSize: 14,
+    color: '#FFFFFF',
   },
 });
