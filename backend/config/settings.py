@@ -123,6 +123,26 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+DATABASES = {
+    'default': {
+        'ENGINE' : 'django.db.backends.mysql',
+
+        'NAME': os.getenv('MYSQL_DATABASE', 'riskpulse'),
+        'USER': os.getenv('MYSQL_USER', 'riskpulse'),
+        'PASSWORD': os.getenv('MYSQL_PASSWORD', 'riskpulse'),
+
+        'HOST': os.getenv('DB_HOST', 'db'),
+        'PORT': os.getenv('DB_PORT', '3306'),
+
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            'charset': 'utf8mb4',
+            # Empty table for ssl
+        },
+    }
+}
+
+
 
 SWAGGER_SETTINGS = {
     'USE_SESSION_AUTH': False,
