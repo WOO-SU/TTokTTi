@@ -1,0 +1,6 @@
+class SceneState:
+    def __init__(self):
+        self.outriggers = {}      # track_id -> OuttriggerState
+        self.any_outtrigger = False
+    
+        self.persons = {}         # track_id -> PersonState
