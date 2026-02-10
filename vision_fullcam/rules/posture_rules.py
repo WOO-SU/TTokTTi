@@ -1,13 +1,13 @@
-# vision/rules/posture_rules.py
-from typing import List
-from vision.rules.base import Rule, RuleContext, Event, Debounce
-from vision.config import Config
+from typing import List, Tuple
+from vision_fullcam.rules.base import Rule, RuleContext, Event, Debounce
+from vision_fullcam.config import Config
+import numpy as np
 
 class ExcessiveBodyTiltRule(Rule):
     name = "excessive_body_tilt"
     def __init__(self, cfg: Config):
         self.cfg = cfg
-        self.db = Debounce(cfg.body_tilt_sec, cfg.cooldown_sec)
+        self.db = {}
 
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp
@@ -19,8 +19,17 @@ class ExcessiveBodyTiltRule(Rule):
             tilt = p.pose_hist[-1].get("tilt_deg", None)
             if tilt is None:
                 continue
-            if self.db.check(now, tilt > self.cfg.body_tilt_deg):
-                events.append(Event(self.name, "medium", p.id, now, {"tilt_deg": tilt}))
+
+            recent = [h["tilt_deg"] for h in list(p.pose_hist)[-7:]]
+            tilt = np.median(recent)
+
+            db = self.db.setdefault(
+                p.id,
+                Debounce(self.cfg.body_tilt_sec, self.cfg.cooldown_sec)
+            )
+
+            if db.check(now, tilt > self.cfg.body_tilt_deg):
+                events.append(Event(self.name, "medium", p.id, now, {"tilt_deg": float(tilt)}))
         return events
 
 class TopStepUsageRule(Rule):
@@ -30,6 +39,31 @@ class TopStepUsageRule(Rule):
 
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp
-        # 2차: MoveNet 발목 + 사다리 상단 금지구간으로 구현
-        # 지금은 뼈대만
+        # Movenet으로 ankle keypoint를 추적
+        left_ankle = ctx.keypoints.get("left_ankle", None)
+        right_ankle = ctx.keypoints.get("right_ankle", None)
+
+        if not left_ankle or not right_ankle:
+            self.db.reset(ctx.track_id, now)
+            return []
+        
+        if (
+            self._in_zone(left_ankle, ctx.task.top_step_zone) or
+            self._in_zone(right_ankle, ctx.task.top_step_zone)
+        ): # 조건 판별 후 hit 호출
+            if self.db.hit(ctx.track_id, now):
+                return [Event(self.name, "top_step_usage", ctx.track_id, now, {})]
+        else:
+            # 발이 내려오면 debounce 리셋
+            self.db.reset(ctx.track_id, now)
+        
         return []
+    
+    @staticmethod
+    def _in_zone(
+        point: Tuple[float, float],
+        zone: Tuple[float]
+    ) -> bool:
+        x, y = point
+        x1, y1, x2, y2 = zone
+        return x1 <= x <= x2 and y1 <= y <= y2
