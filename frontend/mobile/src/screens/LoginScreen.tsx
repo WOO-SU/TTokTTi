@@ -16,7 +16,7 @@ import type { RootStackParamList } from '../../App';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const heroImage = require('../assets/login-hero.png');
+const heroImage = require('../assets/mascot-logo.png');
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Login'>;
@@ -96,7 +96,7 @@ export default function LoginScreen({ navigation }: Props) {
               <TouchableOpacity
                 style={styles.loginButton}
                 activeOpacity={0.8}
-                onPress={() => navigation.navigate('AfterLogin')}>
+                onPress={() => navigation.navigate('Main')}>
                 <Text style={styles.loginButtonText}>Login</Text>
               </TouchableOpacity>
 
