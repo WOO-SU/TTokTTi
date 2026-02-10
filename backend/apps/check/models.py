@@ -1,4 +1,23 @@
 from django.db import models
+from django.conf import settings
 
-# Create your models here.
-# compliance model
+class Compliance(models.Model):
+    employee = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='compliance'
+    )
+
+    is_complied = models.BooleanField(null=True, default=None)
+    original_image = models.CharField(max_length=200, null=True, blank=True)
+    detected_image = models.CharField(max_length=200, null=True, blank=True)
+    is_updated = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)  
+    updated_at = models.DateTimeField(auto_now=True)      
+
+    def __str__(self):
+        return f"Compliance({self.employee_id}, complied={self.is_complied})"
+
+    class Meta:
+        db_table = 'compliance'
+        ordering = ['-created_at']
