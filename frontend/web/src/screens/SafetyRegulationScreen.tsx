@@ -302,7 +302,7 @@ export default function SafetyRegulationScreen() {
       <aside style={styles.sidebar}>
         <button type="button" style={styles.sidebarLogo} onClick={() => navigate('/home')}>
           <span style={{ fontSize: 22 }}>&#x2764;&#xFE0F;</span>
-          <span style={styles.logoText}>RiskPulse</span>
+          <span style={styles.logoText}>TTokTTi</span>
         </button>
 
         <div style={styles.sidebarIcons}>

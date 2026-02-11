@@ -49,7 +49,7 @@ export default function LoginScreen() {
                 <span style={styles.logoHeart}>&#x2764;&#xFE0F;</span>
                 <span style={styles.logoPulse}>~</span>
               </div>
-              <span style={styles.logoText}>riskpulse</span>
+              <span style={styles.logoText}>TTokTTi</span>
             </div>
 
             {/* Welcome */}
