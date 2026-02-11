@@ -7,5 +7,8 @@
 #### 2. detect + save full cam video 
 <img width="1075" height="570" alt="SystemArchitecture-2 drawio" src="https://github.com/user-attachments/assets/6501c7a6-4727-445c-bd37-e3db8a4df281" />
 
+#### 3. upload work-before image then create risk-assessment report
+<img width="842" height="565" alt="SystemArchitecture-3 drawio" src="https://github.com/user-attachments/assets/a4f55f38-027f-4de8-936e-32f930f8384d" />
+
 ---
 Last Updated: Feb 11, 2026
