@@ -10,5 +10,9 @@
 #### 3. upload work-before image then create risk-assessment report
 <img width="842" height="565" alt="SystemArchitecture-3 drawio" src="https://github.com/user-attachments/assets/a4f55f38-027f-4de8-936e-32f930f8384d" />
 
+#### 4. detect + save body cam video
+<img width="951" height="564" alt="SystemArchitecture-4 drawio" src="https://github.com/user-attachments/assets/3ef5a2e2-689d-42b3-b8b4-19f04da137e9" />
+
+
 ---
 Last Updated: Feb 11, 2026
