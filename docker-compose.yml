@@ -3,12 +3,8 @@ services:
   db:
     image: mysql:8.0
     container_name: riskpulse_db
+    env_file: ./backend/.env
     restart: always
-    environment:
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: rootpassword
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
@@ -26,7 +22,7 @@ services:
   backend:
     build: ./backend
     container_name: riskpulse_be
-
+    env_file: ./backend/.env
     volumes:
       - ./backend:/app
     ports:
@@ -35,56 +31,35 @@ services:
       db:
         condition: service_healthy
 
-    environment:
-      - MYSQL_DATABASE=${DB_NAME}
-      - MYSQL_USER=${DB_USER}
-      - MYSQL_PASSWORD=${DB_PASSWORD}
-      - MYSQL_HOST=db
-      - MYSQL_PORT=3306
-
-      - DEBUG=${DEBUG}
-      - DJANGO_SECRET_KEY=${SECRET_KEY}
-
     # Dev
     command: python manage.py runserver 0.0.0.0:8000
 
     # For Deployment
     # command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3
 
-  worker_risk:
-    build: ./backend
-    container_name: riskpulse_gpu_risk
+  # worker:
+  #   build: ./backend
+  #   container_name: riskpulse_gpu
 
-    volumes:
-      - ./backend:/app
-      # If the worker needs to write to DB, share DB logic or use API
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_started
+  #   volumes:
+  #     - ./backend:/app
+  #     # If the worker needs to write to DB, share DB logic or use API
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_started
 
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: 1
+  #             capabilities: [gpu]
 
-    command: celery -A config worker -l info
+  #   command: celery -A config worker -l info
 
-    environment:
-      - MYSQL_DATABASE=${DB_NAME}
-      - MYSQL_USER=${DB_USER}
-      - MYSQL_PASSWORD=${DB_PASSWORD}
-      - MYSQL_HOST=db
-      - MYSQL_PORT=3306
-      - DJANGO_SECRET_KEY=${SECRET_KEY}
-      # Same Connection String as Backend
-
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
 
 volumes:
   db_data:
