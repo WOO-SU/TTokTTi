@@ -11,17 +11,6 @@ const sidebarItems = [
   { label: '보고서 작성', icon: '✏️', path: '/report' },
 ];
 
-type TabItem = { label: string; badge?: string };
-
-const tabItems: TabItem[] = [
-  { label: 'Overview' },
-  { label: 'Tasks', badge: '7' },
-  { label: 'Documents', badge: '2' },
-  { label: 'Team', badge: '99+' },
-  { label: 'Reports' },
-  { label: 'Admin' },
-];
-
 type JudgmentOption = {
   value: string;
   label: string;
@@ -39,7 +28,6 @@ const judgmentOptions: JudgmentOption[] = [
 export default function ReportScreen() {
   const navigate = useNavigate();
   const { logout } = useAuth();
-  const [activeTab, setActiveTab] = useState('Tasks');
   const [activeSidebar, setActiveSidebar] = useState('보고서 작성');
 
   // Form state
@@ -120,46 +108,6 @@ export default function ReportScreen() {
           <button type="button" style={styles.logoutBtn} onClick={handleLogout}>
             Logout
           </button>
-        </div>
-
-        {/* Tabs Row */}
-        <div style={styles.tabRow}>
-          <div style={styles.tabs}>
-            {tabItems.map(tab => {
-              const isActive = activeTab === tab.label;
-              return (
-                <button
-                  key={tab.label}
-                  type="button"
-                  style={{
-                    ...styles.tab,
-                    ...(isActive ? styles.tabActive : {}),
-                  }}
-                  onClick={() => setActiveTab(tab.label)}>
-                  <span style={{ ...styles.tabLabel, ...(isActive ? styles.tabLabelActive : {}) }}>
-                    {tab.label}
-                  </span>
-                  {tab.badge && (
-                    <span style={{ ...styles.tabBadge, ...(isActive ? styles.tabBadgeActive : {}) }}>
-                      {tab.badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-            <button type="button" style={styles.tab}>
-              <span style={styles.tabLabel}>•••</span>
-            </button>
-          </div>
-
-          <div style={styles.headerSearch}>
-            <span style={{ fontSize: 14, color: '#8F9098' }}>🔍</span>
-            <input
-              style={styles.headerSearchInput}
-              type="text"
-              placeholder="Search"
-            />
-          </div>
         </div>
 
         {/* Progress Bar */}
