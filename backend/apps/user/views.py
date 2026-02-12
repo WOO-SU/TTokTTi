@@ -16,7 +16,7 @@ from .models import User, Team
 
 # user_name 필드를 로그인 아이디로 사용
 class UserNameTokenObtainPairSerializer(TokenObtainPairSerializer):
-    username_field = "user_name"
+    username_field = "username"
 
 class LoginView(TokenObtainPairView):
     serializer_class = UserNameTokenObtainPairSerializer

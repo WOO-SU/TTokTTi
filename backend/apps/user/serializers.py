@@ -73,7 +73,7 @@ class UserManageSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             "id",
-            "user_name",
+            "username",
             "password",
             "name",
             "phone",
