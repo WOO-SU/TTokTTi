@@ -62,16 +62,18 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 class Team(models.Model):
     employee1 = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        User,
         on_delete=models.CASCADE,
-        related_name='team'
+        related_name="teams_as_employee1"
     )
-
     employee2 = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        User,
         on_delete=models.CASCADE,
-        related_name='team'
+        related_name="teams_as_employee2"
     )
 
     created_at = models.DateTimeField(auto_now_add=True)  
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
