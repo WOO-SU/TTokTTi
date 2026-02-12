@@ -5,10 +5,15 @@ services:
     container_name: riskpulse_db
     env_file: ./backend/.env
     restart: always
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: rootpassword
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-u", "${DB_USER}", "-p${DB_PASSWORD}"]
       timeout: 20s
       retries: 10
 
@@ -30,7 +35,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-
+    environment:
+      - DB_HOST=db
     # Dev
     command: python manage.py runserver 0.0.0.0:8000
 
