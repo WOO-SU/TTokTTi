@@ -8,7 +8,7 @@ class Compliance(models.Model):
         related_name='compliance'
     )
 
-    is_complied = models.BooleanField(null=True, default=None)
+    is_complied = models.BooleanField(null=False, default=False)
     target = models.CharField(max_length=50, null=False)
     # helmet, glove, safety_shoes, safety_vest
     original_image = models.CharField(max_length=200, null=True, blank=True)
