@@ -30,7 +30,7 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
 
   const login = async (userName: string, password: string) => {
     const res = await client.post('/user/login/', {
-      user_name: userName,
+      username: userName,
       password,
     });
 
