@@ -1,5 +1,9 @@
 # RiskPulse
 
+```bash
+docker compose --env-file .env up -d --build
+```
+
 ## First time setup
 ```bash
 python3.11 -m venv .venv
