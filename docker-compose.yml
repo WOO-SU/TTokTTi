@@ -5,6 +5,12 @@ services:
     container_name: riskpulse_db
     env_file: ./backend/.env
     restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: riskpulse_db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:

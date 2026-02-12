@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import logoImg from '../assets/logo.png';
 
 function EyeIcon({ color }: { color: string }) {
   return (
@@ -45,26 +46,23 @@ export default function LoginScreen() {
           <div style={styles.card}>
             {/* Logo */}
             <div style={styles.logoSection}>
-              <div style={styles.logoIcon}>
-                <span style={styles.logoHeart}>&#x2764;&#xFE0F;</span>
-                <span style={styles.logoPulse}>~</span>
-              </div>
+              <img src={logoImg} alt="TTokTTi" style={styles.logoIcon} />
               <span style={styles.logoText}>TTokTTi</span>
             </div>
 
             {/* Welcome */}
-            <h2 style={styles.welcomeTitle}>Welcome</h2>
+            <h2 style={styles.welcomeTitle}>Welcome!</h2>
 
             {/* Form */}
             <div style={styles.form}>
               {/* Email */}
               <div style={styles.fieldContainer}>
-                <label style={styles.fieldLabel}>Username</label>
+                {/* <label style={styles.fieldLabel}>Username</label> */}
                 <div style={styles.field}>
                   <input
                     style={styles.input}
                     type="text"
-                    placeholder="아이디를 입력하세요"
+                    placeholder="아이디"
                     value={userName}
                     onChange={e => setUserName(e.target.value)}
                   />
@@ -73,12 +71,12 @@ export default function LoginScreen() {
 
               {/* Password */}
               <div style={styles.fieldContainer}>
-                <label style={styles.fieldLabel}>Password</label>
+                {/* <label style={styles.fieldLabel}>Password</label> */}
                 <div style={styles.field}>
                   <input
                     style={{ ...styles.input, paddingRight: 8 }}
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="Placeholder"
+                    placeholder="Password"
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                   />
@@ -90,7 +88,7 @@ export default function LoginScreen() {
                   </button>
                 </div>
                 <span style={styles.passwordHint}>
-                  It must be a combination of minimum 8 letters, numbers, and symbols.
+                  {/* It must be a combination of minimum 8 letters, numbers, and symbols. */}
                 </span>
               </div>
 
@@ -134,7 +132,7 @@ export default function LoginScreen() {
               style={styles.signUpBtn}
               onClick={() => navigate('/signup')}>
               <span style={styles.signUpText}>
-                No account yet? <span style={styles.signUpLink}>Sign Up</span>
+                Not a member? <span style={styles.signUpLink}>Register now</span>
               </span>
             </button>
           </div>
@@ -181,19 +179,7 @@ const styles: Record<string, React.CSSProperties> = {
   logoIcon: {
     width: 60,
     height: 60,
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  logoHeart: {
-    fontSize: 40,
-  },
-  logoPulse: {
-    position: 'absolute',
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: 700,
+    objectFit: 'contain' as const,
   },
   logoText: {
     fontFamily: 'Inter, sans-serif',

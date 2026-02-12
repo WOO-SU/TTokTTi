@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import logoImg from '../assets/logo.png';
 
 // ── Types ──
 
@@ -301,7 +302,7 @@ export default function SafetyRegulationScreen() {
       {/* ── Sidebar ── */}
       <aside style={styles.sidebar}>
         <button type="button" style={styles.sidebarLogo} onClick={() => navigate('/home')}>
-          <span style={{ fontSize: 22 }}>&#x2764;&#xFE0F;</span>
+          <img src={logoImg} alt="TTokTTi" style={{ width: 28, height: 28, objectFit: 'contain' }} />
           <span style={styles.logoText}>TTokTTi</span>
         </button>
 
