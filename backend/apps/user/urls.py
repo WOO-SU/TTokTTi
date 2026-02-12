@@ -14,7 +14,7 @@ from .views import (
 app_name = "user"
 
 router = DefaultRouter()
-router.register(r"users", UserManageViewSet, basename="users")
+router.register(r"user", UserManageViewSet, basename="users")
 
 urlpatterns = [
     path("login/", LoginView.as_view(), name="login"),
