@@ -2,6 +2,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.views import APIView
 
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -9,8 +10,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.exceptions import AuthenticationFailed
 
 from drf_yasg.utils import swagger_auto_schema
-from .serializers import LogoutSerializer, ChangePasswordSerializer
-
+from .serializers import LogoutSerializer, ChangePasswordSerializer, TeamCreateSerializer, TeamResponseSerializer, UserSearchSerializer, CoworkerSerializer
+from .models import User, Team
 
 # user_name 필드를 로그인 아이디로 사용
 class UserNameTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -82,3 +83,49 @@ def change_password(request):
     user.save(update_fields=["password"])
 
     return Response({"ok": True})
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def coworker(request):
+    if request.method == "POST":
+        serializer = TeamCreateSerializer(
+            data=request.data,
+            context={"request": request}
+        )
+        serializer.is_valid(raise_exception=True)
+        team = serializer.save()
+
+        response_serializer = TeamResponseSerializer(team)
+        return Response(response_serializer.data, status=201)
+
+    if request.method == "GET":
+        if team.employee1 == request.user:
+            coworker = team.employee2
+        else:
+            coworker = team.employee1
+
+        data = {
+            "id": coworker.id,
+            "name": coworker.name,
+            "phone_last4": coworker.phone[-4:] if coworker.phone else None,
+        }
+
+        serializer = CoworkerSerializer(data)
+        return Response(serializer.data)
+    
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def search_user_by_birth(request):
+    birth_date = request.query_params.get("birth_date")
+
+    if not birth_date:
+        return Response(
+            {"detail": "birth_date required"},
+            status=400
+        )
+
+    users = User.objects.filter(birth_date=birth_date)
+
+    serializer = UserSearchSerializer(users, many=True)
+
+    return Response(serializer.data)
