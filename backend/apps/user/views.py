@@ -3,6 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
+from rest_framework.viewsets import ModelViewSet
 
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -10,7 +11,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.exceptions import AuthenticationFailed
 
 from drf_yasg.utils import swagger_auto_schema
-from .serializers import LogoutSerializer, ChangePasswordSerializer, TeamCreateSerializer, TeamResponseSerializer, UserSearchSerializer, CoworkerSerializer
+from .serializers import LogoutSerializer, ChangePasswordSerializer, TeamCreateSerializer, TeamResponseSerializer, UserSearchSerializer, CoworkerSerializer, UserManageSerializer
 from .models import User, Team
 
 # user_name 필드를 로그인 아이디로 사용
@@ -129,3 +130,10 @@ def search_user_by_birth(request):
     serializer = UserSearchSerializer(users, many=True)
 
     return Response(serializer.data)
+
+
+
+class UserManageViewSet(ModelViewSet):
+    queryset = User.objects.all().order_by("-created_at")
+    serializer_class = UserManageSerializer
+    permission_classes = [IsAuthenticated]
