@@ -3,6 +3,11 @@ from django.conf import settings
 
 # Create your models here.
 class Video(models.Model):
+
+    class CameraType(models.TextChoices):
+        BODY = "BODY", "Body Cam"
+        FULL = "FULL", "Full Cam"
+
     employee = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -11,6 +16,10 @@ class Video(models.Model):
 
     is_risky = models.BooleanField(null=False, default=False)
     original_video = models.CharField(max_length=200, null=True, blank=True)
+    camera_type = models.CharField(
+        max_length=10,
+        choices=CameraType.choices
+    )
     created_at = models.DateTimeField(auto_now_add=True)  
     updated_at = models.DateTimeField(auto_now=True) 
 
