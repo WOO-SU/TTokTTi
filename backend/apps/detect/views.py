@@ -5,7 +5,6 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework import status
 
 from .models import Video
 from .serializers import VideoSerializer, SaveVideoResponseSerializer
@@ -23,20 +22,29 @@ def save_video(request):
     user = request.user
     is_risky = request.data.get("is_risky", False)
     video_path = request.data.get("video_path", "")
+    camera_type = request.data.get("camera_type")
 
     if not video_path:
-        return Response({"ok": False, "data": None, "detail": "video_path required"}, status=400)
-
-    try:
-        video = Video.objects.create(
-            employee=user,
-            is_risky=is_risky,
-            video_path=video_path
+        return Response(
+            {"ok": False, "data": None, "detail": "video_path required"},
+            status=400
         )
-        serializer = VideoSerializer(video)
-        return Response({"ok": True, "data": serializer.data})
-    except Video.DoesNotExist:
-        return Response({"ok": False, "data": None, "detail": "video not found"}, status=404)
+
+    if camera_type not in ["BODY", "FULL"]:
+        return Response(
+            {"ok": False, "data": None, "detail": "camera_type must be BODY or FULL"},
+            status=400
+        )
+
+    video = Video.objects.create(
+        employee=user,
+        is_risky=is_risky,
+        video_path=video_path,
+        camera_type=camera_type
+    )
+
+    serializer = VideoSerializer(video)
+    return Response({"ok": True, "data": serializer.data})
 
 
 @swagger_auto_schema(
@@ -52,12 +60,16 @@ def search_video(request):
         - employee_id (optional): 작업자 ID
         - start_date (optional): 조회 시작 날짜 (ISO 형식)
         - end_date (optional): 조회 종료 날짜 (ISO 형식)
+        - is_risky (optional): 위험 영상 여부 (true/false)
+        - camera_type (optional): 카메라 타입 (BODY/FULL)
     """
     videos = Video.objects.all()
     
     employee_id = request.query_params.get("employee_id")
     start_date = request.query_params.get("start_date")
     end_date = request.query_params.get("end_date")
+    is_risky = request.query_params.get("is_risky")
+    camera_type = request.query_params.get("camera_type")
 
     if employee_id:
         videos = videos.filter(employee_id=employee_id)
@@ -71,6 +83,12 @@ def search_video(request):
         end_dt = parse_datetime(end_date)
         if end_dt:
             videos = videos.filter(created_at__lte=end_dt)
+    
+    if is_risky is not None:
+        videos = videos.filter(is_risky=is_risky.lower() == "true")
+
+    if camera_type:
+        videos = videos.filter(camera_type=camera_type)
     
     serializer = VideoSerializer(videos, many=True)
     return Response({"ok": True, "data": serializer.data})
