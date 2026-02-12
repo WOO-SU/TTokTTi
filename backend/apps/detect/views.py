@@ -22,20 +22,29 @@ def save_video(request):
     user = request.user
     is_risky = request.data.get("is_risky", False)
     video_path = request.data.get("video_path", "")
+    camera_type = request.data.get("camera_type")
 
     if not video_path:
-        return Response({"ok": False, "data": None, "detail": "video_path required"}, status=400)
-
-    try:
-        video = Video.objects.create(
-            employee=user,
-            is_risky=is_risky,
-            video_path=video_path
+        return Response(
+            {"ok": False, "data": None, "detail": "video_path required"},
+            status=400
         )
-        serializer = VideoSerializer(video)
-        return Response({"ok": True, "data": serializer.data})
-    except Video.DoesNotExist:
-        return Response({"ok": False, "data": None, "detail": "video not found"}, status=404)
+
+    if camera_type not in ["BODY", "FULL"]:
+        return Response(
+            {"ok": False, "data": None, "detail": "camera_type must be BODY or FULL"},
+            status=400
+        )
+
+    video = Video.objects.create(
+        employee=user,
+        is_risky=is_risky,
+        video_path=video_path,
+        camera_type=camera_type
+    )
+
+    serializer = VideoSerializer(video)
+    return Response({"ok": True, "data": serializer.data})
 
 
 @swagger_auto_schema(
