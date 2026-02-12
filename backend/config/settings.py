@@ -62,7 +62,8 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'apps.user',
-    'apps.check'
+    'apps.check',
+    'apps.detect',
 ]
 
 AUTH_USER_MODEL='user.User'
@@ -127,9 +128,9 @@ DATABASES = {
     'default': {
         'ENGINE' : 'django.db.backends.mysql',
 
-        'NAME': os.getenv('DB_NAME', 'riskpulse'),
-        'USER': os.getenv('DB_USER', 'riskpulse'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'riskpulse'),
+        'NAME': os.getenv('DB_NAME', 'riskpulse_db'),
+        'USER': os.getenv('DB_USER', 'user'),
+        'PASSWORD': os.getenv('DB_PASSWORD', 'password'),
 
         'HOST': os.getenv('DB_HOST', 'db'),
         'PORT': os.getenv('DB_PORT', '3306'),

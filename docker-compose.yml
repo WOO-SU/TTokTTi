@@ -6,11 +6,10 @@ services:
     env_file: ./backend/.env
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: riskpulse_db
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
-
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
@@ -36,7 +35,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-
+    environment:
+      - DB_HOST=db
     # Dev
     command: python manage.py runserver 0.0.0.0:8000
 
