@@ -5,7 +5,6 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework import status
 
 from .models import Video
 from .serializers import VideoSerializer, SaveVideoResponseSerializer
@@ -52,12 +51,16 @@ def search_video(request):
         - employee_id (optional): 작업자 ID
         - start_date (optional): 조회 시작 날짜 (ISO 형식)
         - end_date (optional): 조회 종료 날짜 (ISO 형식)
+        - is_risky (optional): 위험 영상 여부 (true/false)
+        - camera_type (optional): 카메라 타입 (BODY/FULL)
     """
     videos = Video.objects.all()
     
     employee_id = request.query_params.get("employee_id")
     start_date = request.query_params.get("start_date")
     end_date = request.query_params.get("end_date")
+    is_risky = request.query_params.get("is_risky")
+    camera_type = request.query_params.get("camera_type")
 
     if employee_id:
         videos = videos.filter(employee_id=employee_id)
@@ -71,6 +74,12 @@ def search_video(request):
         end_dt = parse_datetime(end_date)
         if end_dt:
             videos = videos.filter(created_at__lte=end_dt)
+    
+    if is_risky is not None:
+        videos = videos.filter(is_risky=is_risky.lower() == "true")
+
+    if camera_type:
+        videos = videos.filter(camera_type=camera_type)
     
     serializer = VideoSerializer(videos, many=True)
     return Response({"ok": True, "data": serializer.data})
