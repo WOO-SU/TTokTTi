@@ -52,29 +52,23 @@ services:
     # Dev
     command: python manage.py runserver 0.0.0.0:8000
 
-  azurite:
-    image: mcr.microsoft.com/azure-storage/azurite:3.29.0
-    container_name: riskpulse_azurite
-    command:
-      - azurite-blob
-      - --blobHost
-      - 0.0.0.0
-      - --blobPort
-      - "10000"
-      - --location
-      - /data
-      - --debug
-      - /data/debug.log
-      - --accountName
-      - devstoreaccount1
-      - --accountKey
-      - c3VwZXJzZWNyZXRrZXk=
-    ports:
-      - "10000:10000"
-    volumes:
-      - azurite_data:/data
-
-
+  # azurite:
+  #   image: mcr.microsoft.com/azure-storage/azurite:3.29.0
+  #   container_name: riskpulse_azurite
+  #   command:
+  #     - azurite-blob
+  #     - --blobHost
+  #     - 0.0.0.0
+  #     - --blobPort
+  #     - "10000"
+  #     - --location
+  #     - /data
+  #     - --debug
+  #     - /data/debug.log
+  #   ports:
+  #     - "10000:10000"
+  #   volumes:
+  #     - azurite_data:/data
 
     # For Deployment
     # command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3
@@ -116,5 +110,5 @@ services:
 
 volumes:
   db_data:
-  azurite_data:
+#   azurite_data:
 
