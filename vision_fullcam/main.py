@@ -18,7 +18,6 @@ from .rules.base import RuleContext, Rule
 from .rules.ppe_rules import (
     HelmetNotWornRule,
     SafetyVestNotWornRule,
-    SafetyShoesNotWornRule,
 )
 from .rules.worker_count import InsufficientWorkerCountRule
 from .rules.ladder_rules import (
@@ -44,8 +43,7 @@ def build_detector(cfg: Config):
         1: "ladder",
         2: "helmet",
         3: "safety_vest",
-        4: "safety_shoes",
-        5: "outtrigger",
+        4: "outtrigger",
     }
     return YoloDetector(
         model_path=getattr(cfg, "yolo_model_path", "yolov8n.pt"),
@@ -69,12 +67,11 @@ def _handle_keys(detector, task: TaskState, key: int):
         ord("0"): ("normal", "normal"),
         ord("1"): ("no_helmet", "helmet_not_worn"),
         ord("2"): ("no_vest", "safety_vest_not_worn"),
-        ord("3"): ("no_shoes", "safety_shoes_not_worn"),
-        ord("4"): ("one_person", "insufficient_worker_count"),
-        ord("5"): ("ladder_move", "ladder_movement_with_person"),
-        ord("6"): ("tilted_ladder", "ladder_tilt"),
-        ord("7"): ("outtrigger_missing", "outtrigger_not_deployed"),
-        ord("8"): ("outtrigger_deployed", "normal"),
+        ord("3"): ("one_person", "insufficient_worker_count"),
+        ord("4"): ("ladder_move", "ladder_movement_with_person"),
+        ord("5"): ("tilted_ladder", "ladder_tilt"),
+        ord("6"): ("outtrigger_missing", "outtrigger_not_deployed"),
+        ord("7"): ("outtrigger_deployed", "normal"),
     }
 
     if key in mapping:
@@ -130,7 +127,6 @@ def main():
 
         HelmetNotWornRule(cfg),
         SafetyVestNotWornRule(cfg),
-        SafetyShoesNotWornRule(cfg),
 
         InsufficientWorkerCountRule(cfg),
 

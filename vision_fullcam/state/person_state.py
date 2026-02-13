@@ -12,7 +12,6 @@ class PersonState:
         # 최근 프레임 히스토리(BOOL): by PPEObserver
         self.helmet_hist = deque(maxlen=120)
         self.vest_hist = deque(maxlen=120)
-        self.shoes_hist = deque(maxlen=120)
         self.height_px_hist = deque(maxlen=10)
 
         # 발이 프레임 안 조건

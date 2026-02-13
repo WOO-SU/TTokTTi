@@ -48,8 +48,8 @@ def roi_visible(roi, frame_w, frame_h, min_area_ratio=0.3):
 class PPEObserver:
     """
     사람별 PPE 관측 전용 클래스
-    - helmet / vest / shoes
-    - feet_visible (shoes gate)
+    - helmet / vest
+    - feet_visible
     - on_ladder (사다리 탑승 여부)
     """
 
@@ -63,7 +63,6 @@ class PPEObserver:
 
         helmet_boxes = [t.bbox for t in tracked.values() if t.label == "helmet"]
         vest_boxes   = [t.bbox for t in tracked.values() if t.label == "safety_vest"]
-        shoes_boxes  = [t.bbox for t in tracked.values() if t.label == "safety_shoes"]
         ladder_boxes = [t.bbox for t in tracked.values() if t.label == "ladder"]
 
         for p in persons.values():
@@ -77,19 +76,13 @@ class PPEObserver:
             has_helmet = any(center_in(b, head) for b in helmet_boxes)
             has_vest   = any(center_in(b, torso) for b in vest_boxes)
 
-            # 발이 프레임 안에 있는지 (shoes gate)
+            # 발이 프레임 안에 있는지
             feet_visible = roi_visible(feet, w, h, min_area_ratio=0.35)
-
-            if feet_visible:
-                has_shoes = any(center_in(b, feet) for b in shoes_boxes)
-            else:
-                has_shoes = True  # 판단 유예 (오탐 방지)
 
             # 히스토리 업데이트
             p.helmet_hist.append(has_helmet)
             p.vest_hist.append(has_vest)
             p.feet_visible_hist.append(feet_visible)
-            p.shoes_hist.append(has_shoes)
 
             # 사다리 탑승 여부 (feet ROI 기준)
             on_ladder = False

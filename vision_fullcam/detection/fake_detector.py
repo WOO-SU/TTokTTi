@@ -21,7 +21,6 @@ class FakeDetector:
       - normal
       - no_helmet
       - no_vest
-      - no_shoes
       - one_person
       - ladder_move
       - tilted_ladder
@@ -86,12 +85,6 @@ class FakeDetector:
             person1[0] + 95,
             int(person1[1] + 0.65 * ph),
         )
-        shoes1 = (
-            person1[0] + 25,
-            int(person1[1] + 0.80 * ph),
-            person1[0] + 105,
-            int(person1[1] + 0.92 * ph),
-        )
 
         # =========================
         # 4) outtrigger bbox
@@ -116,8 +109,6 @@ class FakeDetector:
             dets.append(Detection("helmet", helmet1))
         if self.mode != "no_vest":
             dets.append(Detection("safety_vest", vest1))
-        if self.mode != "no_shoes":
-            dets.append(Detection("safety_shoes", shoes1))
 
         # outtrigger 모드
         # - outtrigger_missing: 일부러 아무 것도 안 넣음 (required=True일 때 미전개 이벤트가 떠야 정상)
