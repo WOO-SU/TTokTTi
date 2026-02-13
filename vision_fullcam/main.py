@@ -182,6 +182,7 @@ def main():
                 frame=frame,
                 state=state,
                 task=task,
+                keypoints=
             )
 
             # 7️⃣ rule evaluation

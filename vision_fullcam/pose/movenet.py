@@ -2,6 +2,7 @@ from typing import Dict, Tuple
 import cv2
 import numpy as np
 import tensorflow as tf
+import os
 
 # MoveNet keypoint index
 KEYPOINT_NAMES = [
@@ -17,7 +18,16 @@ KEYPOINT_NAMES = [
 ]
 
 class PoseEstimator:
-    def __init__(self, model_path: str):
+    def __init__(self, model_path: str | None = None):
+        # 기본 경로: 프로젝트 내부 models 폴더
+        if model_path is None:
+            base_dir = os.path.dirname(__file__)
+            model_path = os.path.join(
+                base_dir,
+                "models",
+                "3.tflite",
+            )
+
         self.interpreter = tf.lite.Interpreter(model_path=model_path)
         self.interpreter.allocate_tensors()
         self.input_details = self.interpreter.get_input_details()
