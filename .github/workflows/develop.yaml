@@ -7,8 +7,6 @@ on:
     branches: [ "develop" ]
 
 env:
-  # Using GitHub Container Registry (ghcr.io) for simplicity.
-  # You can switch to Docker Hub if preferred.
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
@@ -18,24 +16,25 @@ jobs:
   # ------------------------------------------------------------------
   test-backend:
     runs-on: ubuntu-latest
-    # Only run this job if files in 'backend' change
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    # Redis를 서비스로 실행
+    services:
+      redis:
+        image: redis:latest
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
 
-      # Only run if backend files changed (Manual path filter logic for steps if needed, 
-      # but usually separating jobs by 'paths' in the 'on' trigger is cleaner. 
-      # Here we run tests on every PR to main just to be safe).
-      
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12' 
+          python-version: '3.12'
           cache: 'pip'
-
-      # We need Redis because your backend has 'celery.py' and 'consumers.py' (Channels)
-      - name: Start Redis
-        uses: supercharge/redis-github-action@1.7.0
 
       - name: Install Dependencies
         run: |
@@ -49,7 +48,6 @@ jobs:
 
       - name: Lint with Flake8
         run: |
-          # stop the build if there are Python syntax errors or undefined names
           flake8 backend --count --select=E9,F63,F7,F82 --show-source --statistics
 
       - name: Run Tests
@@ -66,9 +64,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    # Only run on push to main (deploy), or if you want to test builds on PRs too
     if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
-    
     steps:
       - uses: actions/checkout@v4
 
@@ -101,16 +97,14 @@ jobs:
     permissions:
       contents: read
       packages: write
-    # Optimization: Only run if 'worker' folder changed
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2 # To check file changes
+          fetch-depth: 2
 
       - name: Check for changes in worker directory
         id: check_changes
         run: |
-          git diff --name-only HEAD^ HEAD | grep ^worker/ || echo "no_changes"
           if git diff --name-only HEAD^ HEAD | grep ^worker/; then
             echo "changed=true" >> $GITHUB_OUTPUT
           else
