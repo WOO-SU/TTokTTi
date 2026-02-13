@@ -10,6 +10,8 @@ import requests # test용
 import base64# test용
 import mimetypes# test용
 
+from pathlib import Path
+
 # ✅ 로컬 단독 테스트용: python으로 직접 실행할 때 .env 로드
 # (runserver에서는 settings.py에서 load_dotenv()가 이미 호출되면 이 줄은 없어도 됨)
 # load_dotenv(".env")
@@ -168,6 +170,14 @@ class RiskAssessor:
         api_key = api_key.encode("ascii", "ignore").decode()
 
         self.client = OpenAI(api_key=api_key)
+    
+    def _file_to_data_url(file_path: str) -> str:
+        path = Path(file_path)
+        if not path.exists():
+            raise FileNotFoundError(f"{file_path} not found")
+        mime_type = "image/png" 
+        encoded = base64.b64encode(path.read_bytes()).decode("utf-8")
+        return f"data:{mime_type};base64,{encoded}"
 
     def assess_from_url(
         self,
@@ -216,7 +226,7 @@ class RiskAssessor:
             os.getenv("AZURE_BLOB_CONTAINER"),
         )
         if inp.image_path:
-            image_url = _file_to_data_url(inp.image_path)
+            image_url = self._file_to_data_url(inp.image_path)
         else:
             if not inp.image_blob_name:
                 raise ValueError("image_blob_name 또는 image_path 둘 중 하나는 필요합니다.")
