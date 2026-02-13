@@ -10,7 +10,6 @@ urlpatterns = [
         views.admin_report_detail,
         name="risk-admin-detail",
     ),
-    path("assess-url", views.risk_assess_by_url, name="risk-assess-by-url"),
     path(
         "worker/<int:assessment_id>",
         views.worker_recommendation_detail,

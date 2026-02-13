@@ -22,7 +22,19 @@ from rest_framework.decorators import parser_classes
 from rest_framework.parsers import MultiPartParser, FormParser
 
 from apps.user.storage.sas import make_read_sas
-
+from drf_spectacular.utils import  OpenApiParameter, OpenApiTypes
+from apps.risk.serializers import (
+    SasIssueResponseSerializer,
+    RiskAssessRequestSerializer, RiskAssessResponseSerializer,
+    RiskAssessUrlRequestSerializer,
+    AdminReportResponseSerializer,
+    WorkerResponseSerializer,
+    ErrorResponseSerializer,
+)
+from drf_spectacular.utils import (
+    extend_schema, OpenApiParameter, OpenApiTypes, OpenApiRequest
+)
+from drf_yasg.utils import swagger_auto_schema
 
 SITE_LABEL_FIXED = "사다리 설비함 작업"
 
@@ -30,6 +42,20 @@ SITE_LABEL_FIXED = "사다리 설비함 작업"
 # =========================
 # 1) SAS URL 발급
 # =========================
+from drf_yasg import openapi
+
+@swagger_auto_schema(
+    method='get',
+    manual_parameters=[
+        openapi.Parameter(
+            'blob_name',          # 이름
+            openapi.IN_QUERY,     # 위치 (Query String)
+            description="설명",    # 설명
+            type=openapi.TYPE_STRING # 타입
+        )
+    ],
+    responses={200: SasIssueResponseSerializer} # 이렇게 해야 이미지처럼 박스가 뜸!
+)
 @api_view(["GET"])
 def issue_read_sas(request):
     """
@@ -58,6 +84,7 @@ def issue_read_sas(request):
             "url": url,
         }
     )
+
 @api_view(["POST"])
 def risk_assess_by_url(request):
     """
@@ -193,6 +220,20 @@ def risk_assess_local(request):
 # =========================
 # 2) 위험성 평가 실행 (LLM)
 # =========================
+@swagger_auto_schema(
+    method='get',
+    responses={200: "사용법 안내 (JSON 형식)"},
+    operation_description="API 사용법 안내"
+)
+@swagger_auto_schema(
+    method='post',
+    request_body=RiskAssessRequestSerializer,
+    responses={
+        201: RiskAssessResponseSerializer, # 이미지처럼 박스가 뜨게 됨
+        400: ErrorResponseSerializer
+    },
+    operation_description="Blob 이미지를 기반으로 위험성 평가 수행"
+)
 @api_view(["GET", "POST"])
 def risk_assess(request):
     """
@@ -297,6 +338,14 @@ def risk_assess(request):
 # =========================
 # 3) 관리자용 결과 조회
 # =========================
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: AdminReportResponseSerializer,
+        404: ErrorResponseSerializer
+    },
+    operation_description="관리자용 상세 보고서 조회"
+)
 @api_view(["GET"])
 def admin_report_detail(request, assessment_id: int):
     """
@@ -334,6 +383,14 @@ def admin_report_detail(request, assessment_id: int):
 # =========================
 # 4) 근로자용 결과 조회
 # =========================
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: WorkerResponseSerializer,
+        404: ErrorResponseSerializer
+    },
+    operation_description="근로자용 상세 보고서 조회"
+)
 @api_view(["GET"])
 def worker_recommendation_detail(request, assessment_id: int):
     """
