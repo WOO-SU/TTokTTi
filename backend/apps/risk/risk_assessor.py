@@ -7,6 +7,8 @@ from typing import Any, Dict, Optional, List
 from dotenv import load_dotenv
 from openai import OpenAI
 import requests # test용
+import base64# test용
+import mimetypes# test용
 
 # ✅ 로컬 단독 테스트용: python으로 직접 실행할 때 .env 로드
 # (runserver에서는 settings.py에서 load_dotenv()가 이미 호출되면 이 줄은 없어도 됨)
@@ -31,9 +33,10 @@ def _estimate_cost_guard(max_prompt_chars: int, prompt: str) -> None:
     if len(prompt) > max_prompt_chars:
         raise ValueError(f"Prompt too long: {len(prompt)} chars (limit {max_prompt_chars})")
 
+
+
 MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 WORK_TYPE_FIXED = "사다리 설비함 작업"
-
 
 def _extract_json(text: str) -> dict:
     """
@@ -138,21 +141,87 @@ PROMPT = f"""
 
 @dataclass
 class AssessInput:
-    image_blob_name: str
+    image_blob_name: Optional[str] = None
+    image_path: Optional[str] = None
     site_label: Optional[str] = None
+
 
 
 class RiskAssessor:
     def __init__(self):
         api_key = os.getenv("OPENAI_API_KEY")
+
         if not api_key:
-            raise ValueError("OPENAI_API_KEY가 설정되어 있지 않습니다. (.env 로딩/환경변수 확인)")
+            raise ValueError("OPENAI_API_KEY가 설정되어 있지 않습니다.")
+
+        # 🔥 스마트 따옴표 / 비ASCII 문자 제거
+        api_key = (
+            api_key
+            .replace("“", "")
+            .replace("”", "")
+            .replace("‘", "")
+            .replace("’", "")
+            .strip()
+        )
+
+        # 혹시 모를 비ASCII 문자 완전 제거
+        api_key = api_key.encode("ascii", "ignore").decode()
+
         self.client = OpenAI(api_key=api_key)
 
+    def assess_from_url(
+        self,
+        image_url: str,
+        site_label: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        resp = self.client.responses.create(
+            model=MODEL,
+            temperature=0.2,
+            input=[{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "input_text",
+                        "text": PROMPT + f"\n\nsite_label: {site_label or '미지정'}"
+                    },
+                    {
+                        "type": "input_image",
+                        "image_url": image_url
+                    },
+                ],
+            }],
+        )
+
+        # 응답 텍스트 추출
+        text = ""
+        for item in getattr(resp, "output", []):
+            for c in getattr(item, "content", []):
+                if getattr(c, "type", None) in ("output_text", "text"):
+                    text += getattr(c, "text", "")
+
+        if not text.strip():
+            raise ValueError("LLM returned empty text output")
+
+        data = _extract_json(text)
+        return self._normalize_and_fix(
+            data,
+            fallback_site_label=site_label,
+        )
+
     def assess(self, inp: AssessInput) -> Dict[str, Any]:
-        # ✅ 매 요청마다 새 read SAS URL 발급
-        pack = make_read_sas(inp.image_blob_name)
-        image_url = pack["download_url"]
+        import os
+        print(
+            "🔥 DEBUG SAS ENV:",
+            os.getenv("AZURE_STORAGE_ACCOUNT_NAME"),
+            os.getenv("AZURE_BLOB_CONTAINER"),
+        )
+        if inp.image_path:
+            image_url = _file_to_data_url(inp.image_path)
+        else:
+            if not inp.image_blob_name:
+                raise ValueError("image_blob_name 또는 image_path 둘 중 하나는 필요합니다.")
+            pack = make_read_sas(inp.image_blob_name)
+            image_url = pack["download_url"]
 
         resp = self.client.responses.create(
             model=MODEL,
@@ -165,6 +234,9 @@ class RiskAssessor:
                 ],
             }],
         )
+
+    # ... 이하 동일
+
 
         # ✅ 응답 텍스트 추출(버전 차이 대비)
         text = ""
