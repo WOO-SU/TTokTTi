@@ -14,7 +14,7 @@ from .state.ppe_observer import PPEObserver
 
 from .pose.movenet import PoseEstimator
 
-from .rules.base import RuleContext
+from .rules.base import RuleContext, Rule
 from .rules.ppe_rules import (
     HelmetNotWornRule,
     SafetyVestNotWornRule,
@@ -182,7 +182,6 @@ def main():
                 frame=frame,
                 state=state,
                 task=task,
-                keypoints=
             )
 
             # 7️⃣ rule evaluation

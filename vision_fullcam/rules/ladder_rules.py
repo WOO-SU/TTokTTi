@@ -32,7 +32,9 @@ class LadderTiltRule(Rule):
 
     def __init__(self, cfg: Config):
         self.cfg = cfg
-        self.db = Debounce(cfg.ladder_tilt_sec, cfg.cooldown_sec)
+        self.warn_db = Debounce(cfg.ladder_tilt_sec, cfg.cooldown_sec)
+        self.danger_db = Debounce(0.0, cfg.cooldown_sec)
+
         # 지속 시간 = ladder_tilt_sec, 쿨다운 = cooldown_sec
         # 특정 각도가 지속 시간 이상 유지되면 이벤트 발생
         # 한 번 울리면 쿨다운 동안은 울리지 않도록
@@ -40,35 +42,50 @@ class LadderTiltRule(Rule):
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp
         events = []
-        for l in ctx.state.ladders.values(): # state_buffer -> LadderState 객체
+
+        for l in ctx.state.ladders.values():
+
             if l.bbox is None:
                 continue
 
             angle = ladder_tilt_deg(l.bbox)
 
             l.tilt_hist.append(angle)
-            angle = np.median(l.tilt_hist[-7:])
+            angle = np.median(list(l.tilt_hist)[-7:])
 
-            db = self.db.setdefault(
-                l.id,
-                Debounce(self.cfg.ladder_tilt_sec, self.cfg.cooldown_sec)
-            )
-
-            if angle > self.cfg.ladder_tilt_danger_deg:
-                if db.fire_immediate(now):   # 즉시 위험 알림: 지속 시간 필요 X
-                    events.append(Event(
-                        self.name, "high", l.id, now,
-                        {"tilt_deg": angle}
-                    ))
+            # 🔥 1. danger (즉시)
+            if self.danger_db.check(
+                now,
+                angle > self.cfg.ladder_tilt_danger_deg,
+            ):
+                events.append(
+                    Event(
+                        self.name,
+                        "high",
+                        l.id,
+                        now,
+                        {"tilt_deg": float(angle)},
+                    )
+                )
                 continue
-            # warn
-            if db.check(now, angle > self.cfg.ladder_tilt_warn_deg): # 지속 시간 check
-                events.append(Event(
-                    self.name, "medium", l.id, now,
-                    {"tilt_deg": angle}
-                ))
+
+            # 🔥 2. warn (지속시간 필요)
+            if self.warn_db.check(
+                now,
+                angle > self.cfg.ladder_tilt_warn_deg,
+            ):
+                events.append(
+                    Event(
+                        self.name,
+                        "medium",
+                        l.id,
+                        now,
+                        {"tilt_deg": float(angle)},
+                    )
+                )
 
         return events
+
 
 
 # -----------------------

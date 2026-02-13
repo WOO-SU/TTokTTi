@@ -5,64 +5,102 @@ import numpy as np
 
 class ExcessiveBodyTiltRule(Rule):
     name = "excessive_body_tilt"
+
     def __init__(self, cfg: Config):
         self.cfg = cfg
-        self.db = {}
+        self.db_dict = {}  # person별 debounce 관리
 
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp
         events = []
-        # pose_hist에 {"tilt_deg": ...} 같은 값을 쌓는다고 가정
+
         for p in ctx.state.persons.values():
+
             if len(p.pose_hist) < 5:
                 continue
-            tilt = p.pose_hist[-1].get("tilt_deg", None)
-            if tilt is None:
+
+            # 최근 7개 Pose 객체에서 body_tilt_deg 추출
+            recent = [
+                h.body_tilt_deg
+                for h in list(p.pose_hist)[-7:]
+                if h.body_tilt_deg is not None
+            ]
+            if not recent:
                 continue
 
-            recent = [h["tilt_deg"] for h in list(p.pose_hist)[-7:]]
-            tilt = np.median(recent)
+            tilt = float(np.median(recent))
 
-            db = self.db.setdefault(
+            # 조건 판단
+            cond = tilt > self.cfg.body_tilt_deg
+
+            # track_id(p.id)로 Debounce 객체 가져오기
+            db = self.db_dict.setdefault(
                 p.id,
                 Debounce(self.cfg.body_tilt_sec, self.cfg.cooldown_sec)
             )
 
-            if db.check(now, tilt > self.cfg.body_tilt_deg):
-                events.append(Event(self.name, "medium", p.id, now, {"tilt_deg": float(tilt)}))
+            if db.check(now, cond):
+                events.append(
+                    Event(
+                        self.name,
+                        "medium",
+                        p.id,
+                        now,
+                        {"tilt_deg": tilt},
+                    )
+                )
+
         return events
 
 class TopStepUsageRule(Rule):
     name = "top_step_usage"
+
     def __init__(self, cfg: Config):
-        self.db = Debounce(cfg.top_step_sec, cfg.cooldown_sec)
+        self.cfg = cfg
+        self.db_dict = {}  # ladder별 debounce 관리
 
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp
-        # Movenet으로 ankle keypoint를 추적
-        left_ankle = ctx.keypoints.get("left_ankle", None)
-        right_ankle = ctx.keypoints.get("right_ankle", None)
+        events = []
 
-        if not left_ankle or not right_ankle:
-            self.db.reset(ctx.track_id, now)
-            return []
-        
-        if (
-            self._in_zone(left_ankle, ctx.task.top_step_zone) or
-            self._in_zone(right_ankle, ctx.task.top_step_zone)
-        ): # 조건 판별 후 hit 호출
-            if self.db.hit(ctx.track_id, now):
-                return [Event(self.name, "top_step_usage", ctx.track_id, now, {})]
-        else:
-            # 발이 내려오면 debounce 리셋
-            self.db.reset(ctx.track_id, now)
-        
-        return []
-    
+        for person in ctx.state.persons.values():
+            if not person.pose_hist:
+                continue
+
+            latest_pose = person.pose_hist[-1]
+
+            left_ankle = latest_pose.keypoints.get("left_ankle")
+            right_ankle = latest_pose.keypoints.get("right_ankle")
+            if not left_ankle or not right_ankle:
+                continue
+
+            # ladder_id가 없는 경우 skip
+            if not hasattr(person, "ladder_id") or person.ladder_id not in ctx.state.ladders:
+                continue
+
+            ladder = ctx.state.ladders[person.ladder_id]
+
+            left_point = (left_ankle.x, left_ankle.y)
+            right_point = (right_ankle.x, right_ankle.y)
+
+            db = self.db_dict.setdefault(
+                ladder.id,
+                Debounce(self.cfg.top_step_sec, self.cfg.cooldown_sec)
+            )
+
+            if (self._in_zone(left_point, ladder.top_step_zone) or
+                self._in_zone(right_point, ladder.top_step_zone)):
+                if db.check(now, True):
+                    events.append(Event(self.name, "top_step_usage", person.id, now, {}))
+            else:
+                db.reset(now)
+
+        return events
+
     @staticmethod
     def _in_zone(
         point: Tuple[float, float],
-        zone: Tuple[float]
+        zone: Tuple[float, float, float, float],
     ) -> bool:
         x, y = point
         x1, y1, x2, y2 = zone

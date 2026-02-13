@@ -64,3 +64,5 @@ frontend/mobile/*.log
 frontend/mobile/npm-debug.log*
 frontend/mobile/yarn-debug.log*
 frontend/mobile/yarn-error.log*
+
+vision_fullcam/data/

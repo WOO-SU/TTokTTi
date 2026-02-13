@@ -2,14 +2,27 @@
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 import time
+from ..state.state_buffer import StateBuffer
+from ..state.task_state import TaskState
 
 @dataclass
 class RuleContext:
     timestamp: float
-    frame: "object"  # np.ndarray
-    state: "object"  # StateBuffer
-    task: "object"   # TaskState
-    keypoints: Dict[str, any]  # keypoint dict (from movenet)
+    frame: object
+    state: "StateBuffer"
+    task: "TaskState"
+
+@dataclass
+class KeyPoint:
+    x: float
+    y: float
+    confidence: float
+
+@dataclass
+class Pose:
+    keypoints: dict[str, KeyPoint]
+    body_tilt_deg: float | None = None
+    torso_vector: tuple[float, float] | None = None
 
 @dataclass
 class Event:
@@ -24,7 +37,7 @@ class Rule:
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         raise NotImplementedError
         
-class Debounce: # 함수 추가 구현 필요함
+class Debounce: 
     """
     condition이 duration만큼 참이면 fire.
     fire 이후 cooldown 동안 재발화 방지.
@@ -35,7 +48,7 @@ class Debounce: # 함수 추가 구현 필요함
         self.start_ts: Optional[float] = None
         self.cool_until: float = 0.0
 
-    def check(self, now: float, cond: bool) -> bool: # 조건 판별을 함수 내부에서 함
+    def check(self, now: float, cond: bool) -> bool:
         if now < self.cool_until:
             return False
         if cond:
@@ -49,24 +62,13 @@ class Debounce: # 함수 추가 구현 필요함
             self.start_ts = None
         return False
 
-    def hit(self, track_id: int, now: float) -> bool: # 조건 판별을 밖에서 한 후에 호출
-        s = self.state.get(track_id)
-
-        if s is None:
-            self.state[track_id] = {
-                "start": now,
-                "last_fire": 0.0
-            }
+    def fire_immediate(self, now: float) -> bool:
+        """즉시 발화, duration 체크 없이"""
+        if now < self.cool_until:
             return False
+        self.cool_until = now + self.cooldown
+        return True
 
-        # 쿨다운 중이면 무시
-        if now - s["last_fire"] < self.cooldown_sec:
-            return False
-
-        # 연속 유지 시간 체크
-        if now - s["start"] >= self.active_sec:
-            s["last_fire"] = now
-            s["start"] = now  # 재감지 방지
-            return True
-
-        return False
+    def reset(self, now: float):
+        self.start_ts = None
+        self.cool_until = now

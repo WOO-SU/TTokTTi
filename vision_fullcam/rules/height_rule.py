@@ -18,7 +18,7 @@ class HeightLadderViolationRule(Rule):
             if h is None:
                 continue
 
-            if self.db.check(now, h >= 3.5):
+            if self.db.check(l.id, now, h >= 3.5):
                 events.append(Event(
                     self.name,
                     "medium",

@@ -2,6 +2,7 @@
 from collections import deque
 import time
 import numpy as np
+from typing import Optional
 
 class PersonState:
     def __init__(self, track_id: int):
@@ -26,6 +27,8 @@ class PersonState:
         # 포즈(선택)
         self.pose_hist = deque(maxlen=60)  # dict of keypoints: by movenet
         self.keypoints = None
+
+        self.ladder_id: Optional[int] = None
     
     @property
     def height_px(self):

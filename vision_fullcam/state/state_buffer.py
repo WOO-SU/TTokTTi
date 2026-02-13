@@ -38,7 +38,20 @@ class StateBuffer:
                 l.bbox = t.bbox
                 l.bbox_hist.append(t.bbox)
                 l.last_seen = now
-
+                l.update_top_step_zone(top_ratio=0.2)
+                
+        for person in self.persons.values():
+            person.ladder_id = None
+            for lid, ladder in self.ladders.items():
+                if ladder.bbox is None or person.bbox is None:
+                    continue
+                px1, py1, px2, py2 = person.bbox
+                lx1, ly1, lx2, ly2 = ladder.bbox
+                cx = (px1 + px2) / 2
+                cy = (py1 + py2) / 2
+                if lx1 <= cx <= lx2 and ly1 <= cy <= ly2:
+                    person.ladder_id = lid
+                    break
         # 3) 오래 안 보인 객체 정리
         self.persons = {k: v for k, v in self.persons.items() if now - v.last_seen < 3.0}
         self.ladders = {k: v for k, v in self.ladders.items() if now - v.last_seen < 3.0}

@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import tensorflow as tf
 import os
+from ..rules.base import Pose, KeyPoint
 
 # MoveNet keypoint index
 KEYPOINT_NAMES = [
@@ -33,7 +34,7 @@ class PoseEstimator:
         self.input_details = self.interpreter.get_input_details()
         self.output_details = self.interpreter.get_output_details()
 
-    def infer(self, frame: np.ndarray, person_bbox) -> Dict:
+    def infer(self, frame: np.ndarray, person_bbox) -> Pose | None:
         """
         person_bbox: (x1, y1, x2, y2) -> by YOLO
         """
@@ -43,7 +44,7 @@ class PoseEstimator:
         # --- ROI crop ---
         crop = frame[y1:y2, x1:x2]
         if crop.size == 0:
-            return {}
+            return None
 
         # --- preprocess ---
         crop = cv2.resize(crop, (192, 192))
@@ -58,34 +59,35 @@ class PoseEstimator:
         )[0][0]  # (17, 3)
 
         kp_dict = {}
+
         for i, name in enumerate(KEYPOINT_NAMES):
             y, x, score = keypoints[i]
-            kp_dict[name] = {
-                "x": x1 + x * (x2 - x1),
-                "y": y1 + y * (y2 - y1),
-                "score": float(score),
-            }
+
+            kp_dict[name] = KeyPoint(
+                x=x1 + x * (x2 - x1),
+                y=y1 + y * (y2 - y1),
+                confidence=float(score),
+            )
 
         body_tilt = self._compute_body_tilt(kp_dict)
 
-        return {
-            "keypoints": kp_dict,
-            "body_tilt_deg": body_tilt,
-            "torso_vector": self._torso_vector(kp_dict),
-        }
-
+        return Pose(
+            keypoints=kp_dict,
+            body_tilt_deg=body_tilt,
+            torso_vector=self._torso_vector(kp_dict),
+        )
     # ------------------------
     # Geometry utils
     # ------------------------
 
-    def _torso_vector(self, kp: Dict) -> Tuple[float, float]:
+    def _torso_vector(self, kp: Dict[str, KeyPoint]) -> Tuple[float, float]:
         ls, rs = kp["left_shoulder"], kp["right_shoulder"]
         lh, rh = kp["left_hip"], kp["right_hip"]
 
-        sx = (ls["x"] + rs["x"]) / 2
-        sy = (ls["y"] + rs["y"]) / 2
-        hx = (lh["x"] + rh["x"]) / 2
-        hy = (lh["y"] + rh["y"]) / 2
+        sx = (ls.x + rs.x) / 2
+        sy = (ls.y + rs.y) / 2
+        hx = (lh.x + rh.x) / 2
+        hy = (lh.y + rh.y) / 2
 
         return (hx - sx, hy - sy)
 

@@ -11,26 +11,29 @@ class OuttriggerNotDeployedRule(Rule):
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp
         events = []
-        # meta["outtrigger_required"]=True 일 때만 체크
-        required = bool(ctx.meta.get("outtrigger_required", False))
+
+        # task["outtrigger_required"]=True 일 때만 체크
+        required = bool(ctx.task.outtrigger_required)
         if not required:
             return []
-        
-        db = self.db.setdefault(
-            ctx.track_id,
-            Debounce(self.cfg.outtrigger_not_deployed_sec, self.cfg.cooldown_sec)
-        )
+
         cond = not ctx.state.any_outtrigger
 
-        if db.check(now, cond):
-            events.append(Event(
-                self.name,
-                "medium",
-                ctx.track_id,
-                now,
-                {
-                    "required": True,
-                    "outtrigger_detected": ctx.state.any_outtrigger
-                }
-            ))
+        # scene-level debounce → 고정 ID 사용
+        SCENE_ID = 0
+
+        if self.db.check(SCENE_ID, now, cond):
+            events.append(
+                Event(
+                    self.name,
+                    "medium",
+                    SCENE_ID,
+                    now,
+                    {
+                        "required": True,
+                        "outtrigger_detected": ctx.state.any_outtrigger,
+                    },
+                )
+            )
+
         return events

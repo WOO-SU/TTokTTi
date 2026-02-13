@@ -11,5 +11,5 @@ pip install -r requirements.txt
 Then, from root, run
 
 ```bash
-python python -m vision_fullcam.main 
+python -m vision_fullcam.main 
 ```
