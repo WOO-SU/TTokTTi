@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,24 +9,51 @@ import {
   StatusBar,
   ScrollView,
   Dimensions,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import type {RootStackParamList} from '../../App';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../App';
+import { useAuth } from '../context/AuthContext';
 
-const {width: SCREEN_WIDTH} = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const heroImage = require('../assets/login-hero.png');
+const heroImage = require('../assets/mascot-logo.png');
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Login'>;
 };
 
-export default function LoginScreen({navigation}: Props) {
+export default function LoginScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
-  const [email, setEmail] = useState('');
+  const { login } = useAuth();
+  const [userName, setUserName] = useState('');
   const [password, setPassword] = useState('');
   const [secureText, setSecureText] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (!userName.trim() || !password.trim()) {
+      Alert.alert('입력 오류', '아이디와 비밀번호를 입력해주세요.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await login(userName.trim(), password);
+      navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 401) {
+        Alert.alert('로그인 실패', '아이디 혹은 비밀번호가 틀렸습니다.');
+      } else {
+        Alert.alert('연결 오류', '서버에 연결할 수 없습니다. 네트워크를 확인해주세요.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -38,7 +65,7 @@ export default function LoginScreen({navigation}: Props) {
         {/* Hero Image */}
         <Image
           source={heroImage}
-          style={[styles.heroImage, {marginTop: insets.top}]}
+          style={[styles.heroImage, { marginTop: insets.top }]}
           resizeMode="cover"
         />
 
@@ -55,11 +82,10 @@ export default function LoginScreen({navigation}: Props) {
                 <View style={styles.field}>
                   <TextInput
                     style={styles.input}
-                    placeholder="Email Address"
+                    placeholder="아이디"
                     placeholderTextColor="#8F9098"
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
+                    value={userName}
+                    onChangeText={setUserName}
                     autoCapitalize="none"
                   />
                 </View>
@@ -93,8 +119,16 @@ export default function LoginScreen({navigation}: Props) {
             {/* Buttons */}
             <View style={styles.buttonsSection}>
               {/* Login Button */}
-              <TouchableOpacity style={styles.loginButton} activeOpacity={0.8}>
-                <Text style={styles.loginButtonText}>Login</Text>
+              <TouchableOpacity
+                style={[styles.loginButton, isLoading && {opacity: 0.6}]}
+                activeOpacity={0.8}
+                disabled={isLoading}
+                onPress={handleLogin}>
+                {isLoading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.loginButtonText}>Login</Text>
+                )}
               </TouchableOpacity>
 
               {/* Register */}
@@ -116,21 +150,21 @@ export default function LoginScreen({navigation}: Props) {
             <View style={styles.socialButtons}>
               {/* Google */}
               <TouchableOpacity
-                style={[styles.socialButton, {backgroundColor: '#ED3241'}]}
+                style={[styles.socialButton, { backgroundColor: '#ED3241' }]}
                 activeOpacity={0.8}>
                 <GoogleIcon />
               </TouchableOpacity>
 
               {/* Apple */}
               <TouchableOpacity
-                style={[styles.socialButton, {backgroundColor: '#1F2024'}]}
+                style={[styles.socialButton, { backgroundColor: '#1F2024' }]}
                 activeOpacity={0.8}>
                 <AppleIcon />
               </TouchableOpacity>
 
               {/* Facebook */}
               <TouchableOpacity
-                style={[styles.socialButton, {backgroundColor: '#006FFD'}]}
+                style={[styles.socialButton, { backgroundColor: '#006FFD' }]}
                 activeOpacity={0.8}>
                 <FacebookIcon />
               </TouchableOpacity>
@@ -144,19 +178,19 @@ export default function LoginScreen({navigation}: Props) {
 
 /* SVG-like icon components using basic Views/Text */
 
-function EyeIcon({color}: {color: string}) {
+function EyeIcon({ color }: { color: string }) {
   return (
     <View style={iconStyles.eyeContainer}>
       <View
         style={[
           iconStyles.eyeOuter,
-          {borderColor: color},
+          { borderColor: color },
         ]}
       />
       <View
         style={[
           iconStyles.eyeInner,
-          {backgroundColor: color},
+          { backgroundColor: color },
         ]}
       />
     </View>
