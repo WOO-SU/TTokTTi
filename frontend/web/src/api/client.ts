@@ -79,7 +79,7 @@ export async function login(
   const res = await fetch(`${API_BASE}/user/login/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user_name: userName, password }),
+    body: JSON.stringify({ username: userName, password }),
   });
 
   if (!res.ok) {
