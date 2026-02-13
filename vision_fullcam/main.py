@@ -147,36 +147,36 @@ def main():
             if frame is None:
                 break
 
-            clip_buffer.push(frame)
+            clip_buffer.push(frame) # 여기 쌓인 프레임 버퍼를 그대로 blob으로 보낼 수 있게 하자 (/api/detect/save)
 
-            # 1️⃣ detection
+            # 1️⃣ detection: frame의 객체 검출
             detections = detector.detect(frame)
 
-            # 2️⃣ tracking
+            # 2️⃣ tracking: 
             tracked_input = [
-                Tracked(-1, d.label, d.bbox, d.score)
+                Tracked(-1, d.label, d.bbox, d.score) # detections의 각 객체를 Tracked 형태로 변환 = 아직 아이디는 -1
                 for d in detections
             ]
-            tracked = tracker.update(tracked_input)
+            tracked = tracker.update(tracked_input) # ID 부여
 
             # 3️⃣ state update
             now = time.time()
-            state.update(tracked, frame, now)
+            state.update(tracked, frame, now) # 각 클래스 마다 state field update (if needed) -> state는 클래스별 객체의 state를 모두 들고 있음
 
-            # 4️⃣ pose estimation (MoveNet 자리)
+            # 4️⃣ pose estimation: by MoveNet, 사람 몸체에 대한 판단
             for p in state.persons.values():
-                pose = pose_estimator.infer(frame, p.bbox)
+                pose = pose_estimator.infer(frame, p.bbox) # person의 bbox를 movenet에 넘겨서 pose estimation
                 if pose:
-                    p.pose_hist.append(pose)
+                    p.pose_hist.append(pose) # keypoints, body_tilt_deg, torso_vector를 pose_hist에 저장
 
-            # 5️⃣ PPE observer
+            # 5️⃣ PPE observer: 각 사람에 대한 PPE 관측 정보 업데이트
             ppe_observer.update(
                 persons=state.persons,
                 tracked=tracked,
                 frame_shape=frame.shape[:2],
             )
 
-            # 6️⃣ rule context
+            # 6️⃣ rule context: 위에서 갱신된 state를 바탕으로 rule 평가를 위한 context 생성
             ctx = RuleContext(
                 timestamp=now,
                 frame=frame,
@@ -187,7 +187,7 @@ def main():
             # 7️⃣ rule evaluation
             events = []
             for rule in rules:
-                events.extend(rule.evaluate(ctx))
+                events.extend(rule.evaluate(ctx)) # 각 rule에 대한 평가를 Event 객체로 저장함
 
             # 8️⃣ emit
             if events:

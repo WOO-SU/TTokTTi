@@ -8,7 +8,7 @@ class PersonState:
         self.id = track_id
         self.last_seen = time.time()
 
-        # 최근 프레임 히스토리(BOOL)
+        # 최근 프레임 히스토리(BOOL): by PPEObserver
         self.helmet_hist = deque(maxlen=120)
         self.vest_hist = deque(maxlen=120)
         self.shoes_hist = deque(maxlen=120)
