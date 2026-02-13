@@ -1,14 +1,14 @@
 # core
 ultralytics==8.0.0
-opencv-python==4.8.0
-numpy==1.23
+opencv-python==4.8.0.76
+numpy==1.23.5
 
 # torch
 torch==1.13
 torchvision==0.14
 
 # pose (optional, phase 2)
-tensorflow==2.9
+tensorflow==2.15.0
 tensorflow-hub==0.12
 
 # utils

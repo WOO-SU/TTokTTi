@@ -1,39 +1,39 @@
 import time
 import cv2
 
-from vision_fullcam.config import Config
-from vision_fullcam.stream.reader import FrameReader
+from .config import Config
+from .stream.reader import FrameReader
 
-from vision_fullcam.detection.yolo_detector import YoloDetector
-from vision_fullcam.detection.fake_detector import FakeDetector
+from .detection.yolo_detector import YoloDetector
+from .detection.fake_detector import FakeDetector
 
-from vision_fullcam.tracking.simple_tracker import SimpleTracker, Tracked
-from vision_fullcam.state.state_buffer import StateBuffer
-from vision_fullcam.state.task_state import TaskState
-from vision_fullcam.state.ppe_observer import PPEObserver
+from .tracking.simple_tracker import SimpleTracker, Tracked
+from .state.state_buffer import StateBuffer
+from .state.task_state import TaskState
+from .state.ppe_observer import PPEObserver
 
-from vision_fullcam.pose.movenet import PoseEstimator
+from .pose.movenet import PoseEstimator
 
-from vision_fullcam.rules.base import RuleContext
-from vision_fullcam.rules.ppe_rules import (
+from .rules.base import RuleContext
+from .rules.ppe_rules import (
     HelmetNotWornRule,
     SafetyVestNotWornRule,
     SafetyShoesNotWornRule,
 )
-from vision_fullcam.rules.worker_count import InsufficientWorkerCountRule
-from vision_fullcam.rules.ladder_rules import (
+from .rules.worker_count import InsufficientWorkerCountRule
+from .rules.ladder_rules import (
     LadderTiltRule,
     LadderMovementWithPersonRule,
 )
-from vision_fullcam.rules.height_rule import HeightLadderViolationRule
-from vision_fullcam.rules.outtrigger_not_deployed import OuttriggerNotDeployedRule
-from vision_fullcam.rules.posture_rules import (
+from .rules.height_rule import HeightLadderViolationRule
+from .rules.outtrigger_not_deployed import OuttriggerNotDeployedRule
+from .rules.posture_rules import (
     ExcessiveBodyTiltRule,
     TopStepUsageRule,
 )
 
-from vision_fullcam.events.clip_buffer import ClipBuffer
-from vision_fullcam.events.emitter import EventEmitter
+from .events.clip_buffer import ClipBuffer
+from .events.emitter import EventEmitter
 
 def build_detector(cfg: Config):
     if getattr(cfg, "use_fake_detector", True):
@@ -202,7 +202,7 @@ def main():
 
             # 9️⃣ monitor
             if getattr(cfg, "show_window", True):
-                cv2.imshow("vision_fullcam", frame)
+                cv2.imshow("", frame)
 
             key = cv2.waitKey(1) & 0xFF
             _handle_keys(detector, task, key)
