@@ -1,7 +1,5 @@
 # Fullcam Vision Model
 
----
-
 To test at local with FakeDetector, you need to set environment by.
 
 ```bash
