@@ -203,7 +203,7 @@ const regulationMap = new Map(regulations.map(r => [r.id, r]));
 const sidebarItems = [
   { label: 'Home', icon: '🏠', path: '/home' },
   { label: '안전 규정 확인', icon: '🛡️', path: '/safety' },
-  { label: '근로자 위험도', icon: '👤', path: '/risk' },
+  { label: '위험성 평가', icon: '👤', path: '/risk' },
   { label: '보고서 작성', icon: '✏️', path: '/report' },
 ];
 
