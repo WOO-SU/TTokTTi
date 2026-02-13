@@ -7,6 +7,8 @@ from azure.storage.blob import (
     generate_blob_sas,
     BlobSasPermissions,
 )
+from dotenv import load_dotenv
+load_dotenv()
 
 ACCOUNT = os.getenv("AZURE_STORAGE_ACCOUNT_NAME")
 KEY = os.getenv("AZURE_STORAGE_ACCOUNT_KEY")
