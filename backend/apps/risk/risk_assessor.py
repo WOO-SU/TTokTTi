@@ -10,7 +10,12 @@ import requests # test용
 
 # ✅ 로컬 단독 테스트용: python으로 직접 실행할 때 .env 로드
 # (runserver에서는 settings.py에서 load_dotenv()가 이미 호출되면 이 줄은 없어도 됨)
-load_dotenv(".env")
+# load_dotenv(".env")
+
+# risk_assessor.py (추천)
+if os.getenv("DJANGO_SETTINGS_MODULE") is None:
+    # 진짜 로컬 단독 테스트일 때만
+    load_dotenv(".env")
 
 from apps.user.storage.sas import make_read_sas
 
