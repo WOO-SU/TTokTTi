@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import logoImg from '../assets/logo.png';
 
@@ -28,8 +28,10 @@ const judgmentOptions: JudgmentOption[] = [
 
 export default function ReportScreen() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { logout } = useAuth();
   const [activeSidebar, setActiveSidebar] = useState('보고서 작성');
+  const isProfileActive = location.pathname === '/profile';
 
   // Form state
   const [violations, setViolations] = useState('');
@@ -56,7 +58,7 @@ export default function ReportScreen() {
         </button>
 
         <div style={styles.sidebarIcons}>
-          <button type="button" style={styles.sidebarIconBtn}>👤</button>
+          <button type="button" style={{ ...styles.sidebarIconBtn, ...(isProfileActive ? { backgroundColor: '#006FFD', boxShadow: '0 2px 8px rgba(0,111,253,0.3)' } : {}) }} onClick={() => navigate('/profile')}>👤</button>
           <button type="button" style={styles.sidebarIconBtn}>⚙️</button>
           <button type="button" style={{ ...styles.sidebarIconBtn, position: 'relative' }}>
             🔔

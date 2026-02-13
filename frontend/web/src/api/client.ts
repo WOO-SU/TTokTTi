@@ -75,7 +75,7 @@ export async function apiFetch(
 export async function login(
   userName: string,
   password: string,
-): Promise<{ userName: string }> {
+): Promise<{ userName: string; userId: number | null }> {
   const res = await fetch(`${API_BASE}/user/login/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -91,7 +91,7 @@ export async function login(
   setTokens(access, refresh);
 
   const payload = decodeJwtPayload(access);
-  return { userName: (payload.user_name ?? userName) as string };
+  return { userName: (payload.user_name ?? userName) as string, userId: (payload.user_id as number) ?? null };
 }
 
 export async function logout(): Promise<void> {

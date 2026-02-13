@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import logoImg from '../assets/logo.png';
 
@@ -226,7 +226,9 @@ const statusIcons: Record<string, { emoji: string; bg: string }> = {
 
 export default function SafetyRegulationScreen() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuth();
+  const isProfileActive = location.pathname === '/profile';
   const handleLogout = async () => {
     await logout();
     navigate('/login');
@@ -307,7 +309,7 @@ export default function SafetyRegulationScreen() {
         </button>
 
         <div style={styles.sidebarIcons}>
-          <button type="button" style={styles.sidebarIconBtn}>👤</button>
+          <button type="button" style={{ ...styles.sidebarIconBtn, ...(isProfileActive ? { backgroundColor: '#006FFD', boxShadow: '0 2px 8px rgba(0,111,253,0.3)' } : {}) }} onClick={() => navigate('/profile')}>👤</button>
           <button type="button" style={styles.sidebarIconBtn}>⚙️</button>
           <button type="button" style={{ ...styles.sidebarIconBtn, position: 'relative' }}>
             🔔

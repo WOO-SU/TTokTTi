@@ -6,7 +6,7 @@ import {
   decodeJwtPayload,
 } from '../api/client';
 
-type User = { userName: string };
+type User = { userName: string; userId: number | null };
 
 type AuthContextValue = {
   user: User | null;
@@ -25,7 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (access) {
       try {
         const payload = decodeJwtPayload(access);
-        setUser({ userName: payload.user_name as string });
+        setUser({ userName: payload.user_name as string, userId: (payload.user_id as number) ?? null });
       } catch {
         setUser(null);
       }
@@ -34,7 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(async (userName: string, password: string) => {
     const result = await apiLogin(userName, password);
-    setUser({ userName: result.userName });
+    setUser({ userName: result.userName, userId: result.userId });
   }, []);
 
   const logout = useCallback(async () => {
