@@ -11,3 +11,4 @@ mysqlclient==2.2.7
 
 azure-storage-blob==12.19.0
 openai>=2.20.0
+drf-spectacular>=1.28.0
