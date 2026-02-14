@@ -3,17 +3,16 @@ services:
   db:
     image: mysql:8.0
     container_name: riskpulse_db
-    env_file: ./backend/.env
     restart: always
     environment:
       MYSQL_DATABASE: ${DB_NAME}
       MYSQL_USER: ${DB_USER}
       MYSQL_PASSWORD: ${DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_ROOT_PASSWORD: rootpassword
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$MYSQL_ROOT_PASSWORD"]
       timeout: 20s
       retries: 10
 
@@ -27,7 +26,7 @@ services:
   backend:
     build: ./backend
     container_name: riskpulse_be
-    env_file: ./backend/.env
+
     volumes:
       - ./backend:/app
     ports:
@@ -35,17 +34,48 @@ services:
     depends_on:
       db:
         condition: service_healthy
+
     environment:
-      - DB_HOST=db
+      - MYSQL_DATABASE=${DB_NAME}
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+      - MYSQL_HOST=db
+      - MYSQL_PORT=3306
+
+      - DEBUG=${DEBUG}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+    
+
+    env_file:
+      - ./backend/.env
+  
     # Dev
     command: python manage.py runserver 0.0.0.0:8000
+
+  # azurite:
+  #   image: mcr.microsoft.com/azure-storage/azurite:3.29.0
+  #   container_name: riskpulse_azurite
+  #   command:
+  #     - azurite-blob
+  #     - --blobHost
+  #     - 0.0.0.0
+  #     - --blobPort
+  #     - "10000"
+  #     - --location
+  #     - /data
+  #     - --debug
+  #     - /data/debug.log
+  #   ports:
+  #     - "10000:10000"
+  #   volumes:
+  #     - azurite_data:/data
 
     # For Deployment
     # command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3
 
-  # worker:
+  # worker_risk:
   #   build: ./backend
-  #   container_name: riskpulse_gpu
+  #   container_name: riskpulse_gpu_risk
 
   #   volumes:
   #     - ./backend:/app
@@ -66,6 +96,19 @@ services:
 
   #   command: celery -A config worker -l info
 
+  #   environment:
+  #     - MYSQL_DATABASE=${DB_NAME}
+  #     - MYSQL_USER=${DB_USER}
+  #     - MYSQL_PASSWORD=${DB_PASSWORD}
+  #     - MYSQL_HOST=db
+  #     - MYSQL_PORT=3306
+  #     - DJANGO_SECRET_KEY=${SECRET_KEY}
+  #     # Same Connection String as Backend
+
+  #     - REDIS_HOST=redis
+  #     - REDIS_PORT=6379
 
 volumes:
   db_data:
+#   azurite_data:
+
