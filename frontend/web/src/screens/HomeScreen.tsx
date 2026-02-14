@@ -14,9 +14,32 @@ type TaskCard = {
   memberCount: number;
 };
 
-const employeeCards: TaskCard[] = [
-  { title: '(작업중)', subtitle: '근무 인원 현황', name: '송영민', memberCount: 2 },
-  { title: '(작업 보조중)', subtitle: '근무 인원 현황', name: '임정원', memberCount: 3 },
+type WorkSiteCard = {
+  siteName: string;
+  startTime: string;
+  members: { id: number; name: string }[];
+  status: '작업중' | '이동중' | '대기중';
+};
+
+const workSiteCards: WorkSiteCard[] = [
+  {
+    siteName: '봉천동 작업현장1',
+    startTime: '08:30',
+    members: [{ id: 2, name: '송영민' }, { id: 3, name: '임정원' }],
+    status: '작업중',
+  },
+  {
+    siteName: '신림동 작업현장2',
+    startTime: '09:00',
+    members: [{ id: 4, name: '김태호' }, { id: 5, name: '박지수' }],
+    status: '작업중',
+  },
+  {
+    siteName: '관악구 작업현장3',
+    startTime: '09:15',
+    members: [{ id: 6, name: '이준혁' }, { id: 7, name: '최서연' }],
+    status: '이동중',
+  },
 ];
 
 const noticeCards: TaskCard[] = [
@@ -102,6 +125,54 @@ function TaskCardComponent({ card }: { card: TaskCard }) {
   );
 }
 
+const statusColors: Record<string, { bg: string; text: string }> = {
+  '작업중': { bg: '#E7F4E8', text: '#298A3E' },
+  '이동중': { bg: '#FFF4E5', text: '#E8900C' },
+  '대기중': { bg: '#F0F1F3', text: '#71727A' },
+};
+
+function WorkSiteCardComponent({
+  card,
+  onMemberClick,
+}: {
+  card: WorkSiteCard;
+  onMemberClick: (id: number) => void;
+}) {
+  const sc = statusColors[card.status] ?? statusColors['작업중'];
+  return (
+    <div style={styles.workCard}>
+      <div style={styles.workCardHeader}>
+        <span style={styles.workCardSite}>{card.siteName}</span>
+        <span style={{ ...styles.workCardStatus, backgroundColor: sc.bg, color: sc.text }}>
+          {card.status}
+        </span>
+      </div>
+      <div style={styles.workCardMeta}>
+        <span style={styles.workCardMetaIcon}>&#x1F552;</span>
+        <span style={styles.workCardMetaText}>작업 시작 {card.startTime}</span>
+      </div>
+      <div style={styles.workCardDivider} />
+      <div style={styles.workCardMembersLabel}>
+        <span style={styles.workCardMetaIcon}>&#x1F465;</span>
+        <span style={styles.workCardMetaText}>작업 인원</span>
+      </div>
+      <div style={styles.workCardMembers}>
+        {card.members.map((m, i) => (
+          <React.Fragment key={m.id}>
+            {i > 0 && <span style={styles.workCardMemberSep}>,</span>}
+            <button
+              type="button"
+              style={styles.workCardMemberBtn}
+              onClick={() => onMemberClick(m.id)}>
+              {m.name}
+            </button>
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Component ──
 
 export default function HomeScreen() {
@@ -183,7 +254,7 @@ export default function HomeScreen() {
             <h1 style={styles.headerTitle}>Home</h1>
             {user && (
               <span style={styles.headerUser}>
-                {user.userName} 님, 환영합니다
+                관리자: {user.userName}
               </span>
             )}
           </div>
@@ -194,20 +265,20 @@ export default function HomeScreen() {
 
         {/* Board */}
         <div style={styles.board}>
-          {/* Column: 메인 직원정보 */}
+          {/* Column: 현재 작업중 */}
           <div style={styles.column}>
             <div style={styles.columnHeader}>
-              <span style={styles.columnTitle}>메인 직원정보</span>
-              <span style={styles.columnMore}>•••</span>
+              <span style={styles.columnTitle}>현재 작업중</span>
+              <span style={styles.columnBadge}>{workSiteCards.length}</span>
             </div>
             <div style={styles.columnContent}>
-              {employeeCards.map((card, idx) => (
-                <TaskCardComponent key={idx} card={card} />
+              {workSiteCards.map((card, idx) => (
+                <WorkSiteCardComponent
+                  key={idx}
+                  card={card}
+                  onMemberClick={(id) => navigate(`/employee/${id}`, { state: { siteName: card.siteName } })}
+                />
               ))}
-              <button type="button" style={styles.newTaskBtn}>
-                <span style={styles.newTaskPlus}>+</span>
-                <span style={styles.newTaskText}>New Task</span>
-              </button>
             </div>
           </div>
 
@@ -617,6 +688,99 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#8F9098',
     letterSpacing: 2,
     cursor: 'pointer',
+  },
+
+  // Column badge
+  columnBadge: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
+    fontSize: 11,
+    color: '#FFFFFF',
+    backgroundColor: '#006FFD',
+    borderRadius: 10,
+    padding: '2px 8px',
+    minWidth: 18,
+    textAlign: 'center',
+  },
+
+  // Work Site Card
+  workCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 10,
+    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+    border: '1px solid #F0F1F3',
+  },
+  workCardHeader: {
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  workCardSite: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 700,
+    fontSize: 14,
+    color: '#1F2024',
+  },
+  workCardStatus: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
+    fontSize: 11,
+    padding: '3px 10px',
+    borderRadius: 12,
+  },
+  workCardMeta: {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  workCardMetaIcon: {
+    fontSize: 13,
+  },
+  workCardMetaText: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 500,
+    fontSize: 12,
+    color: '#71727A',
+  },
+  workCardDivider: {
+    height: 1,
+    backgroundColor: '#F0F1F3',
+    margin: '2px 0',
+  },
+  workCardMembersLabel: {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  workCardMembers: {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingLeft: 20,
+  },
+  workCardMemberBtn: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
+    fontSize: 13,
+    color: '#006FFD',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '2px 4px',
+    borderRadius: 4,
+  },
+  workCardMemberSep: {
+    fontFamily: 'Inter, sans-serif',
+    fontSize: 13,
+    color: '#8F9098',
   },
 
   // New Task Button

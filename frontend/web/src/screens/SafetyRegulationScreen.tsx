@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import logoImg from '../assets/logo.png';
@@ -30,7 +30,7 @@ type RegulationCard = {
 type WorkerGroup = {
   id: number;
   name: string;
-  members: { name: string; color: string }[];
+  members: { employeeId: number; name: string; color: string }[];
   regulationIds: number[];
 };
 
@@ -162,39 +162,30 @@ const regulations: RegulationCard[] = [
 const workerGroups: WorkerGroup[] = [
   {
     id: 1,
-    name: '사다리 작업 1조',
+    name: '봉천동 작업현장1',
     members: [
-      { name: '똑띠', color: '#006FFD' },
-      { name: 'TTokTTi', color: '#E87C5D' },
+      { employeeId: 2, name: '송영민', color: '#006FFD' },
+      { employeeId: 3, name: '임정원', color: '#E87C5D' },
     ],
     regulationIds: [1, 2],
   },
   {
     id: 2,
-    name: '사다리 작업 2조',
+    name: '신림동 작업현장2',
     members: [
-      { name: '우수연', color: '#22A06B' },
-      { name: '원인영', color: '#8F9098' },
+      { employeeId: 4, name: '김태호', color: '#22A06B' },
+      { employeeId: 5, name: '박지수', color: '#8F9098' },
     ],
     regulationIds: [3, 4],
   },
   {
     id: 3,
-    name: '사다리 작업 3조',
+    name: '관악구 작업현장3',
     members: [
-      { name: '이민호', color: '#7B61FF' },
-      { name: '송영민', color: '#E85DBF' },
+      { employeeId: 6, name: '이준혁', color: '#7B61FF' },
+      { employeeId: 7, name: '최서연', color: '#E85DBF' },
     ],
-    regulationIds: [5, 6],
-  },
-  {
-    id: 4,
-    name: '사다리 작업 4조',
-    members: [
-      { name: '이재성', color: '#FF8A00' },
-      { name: '임정원', color: '#00B8D9' },
-    ],
-    regulationIds: [7],
+    regulationIds: [5, 6, 7],
   },
 ];
 
@@ -227,7 +218,7 @@ const statusIcons: Record<string, { emoji: string; bg: string }> = {
 export default function SafetyRegulationScreen() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const isProfileActive = location.pathname === '/profile';
   const handleLogout = async () => {
     await logout();
@@ -236,19 +227,7 @@ export default function SafetyRegulationScreen() {
   const [expandedGroupId, setExpandedGroupId] = useState<number | null>(1);
   const [expandedRegId, setExpandedRegId] = useState<number | null>(null);
 
-  // Replace 송영민 in 3조 with the logged-in user's name
-  const groups = useMemo(() => {
-    if (!user) return workerGroups;
-    return workerGroups.map(g => {
-      if (g.id !== 3) return g;
-      return {
-        ...g,
-        members: g.members.map((m, i) =>
-          i === 1 ? { ...m, name: user.userName } : m
-        ),
-      };
-    });
-  }, [user]);
+  const groups = workerGroups;
   const [checkStates, setCheckStates] = useState<Record<number, boolean[]>>(() => {
     const init: Record<number, boolean[]> = {};
     regulations.forEach(r => {
@@ -384,12 +363,16 @@ export default function SafetyRegulationScreen() {
                 {/* Group Members */}
                 <div style={styles.groupMembersRow}>
                   {group.members.map(member => (
-                    <div key={member.name} style={styles.groupMember}>
+                    <button
+                      key={member.name}
+                      type="button"
+                      style={styles.groupMember}
+                      onClick={() => navigate(`/employee/${member.employeeId}`, { state: { siteName: group.name } })}>
                       <span style={{ ...styles.memberAvatar, backgroundColor: member.color }}>
                         {member.name[0]}{member.name[member.name.length - 1]}
                       </span>
-                      <span style={styles.memberName}>{member.name}</span>
-                    </div>
+                      <span style={styles.memberNameLink}>{member.name}</span>
+                    </button>
                   ))}
                 </div>
 
@@ -835,6 +818,10 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: 0,
   },
   memberAvatar: {
     width: 28,
@@ -853,6 +840,12 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 500,
     fontSize: 13,
     color: '#1F2024',
+  },
+  memberNameLink: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
+    fontSize: 13,
+    color: '#006FFD',
   },
   groupProgressRow: {
     display: 'flex',
