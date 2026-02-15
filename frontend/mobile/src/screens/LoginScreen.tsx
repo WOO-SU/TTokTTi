@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import {
   View,
   Text,
@@ -8,16 +8,15 @@ import {
   Image,
   StatusBar,
   ScrollView,
-  Dimensions,
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../App';
-import { useAuth } from '../context/AuthContext';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import type {RootStackParamList} from '../../App';
+import {useAuth} from '../context/AuthContext';
+import {s, vs, ms, SCREEN_WIDTH} from '../utils';
+import {Colors, Fonts} from '../utils';
 
 const heroImage = require('../assets/mascot-logo.png');
 
@@ -25,9 +24,9 @@ type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Login'>;
 };
 
-export default function LoginScreen({ navigation }: Props) {
+export default function LoginScreen({navigation}: Props) {
   const insets = useSafeAreaInsets();
-  const { login } = useAuth();
+  const {login} = useAuth();
   const [userName, setUserName] = useState('');
   const [password, setPassword] = useState('');
   const [secureText, setSecureText] = useState(true);
@@ -42,13 +41,16 @@ export default function LoginScreen({ navigation }: Props) {
     setIsLoading(true);
     try {
       await login(userName.trim(), password);
-      navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+      navigation.reset({index: 0, routes: [{name: 'Main'}]});
     } catch (error: any) {
       const status = error?.response?.status;
       if (status === 401) {
         Alert.alert('로그인 실패', '아이디 혹은 비밀번호가 틀렸습니다.');
       } else {
-        Alert.alert('연결 오류', '서버에 연결할 수 없습니다. 네트워크를 확인해주세요.');
+        Alert.alert(
+          '연결 오류',
+          '서버에 연결할 수 없습니다. 네트워크를 확인해주세요.',
+        );
       }
     } finally {
       setIsLoading(false);
@@ -57,7 +59,7 @@ export default function LoginScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         bounces={false}
@@ -65,7 +67,7 @@ export default function LoginScreen({ navigation }: Props) {
         {/* Hero Image */}
         <Image
           source={heroImage}
-          style={[styles.heroImage, { marginTop: insets.top }]}
+          style={[styles.heroImage, {marginTop: insets.top}]}
           resizeMode="cover"
         />
 
@@ -83,7 +85,7 @@ export default function LoginScreen({ navigation }: Props) {
                   <TextInput
                     style={styles.input}
                     placeholder="아이디"
-                    placeholderTextColor="#8F9098"
+                    placeholderTextColor={Colors.textGrayAlt}
                     value={userName}
                     onChangeText={setUserName}
                     autoCapitalize="none"
@@ -97,7 +99,7 @@ export default function LoginScreen({ navigation }: Props) {
                   <TextInput
                     style={[styles.input, styles.passwordInput]}
                     placeholder="Password"
-                    placeholderTextColor="#8F9098"
+                    placeholderTextColor={Colors.textGrayAlt}
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry={secureText}
@@ -105,7 +107,7 @@ export default function LoginScreen({ navigation }: Props) {
                   <TouchableOpacity
                     onPress={() => setSecureText(!secureText)}
                     style={styles.eyeIconContainer}>
-                    <EyeIcon color="#8F9098" />
+                    <EyeIcon color={Colors.textGrayAlt} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -125,7 +127,7 @@ export default function LoginScreen({ navigation }: Props) {
                 disabled={isLoading}
                 onPress={handleLogin}>
                 {isLoading ? (
-                  <ActivityIndicator color="#FFFFFF" />
+                  <ActivityIndicator color={Colors.white} />
                 ) : (
                   <Text style={styles.loginButtonText}>Login</Text>
                 )}
@@ -150,21 +152,27 @@ export default function LoginScreen({ navigation }: Props) {
             <View style={styles.socialButtons}>
               {/* Google */}
               <TouchableOpacity
-                style={[styles.socialButton, { backgroundColor: '#ED3241' }]}
+                style={[styles.socialButton, {backgroundColor: Colors.google}]}
                 activeOpacity={0.8}>
                 <GoogleIcon />
               </TouchableOpacity>
 
               {/* Apple */}
               <TouchableOpacity
-                style={[styles.socialButton, { backgroundColor: '#1F2024' }]}
+                style={[
+                  styles.socialButton,
+                  {backgroundColor: Colors.textDark},
+                ]}
                 activeOpacity={0.8}>
                 <AppleIcon />
               </TouchableOpacity>
 
               {/* Facebook */}
               <TouchableOpacity
-                style={[styles.socialButton, { backgroundColor: '#006FFD' }]}
+                style={[
+                  styles.socialButton,
+                  {backgroundColor: Colors.primary},
+                ]}
                 activeOpacity={0.8}>
                 <FacebookIcon />
               </TouchableOpacity>
@@ -178,21 +186,11 @@ export default function LoginScreen({ navigation }: Props) {
 
 /* SVG-like icon components using basic Views/Text */
 
-function EyeIcon({ color }: { color: string }) {
+function EyeIcon({color}: {color: string}) {
   return (
     <View style={iconStyles.eyeContainer}>
-      <View
-        style={[
-          iconStyles.eyeOuter,
-          { borderColor: color },
-        ]}
-      />
-      <View
-        style={[
-          iconStyles.eyeInner,
-          { backgroundColor: color },
-        ]}
-      />
+      <View style={[iconStyles.eyeOuter, {borderColor: color}]} />
+      <View style={[iconStyles.eyeInner, {backgroundColor: color}]} />
     </View>
   );
 }
@@ -211,26 +209,26 @@ function FacebookIcon() {
 
 const iconStyles = StyleSheet.create({
   eyeContainer: {
-    width: 16,
-    height: 16,
+    width: s(16),
+    height: s(16),
     justifyContent: 'center',
     alignItems: 'center',
   },
   eyeOuter: {
-    width: 14,
-    height: 10,
+    width: s(14),
+    height: s(10),
     borderWidth: 1.5,
-    borderRadius: 7,
+    borderRadius: s(7),
   },
   eyeInner: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
+    width: s(5),
+    height: s(5),
+    borderRadius: s(2.5),
     position: 'absolute',
   },
   socialIconText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+    color: Colors.white,
+    fontSize: ms(16),
     fontWeight: '700',
   },
 });
@@ -238,121 +236,121 @@ const iconStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
   scrollContent: {
     flexGrow: 1,
   },
   heroImage: {
     width: SCREEN_WIDTH,
-    height: 251,
+    height: vs(251),
   },
   loginOptions: {
-    paddingHorizontal: 24,
-    paddingTop: 40,
-    paddingBottom: 40,
-    gap: 24,
+    paddingHorizontal: s(24),
+    paddingTop: s(40),
+    paddingBottom: s(40),
+    gap: s(24),
   },
   welcomeTitle: {
-    fontFamily: 'Inter',
+    fontFamily: Fonts.inter,
     fontWeight: '800',
-    fontSize: 24,
-    letterSpacing: 0.24,
-    color: '#000000',
+    fontSize: ms(24),
+    letterSpacing: ms(0.24),
+    color: Colors.black,
   },
   loginSection: {
-    gap: 24,
+    gap: s(24),
   },
   form: {
-    gap: 16,
+    gap: s(16),
   },
   textFieldContainer: {
-    gap: 8,
+    gap: s(8),
   },
   field: {
-    height: 48,
+    height: s(48),
     borderWidth: 1,
-    borderColor: '#C5C6CC',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    borderColor: Colors.border,
+    borderRadius: s(12),
+    paddingHorizontal: s(16),
     flexDirection: 'row',
     alignItems: 'center',
   },
   input: {
     flex: 1,
-    fontFamily: 'Inter',
+    fontFamily: Fonts.inter,
     fontWeight: '400',
-    fontSize: 14,
-    color: '#000000',
+    fontSize: ms(14),
+    color: Colors.black,
     padding: 0,
     height: '100%',
   },
   passwordInput: {
-    paddingRight: 8,
+    paddingRight: s(8),
   },
   eyeIconContainer: {
-    width: 24,
-    height: 24,
+    width: s(24),
+    height: s(24),
     justifyContent: 'center',
     alignItems: 'center',
   },
   forgotPassword: {
-    fontFamily: 'Inter',
+    fontFamily: Fonts.inter,
     fontWeight: '600',
-    fontSize: 12,
-    color: '#006FFD',
+    fontSize: ms(12),
+    color: Colors.primary,
     textAlign: 'right',
   },
   buttonsSection: {
-    gap: 16,
+    gap: s(16),
   },
   loginButton: {
-    height: 48,
-    backgroundColor: '#006FFD',
-    borderRadius: 12,
+    height: s(48),
+    backgroundColor: Colors.primary,
+    borderRadius: s(12),
     justifyContent: 'center',
     alignItems: 'center',
   },
   loginButtonText: {
-    fontFamily: 'Inter',
+    fontFamily: Fonts.inter,
     fontWeight: '600',
-    fontSize: 12,
-    color: '#FFFFFF',
+    fontSize: ms(12),
+    color: Colors.white,
   },
   registerText: {
-    fontFamily: 'Inter',
+    fontFamily: Fonts.inter,
     fontWeight: '400',
-    fontSize: 12,
-    color: '#71727A',
+    fontSize: ms(12),
+    color: Colors.textGray,
     textAlign: 'center',
   },
   registerLink: {
     fontWeight: '600',
-    color: '#006FFD',
+    color: Colors.primary,
   },
   divider: {
     height: 1,
-    backgroundColor: '#D3D5DD',
+    backgroundColor: Colors.borderLight,
   },
   socialSection: {
-    gap: 16,
+    gap: s(16),
   },
   socialText: {
-    fontFamily: 'Inter',
+    fontFamily: Fonts.inter,
     fontWeight: '400',
-    fontSize: 12,
-    color: '#71727A',
+    fontSize: ms(12),
+    color: Colors.textGray,
     textAlign: 'center',
   },
   socialButtons: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 12,
+    gap: s(12),
   },
   socialButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 63,
+    width: s(40),
+    height: s(40),
+    borderRadius: s(63),
     justifyContent: 'center',
     alignItems: 'center',
   },

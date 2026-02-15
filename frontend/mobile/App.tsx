@@ -3,7 +3,7 @@ import {View, Text, StyleSheet} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import {SafeAreaProvider} from 'react-native-safe-area-context';
+import {SafeAreaProvider, useSafeAreaInsets} from 'react-native-safe-area-context';
 import LoginScreen from './src/screens/LoginScreen';
 import SignUpScreen from './src/screens/SignUpScreen';
 import HomeScreen from './src/screens/HomeScreen';
@@ -14,6 +14,8 @@ import EquipmentCameraScreen from './src/screens/EquipmentCameraScreen';
 import PersonalScreen from './src/screens/PersonalScreen';
 import SettingScreen from './src/screens/SettingScreen';
 import {AuthProvider} from './src/context/AuthContext';
+import {s, ms} from './src/utils';
+import {Colors, Fonts} from './src/utils';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -21,7 +23,7 @@ export type RootStackParamList = {
   Main: undefined;
   SelectMode: undefined;
   Camera: {mode: 'all' | 'worker'};
-  RiskAssessment: { completedTitle?: string } | undefined;
+  RiskAssessment: {completedTitle?: string} | undefined;
   EquipmentCamera: {title: string};
 };
 
@@ -45,7 +47,6 @@ function PlaceholderScreen({title}: {title: string}) {
   );
 }
 
-
 function FavoriteScreen() {
   return <PlaceholderScreen title="Favorite" />;
 }
@@ -55,20 +56,20 @@ const placeholderStyles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
   text: {
-    fontFamily: 'Inter',
-    fontSize: 18,
+    fontFamily: Fonts.inter,
+    fontSize: ms(18),
     fontWeight: '600',
-    color: '#1F2024',
+    color: Colors.textDark,
   },
 });
 
 /* ──────── Tab Icon Components ──────── */
 
 function HomeTabIcon({focused}: {focused: boolean}) {
-  const color = focused ? '#1F2024' : '#71727A';
+  const color = focused ? Colors.textDark : Colors.textGray;
   return (
     <View style={tabIconStyles.container}>
       <View style={[tabIconStyles.homeRoof, {borderBottomColor: color}]} />
@@ -78,7 +79,7 @@ function HomeTabIcon({focused}: {focused: boolean}) {
 }
 
 function PersonTabIcon({focused}: {focused: boolean}) {
-  const color = focused ? '#1F2024' : '#71727A';
+  const color = focused ? Colors.textDark : Colors.textGray;
   return (
     <View style={tabIconStyles.container}>
       <View style={[tabIconStyles.personHead, {borderColor: color}]} />
@@ -88,7 +89,7 @@ function PersonTabIcon({focused}: {focused: boolean}) {
 }
 
 function StarTabIcon({focused}: {focused: boolean}) {
-  const color = focused ? '#1F2024' : '#71727A';
+  const color = focused ? Colors.textDark : Colors.textGray;
   return (
     <View style={tabIconStyles.container}>
       <Text style={[tabIconStyles.starText, {color}]}>☆</Text>
@@ -97,7 +98,7 @@ function StarTabIcon({focused}: {focused: boolean}) {
 }
 
 function SettingTabIcon({focused}: {focused: boolean}) {
-  const color = focused ? '#1F2024' : '#71727A';
+  const color = focused ? Colors.textDark : Colors.textGray;
   return (
     <View style={tabIconStyles.container}>
       <Text style={[tabIconStyles.gearText, {color}]}>⚙</Text>
@@ -107,84 +108,86 @@ function SettingTabIcon({focused}: {focused: boolean}) {
 
 const tabIconStyles = StyleSheet.create({
   container: {
-    width: 20,
-    height: 20,
+    width: s(20),
+    height: s(20),
     justifyContent: 'center',
     alignItems: 'center',
   },
   homeRoof: {
     width: 0,
     height: 0,
-    borderLeftWidth: 10,
-    borderRightWidth: 10,
-    borderBottomWidth: 8,
+    borderLeftWidth: s(10),
+    borderRightWidth: s(10),
+    borderBottomWidth: s(8),
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
     position: 'absolute',
     top: 0,
   },
   homeBase: {
-    width: 14,
-    height: 10,
+    width: s(14),
+    height: s(10),
     borderWidth: 2,
     borderTopWidth: 0,
-    borderBottomLeftRadius: 2,
-    borderBottomRightRadius: 2,
+    borderBottomLeftRadius: s(2),
+    borderBottomRightRadius: s(2),
     position: 'absolute',
     bottom: 0,
   },
   personHead: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: s(8),
+    height: s(8),
+    borderRadius: s(4),
     borderWidth: 1.5,
     position: 'absolute',
     top: 0,
   },
   personBody: {
-    width: 14,
-    height: 8,
-    borderTopLeftRadius: 7,
-    borderTopRightRadius: 7,
+    width: s(14),
+    height: s(8),
+    borderTopLeftRadius: s(7),
+    borderTopRightRadius: s(7),
     borderWidth: 1.5,
     borderBottomWidth: 0,
     position: 'absolute',
     bottom: 0,
   },
   starText: {
-    fontSize: 20,
-    lineHeight: 22,
+    fontSize: ms(20),
+    lineHeight: ms(22),
   },
   gearText: {
-    fontSize: 18,
-    lineHeight: 20,
+    fontSize: ms(18),
+    lineHeight: ms(20),
   },
 });
 
 /* ──────── Bottom Tab Navigator ──────── */
 
 function MainTabs() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          height: 88,
-          paddingTop: 16,
-          paddingBottom: 32,
-          paddingHorizontal: 16,
-          backgroundColor: '#FFFFFF',
+          height: s(64) + insets.bottom,
+          paddingTop: s(8),
+          paddingBottom: insets.bottom + s(8),
+          paddingHorizontal: s(16),
+          backgroundColor: Colors.white,
           borderTopWidth: 0,
           elevation: 0,
           shadowOpacity: 0,
         },
         tabBarLabelStyle: {
-          fontFamily: 'Inter',
-          fontSize: 10,
-          marginTop: 4,
+          fontFamily: Fonts.inter,
+          fontSize: ms(10),
+          marginTop: s(4),
         },
-        tabBarActiveTintColor: '#1F2024',
-        tabBarInactiveTintColor: '#71727A',
+        tabBarActiveTintColor: Colors.textDark,
+        tabBarInactiveTintColor: Colors.textGray,
       }}>
       <Tab.Screen
         name="Home"
@@ -192,10 +195,10 @@ function MainTabs() {
         options={{
           tabBarIcon: ({focused}) => <HomeTabIcon focused={focused} />,
           tabBarLabelStyle: {
-            fontFamily: 'Inter',
+            fontFamily: Fonts.inter,
             fontWeight: '600',
-            fontSize: 10,
-            marginTop: 4,
+            fontSize: ms(10),
+            marginTop: s(4),
           },
         }}
       />
@@ -240,8 +243,14 @@ function App() {
             <Stack.Screen name="Main" component={MainTabs} />
             <Stack.Screen name="SelectMode" component={SelectModeScreen} />
             <Stack.Screen name="Camera" component={CameraScreen} />
-            <Stack.Screen name="RiskAssessment" component={RiskAssessmentScreen} />
-            <Stack.Screen name="EquipmentCamera" component={EquipmentCameraScreen} />
+            <Stack.Screen
+              name="RiskAssessment"
+              component={RiskAssessmentScreen}
+            />
+            <Stack.Screen
+              name="EquipmentCamera"
+              component={EquipmentCameraScreen}
+            />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaProvider>

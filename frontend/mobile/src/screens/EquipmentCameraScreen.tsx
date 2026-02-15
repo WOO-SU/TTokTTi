@@ -1,6 +1,6 @@
 /* 장비 점검 카메라 */
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, {useState, useRef, useCallback, useEffect} from 'react';
 import {
   View,
   Text,
@@ -10,21 +10,23 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {
   Camera,
   useCameraDevice,
   useCameraPermission,
 } from 'react-native-vision-camera';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RouteProp } from '@react-navigation/native';
-import type { RootStackParamList } from '../../App';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import type {RouteProp} from '@react-navigation/native';
+import type {RootStackParamList} from '../../App';
 import {
   getSasToken,
   uploadToBlob,
   requestDetection,
   fetchCheckUpdate,
 } from '../api/equipment';
+import {s, ms} from '../utils';
+import {Colors, Fonts} from '../utils';
 
 type Props = {
   navigation: NativeStackNavigationProp<
@@ -81,16 +83,16 @@ function LargeXIcon() {
 
 /* ──────── Main Component ──────── */
 
-export default function EquipmentCameraScreen({ navigation, route }: Props) {
+export default function EquipmentCameraScreen({navigation, route}: Props) {
   const insets = useSafeAreaInsets();
-  const { title } = route.params;
+  const {title} = route.params;
   const [photoPath, setPhotoPath] = useState<string | null>(null);
   const [screenState, setScreenState] = useState<ScreenState>('idle');
 
   const cameraRef = useRef<Camera>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const device = useCameraDevice('back');
-  const { hasPermission, requestPermission } = useCameraPermission();
+  const {hasPermission, requestPermission} = useCameraPermission();
 
   useEffect(() => {
     if (!hasPermission) {
@@ -121,7 +123,7 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
       }
 
       try {
-        const { isUpdated, isComplied } = await fetchCheckUpdate(complianceId);
+        const {isUpdated, isComplied} = await fetchCheckUpdate(complianceId);
 
         if (isUpdated) {
           if (pollingRef.current) {
@@ -140,7 +142,9 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
   }, []);
 
   const handleCapture = useCallback(async () => {
-    if (!cameraRef.current) { return; }
+    if (!cameraRef.current) {
+      return;
+    }
 
     // 1. 사진 촬영
     const photo = await cameraRef.current.takePhoto();
@@ -150,7 +154,7 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
 
     try {
       // 2. SAS 토큰 발급 → Blob 업로드
-      const { upload_url, blob_name } = await getSasToken();
+      const {upload_url, blob_name} = await getSasToken();
       await uploadToBlob(upload_url, fileUri);
 
       // 3. 탐지 요청 (DB에 Compliance 레코드 생성)
@@ -174,17 +178,18 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
   }, []);
 
   const handleContinue = () => {
-    navigation.navigate('RiskAssessment', { completedTitle: title });
+    navigation.navigate('RiskAssessment', {completedTitle: title});
   };
 
-  const isProcessing = screenState === 'uploading' || screenState === 'analyzing';
+  const isProcessing =
+    screenState === 'uploading' || screenState === 'analyzing';
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
 
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, {paddingTop: insets.top + s(12)}]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}>
@@ -197,12 +202,12 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
       <View style={styles.cameraPreview}>
         {photoPath ? (
           <>
-            <Image source={{ uri: photoPath }} style={styles.capturedImage} />
+            <Image source={{uri: photoPath}} style={styles.capturedImage} />
 
             {/* 로딩 상태: 업로드 중 / 분석 중 */}
             {isProcessing && (
               <View style={styles.resultCard}>
-                <ActivityIndicator size="large" color="#006FFD" />
+                <ActivityIndicator size="large" color={Colors.primary} />
                 <Text style={styles.resultText}>
                   {screenState === 'uploading' ? '업로드 중...' : '분석 중...'}
                 </Text>
@@ -241,7 +246,9 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
           />
         ) : (
           <Text style={styles.noCameraText}>
-            {!hasPermission ? '카메라 권한이 필요합니다' : '카메라를 불러오는 중...'}
+            {!hasPermission
+              ? '카메라 권한이 필요합니다'
+              : '카메라를 불러오는 중...'}
           </Text>
         )}
 
@@ -257,11 +264,11 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
       </View>
 
       {/* Continue Button */}
-      <View style={styles.continueSection}>
+      <View style={[styles.continueSection, {paddingBottom: insets.bottom + s(16)}]}>
         <TouchableOpacity
           style={[
             styles.continueButton,
-            screenState !== 'success' && { opacity: 0.4 },
+            screenState !== 'success' && {opacity: 0.4},
           ]}
           activeOpacity={0.8}
           disabled={screenState !== 'success'}
@@ -277,104 +284,104 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
 
 const iconStyles = StyleSheet.create({
   backContainer: {
-    width: 28,
-    height: 28,
+    width: s(28),
+    height: s(28),
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   arrowTop: {
-    width: 12,
-    height: 2,
-    backgroundColor: '#006FFD',
-    borderRadius: 1,
+    width: s(12),
+    height: s(2),
+    backgroundColor: Colors.primary,
+    borderRadius: s(1),
     position: 'absolute',
     left: 0,
-    transform: [{ rotate: '-45deg' }, { translateX: -2 }, { translateY: -7 }],
+    transform: [{rotate: '-45deg'}, {translateX: s(-2)}, {translateY: s(-7)}],
   },
   arrowBottom: {
-    width: 12,
-    height: 2,
-    backgroundColor: '#006FFD',
-    borderRadius: 1,
+    width: s(12),
+    height: s(2),
+    backgroundColor: Colors.primary,
+    borderRadius: s(1),
     position: 'absolute',
     left: 0,
-    transform: [{ rotate: '45deg' }, { translateX: -2 }, { translateY: 7 }],
+    transform: [{rotate: '45deg'}, {translateX: s(-2)}, {translateY: s(7)}],
   },
   cameraContainer: {
-    width: 28,
-    height: 28,
+    width: s(28),
+    height: s(28),
     justifyContent: 'center',
     alignItems: 'center',
   },
   cameraBody: {
-    width: 24,
-    height: 18,
+    width: s(24),
+    height: s(18),
     borderWidth: 2,
-    borderColor: '#F8F8F8',
-    borderRadius: 4,
+    borderColor: Colors.borderSoft,
+    borderRadius: s(4),
     justifyContent: 'center',
     alignItems: 'center',
     position: 'absolute',
-    bottom: 2,
+    bottom: s(2),
   },
   cameraLens: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: s(10),
+    height: s(10),
+    borderRadius: s(5),
     borderWidth: 2,
-    borderColor: '#F8F8F8',
+    borderColor: Colors.borderSoft,
   },
   cameraTop: {
-    width: 10,
-    height: 4,
-    borderTopLeftRadius: 2,
-    borderTopRightRadius: 2,
-    backgroundColor: '#F8F8F8',
+    width: s(10),
+    height: s(4),
+    borderTopLeftRadius: s(2),
+    borderTopRightRadius: s(2),
+    backgroundColor: Colors.borderSoft,
     position: 'absolute',
-    top: 2,
+    top: s(2),
   },
   largeCheckContainer: {
-    width: 112,
-    height: 112,
+    width: s(112),
+    height: s(112),
     justifyContent: 'center',
     alignItems: 'center',
   },
   largeCheckShort: {
-    width: 36,
-    height: 8,
-    backgroundColor: '#006FFD',
-    borderRadius: 4,
+    width: s(36),
+    height: s(8),
+    backgroundColor: Colors.primary,
+    borderRadius: s(4),
     position: 'absolute',
-    left: 16,
-    bottom: 24,
-    transform: [{ rotate: '45deg' }],
+    left: s(16),
+    bottom: s(24),
+    transform: [{rotate: '45deg'}],
   },
   largeCheckLong: {
-    width: 72,
-    height: 8,
-    backgroundColor: '#006FFD',
-    borderRadius: 4,
+    width: s(72),
+    height: s(8),
+    backgroundColor: Colors.primary,
+    borderRadius: s(4),
     position: 'absolute',
-    right: 8,
-    bottom: 36,
-    transform: [{ rotate: '-45deg' }],
+    right: s(8),
+    bottom: s(36),
+    transform: [{rotate: '-45deg'}],
   },
   xLine1: {
-    width: 80,
-    height: 8,
-    backgroundColor: '#FF3B30',
-    borderRadius: 4,
+    width: s(80),
+    height: s(8),
+    backgroundColor: Colors.error,
+    borderRadius: s(4),
     position: 'absolute',
-    transform: [{ rotate: '45deg' }],
+    transform: [{rotate: '45deg'}],
   },
   xLine2: {
-    width: 80,
-    height: 8,
-    backgroundColor: '#FF3B30',
-    borderRadius: 4,
+    width: s(80),
+    height: s(8),
+    backgroundColor: Colors.error,
+    borderRadius: s(4),
     position: 'absolute',
-    transform: [{ rotate: '-45deg' }],
+    transform: [{rotate: '-45deg'}],
   },
 });
 
@@ -383,32 +390,32 @@ const iconStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingBottom: 12,
-    backgroundColor: '#FFFFFF',
-    gap: 8,
+    paddingHorizontal: s(24),
+    paddingBottom: s(12),
+    backgroundColor: Colors.white,
+    gap: s(8),
   },
   backButton: {
-    width: 28,
-    height: 28,
+    width: s(28),
+    height: s(28),
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
-    fontFamily: 'Roboto',
+    fontFamily: Fonts.roboto,
     fontWeight: '400',
-    fontSize: 24,
-    color: '#363636',
+    fontSize: ms(24),
+    color: Colors.textDarkBody,
   },
   cameraPreview: {
     flex: 1,
-    marginHorizontal: 15,
-    backgroundColor: '#000000',
+    marginHorizontal: s(15),
+    backgroundColor: Colors.black,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
@@ -418,71 +425,71 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   noCameraText: {
-    fontFamily: 'Inter',
-    fontSize: 14,
-    color: '#FFFFFF',
+    fontFamily: Fonts.inter,
+    fontSize: ms(14),
+    color: Colors.white,
   },
   resultCard: {
-    width: 229,
-    height: 169,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    width: s(229),
+    height: s(169),
+    backgroundColor: Colors.white,
+    borderRadius: s(20),
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
+    gap: s(8),
     zIndex: 1,
   },
   resultText: {
-    fontFamily: 'Roboto',
+    fontFamily: Fonts.roboto,
     fontWeight: '400',
-    fontSize: 20,
-    color: '#000000',
+    fontSize: ms(20),
+    color: Colors.black,
   },
   failedText: {
-    fontFamily: 'Roboto',
+    fontFamily: Fonts.roboto,
     fontWeight: '400',
-    fontSize: 20,
-    color: '#FF3B30',
+    fontSize: ms(20),
+    color: Colors.error,
   },
   retakeButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    backgroundColor: '#FF3B30',
-    borderRadius: 10,
-    marginTop: 4,
+    paddingHorizontal: s(20),
+    paddingVertical: s(8),
+    backgroundColor: Colors.error,
+    borderRadius: s(10),
+    marginTop: s(4),
   },
   retakeButtonText: {
-    fontFamily: 'Roboto',
+    fontFamily: Fonts.roboto,
     fontWeight: '600',
-    fontSize: 14,
-    color: '#FFFFFF',
+    fontSize: ms(14),
+    color: Colors.white,
   },
   captureButton: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: '#006FFD',
+    width: s(58),
+    height: s(58),
+    borderRadius: s(29),
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'absolute',
-    bottom: 24,
+    bottom: s(24),
   },
   continueSection: {
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: s(16),
   },
   continueButton: {
-    width: 153,
-    height: 38,
-    borderRadius: 15,
-    backgroundColor: '#006FFD',
+    width: s(153),
+    height: s(38),
+    borderRadius: s(15),
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   continueText: {
-    fontFamily: 'Roboto',
+    fontFamily: Fonts.roboto,
     fontWeight: '400',
-    fontSize: 14,
-    color: '#F6F6F6',
+    fontSize: ms(14),
+    color: Colors.bgLight,
   },
 });

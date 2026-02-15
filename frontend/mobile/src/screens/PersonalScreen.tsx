@@ -8,6 +8,8 @@ import {
   ScrollView,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {s, ms} from '../utils';
+import {Colors, Fonts} from '../utils';
 
 /* ──────── Icon Components ──────── */
 
@@ -29,7 +31,7 @@ export default function PersonalScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
 
       {/* Nav Bar */}
       <View style={[styles.navBar, {paddingTop: insets.top}]}>
@@ -69,7 +71,7 @@ export default function PersonalScreen() {
                 <TextInput
                   style={styles.input}
                   placeholder="detail"
-                  placeholderTextColor="#A2A6B0"
+                  placeholderTextColor={Colors.textGrayLight}
                   value={company}
                   onChangeText={setCompany}
                 />
@@ -83,7 +85,7 @@ export default function PersonalScreen() {
                 <TextInput
                   style={styles.input}
                   placeholder="detail"
-                  placeholderTextColor="#A2A6B0"
+                  placeholderTextColor={Colors.textGrayLight}
                   value={area}
                   onChangeText={setArea}
                 />
@@ -100,30 +102,30 @@ export default function PersonalScreen() {
 
 const iconStyles = StyleSheet.create({
   avatarIconContainer: {
-    width: 40,
-    height: 40,
+    width: s(40),
+    height: s(40),
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarHead: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
+    width: s(14),
+    height: s(14),
+    borderRadius: s(7),
     borderWidth: 2,
-    borderColor: '#A2A6B0',
+    borderColor: Colors.textGrayLight,
     position: 'absolute',
-    top: 2,
+    top: s(2),
   },
   avatarBody: {
-    width: 24,
-    height: 12,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+    width: s(24),
+    height: s(12),
+    borderTopLeftRadius: s(12),
+    borderTopRightRadius: s(12),
     borderWidth: 2,
     borderBottomWidth: 0,
-    borderColor: '#A2A6B0',
+    borderColor: Colors.textGrayLight,
     position: 'absolute',
-    bottom: 2,
+    bottom: s(2),
   },
 });
 
@@ -132,106 +134,106 @@ const iconStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
   navBar: {
-    height: 56,
+    height: s(56),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    backgroundColor: '#FFFFFF',
+    paddingHorizontal: s(24),
+    backgroundColor: Colors.white,
   },
   navSpacer: {
-    width: 20,
+    width: s(20),
   },
   pageTitle: {
-    fontFamily: 'Inter',
+    fontFamily: Fonts.inter,
     fontWeight: '700',
-    fontSize: 14,
-    color: '#1F2024',
+    fontSize: ms(14),
+    color: Colors.textDark,
     textAlign: 'center',
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 16,
-    paddingBottom: 24,
+    paddingHorizontal: s(16),
+    paddingBottom: s(24),
   },
 
   /* Card */
   card: {
     borderWidth: 1,
-    borderColor: '#DDE1E6',
-    borderRadius: 4,
-    paddingHorizontal: 16,
-    paddingTop: 32,
-    paddingBottom: 16,
+    borderColor: Colors.borderGray,
+    borderRadius: s(4),
+    paddingHorizontal: s(16),
+    paddingTop: s(32),
+    paddingBottom: s(16),
   },
 
   /* Section */
   sectionTitle: {
-    fontFamily: 'Roboto',
+    fontFamily: Fonts.roboto,
     fontWeight: '700',
-    fontSize: 18,
-    color: '#21272A',
-    marginBottom: 16,
+    fontSize: ms(18),
+    color: Colors.textDarkAlt,
+    marginBottom: s(16),
   },
 
   /* Profile Row */
   profileRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 24,
-    marginBottom: 24,
+    gap: s(24),
+    marginBottom: s(24),
   },
   avatar: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: '#F2F4F8',
+    width: s(96),
+    height: s(96),
+    borderRadius: s(48),
+    backgroundColor: Colors.bgInput,
     justifyContent: 'center',
     alignItems: 'center',
   },
   userName: {
-    fontFamily: 'Roboto',
+    fontFamily: Fonts.roboto,
     fontWeight: '400',
-    fontSize: 14,
-    color: '#001D6C',
+    fontSize: ms(14),
+    color: Colors.textNavy,
   },
 
   /* Divider */
   divider: {
     height: 1,
-    backgroundColor: '#DDE1E6',
-    marginBottom: 24,
+    backgroundColor: Colors.borderGray,
+    marginBottom: s(24),
   },
 
   /* Form Fields */
   formFields: {
-    gap: 16,
+    gap: s(16),
   },
   fieldGroup: {
-    gap: 8,
+    gap: s(8),
   },
   fieldLabel: {
-    fontFamily: 'Roboto',
+    fontFamily: Fonts.roboto,
     fontWeight: '400',
-    fontSize: 14,
-    color: '#21272A',
+    fontSize: ms(14),
+    color: Colors.textDarkAlt,
   },
   inputContainer: {
-    height: 48,
-    backgroundColor: '#F2F4F8',
+    height: s(48),
+    backgroundColor: Colors.bgInput,
     borderBottomWidth: 1,
-    borderBottomColor: '#A2A6B0',
+    borderBottomColor: Colors.textGrayLight,
     justifyContent: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: s(16),
   },
   input: {
-    fontFamily: 'Roboto',
+    fontFamily: Fonts.roboto,
     fontWeight: '400',
-    fontSize: 14,
-    color: '#21272A',
+    fontSize: ms(14),
+    color: Colors.textDarkAlt,
     padding: 0,
   },
 });

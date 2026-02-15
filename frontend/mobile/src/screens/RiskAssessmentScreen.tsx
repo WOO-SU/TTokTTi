@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -6,10 +6,12 @@ import {
   StyleSheet,
   StatusBar,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RouteProp } from '@react-navigation/native';
-import type { RootStackParamList } from '../../App';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import type {RouteProp} from '@react-navigation/native';
+import type {RootStackParamList} from '../../App';
+import {s, ms} from '../utils';
+import {Colors, Fonts} from '../utils';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'RiskAssessment'>;
@@ -23,10 +25,10 @@ type AssessmentItem = {
 };
 
 const INITIAL_ITEMS: AssessmentItem[] = [
-  { id: '1', title: '안전모', checked: false },
-  { id: '2', title: '조끼', checked: false },
-  { id: '3', title: '안전화', checked: false },
-  { id: '4', title: '장갑', checked: false },
+  {id: '1', title: '안전모', checked: false},
+  {id: '2', title: '조끼', checked: false},
+  {id: '3', title: '안전화', checked: false},
+  {id: '4', title: '장갑', checked: false},
 ];
 
 /* ──────── Icon Components ──────── */
@@ -60,7 +62,7 @@ function ChevronRightIcon() {
 
 /* ──────── Main Component ──────── */
 
-export default function RiskAssessmentScreen({ navigation, route }: Props) {
+export default function RiskAssessmentScreen({navigation, route}: Props) {
   const insets = useSafeAreaInsets();
   const [items, setItems] = useState<AssessmentItem[]>(INITIAL_ITEMS);
 
@@ -70,7 +72,7 @@ export default function RiskAssessmentScreen({ navigation, route }: Props) {
     if (completedTitle) {
       setItems(prev =>
         prev.map(item =>
-          item.title === completedTitle ? { ...item, checked: true } : item,
+          item.title === completedTitle ? {...item, checked: true} : item,
         ),
       );
     }
@@ -79,17 +81,17 @@ export default function RiskAssessmentScreen({ navigation, route }: Props) {
   const toggleItem = (id: string) => {
     setItems(prev =>
       prev.map(item =>
-        item.id === id ? { ...item, checked: !item.checked } : item,
+        item.id === id ? {...item, checked: !item.checked} : item,
       ),
     );
   };
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
 
       {/* Nav Bar */}
-      <View style={[styles.navBar, { paddingTop: insets.top }]}>
+      <View style={[styles.navBar, {paddingTop: insets.top}]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}>
@@ -143,7 +145,8 @@ export default function RiskAssessmentScreen({ navigation, route }: Props) {
       </View>
 
       {/* 요청보내기 Button */}
-      <View style={[styles.submitSection, { paddingBottom: insets.bottom + 16 }]}>
+      <View
+        style={[styles.submitSection, {paddingBottom: insets.bottom + s(16)}]}>
         <TouchableOpacity style={styles.submitButton} activeOpacity={0.8}>
           <Text style={styles.submitText}>요청보내기</Text>
         </TouchableOpacity>
@@ -156,74 +159,74 @@ export default function RiskAssessmentScreen({ navigation, route }: Props) {
 
 const iconStyles = StyleSheet.create({
   backContainer: {
-    width: 20,
-    height: 20,
+    width: s(20),
+    height: s(20),
     justifyContent: 'center',
     alignItems: 'center',
   },
   backArrowTop: {
-    width: 12,
-    height: 2,
-    backgroundColor: '#006FFD',
-    borderRadius: 1,
+    width: s(12),
+    height: s(2),
+    backgroundColor: Colors.primary,
+    borderRadius: s(1),
     position: 'absolute',
-    transform: [{ rotate: '-45deg' }, { translateY: -4.5 }],
+    transform: [{rotate: '-45deg'}, {translateY: s(-4.5)}],
   },
   backArrowBottom: {
-    width: 12,
-    height: 2,
-    backgroundColor: '#006FFD',
-    borderRadius: 1,
+    width: s(12),
+    height: s(2),
+    backgroundColor: Colors.primary,
+    borderRadius: s(1),
     position: 'absolute',
-    transform: [{ rotate: '45deg' }, { translateY: 4.5 }],
+    transform: [{rotate: '45deg'}, {translateY: s(4.5)}],
   },
   checkContainer: {
-    width: 16,
-    height: 16,
+    width: s(16),
+    height: s(16),
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkShort: {
-    width: 6,
-    height: 2,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 1,
+    width: s(6),
+    height: s(2),
+    backgroundColor: Colors.white,
+    borderRadius: s(1),
     position: 'absolute',
-    left: 1,
-    bottom: 3,
-    transform: [{ rotate: '45deg' }],
+    left: s(1),
+    bottom: s(3),
+    transform: [{rotate: '45deg'}],
   },
   checkLong: {
-    width: 12,
-    height: 2,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 1,
+    width: s(12),
+    height: s(2),
+    backgroundColor: Colors.white,
+    borderRadius: s(1),
     position: 'absolute',
     right: 0,
-    bottom: 5,
-    transform: [{ rotate: '-45deg' }],
+    bottom: s(5),
+    transform: [{rotate: '-45deg'}],
   },
   chevronContainer: {
-    width: 12,
-    height: 12,
+    width: s(12),
+    height: s(12),
     justifyContent: 'center',
     alignItems: 'center',
   },
   chevronTop: {
-    width: 7,
-    height: 2,
-    backgroundColor: '#006FFD',
-    borderRadius: 1,
+    width: s(7),
+    height: s(2),
+    backgroundColor: Colors.primary,
+    borderRadius: s(1),
     position: 'absolute',
-    transform: [{ rotate: '45deg' }, { translateY: -2 }],
+    transform: [{rotate: '45deg'}, {translateY: s(-2)}],
   },
   chevronBottom: {
-    width: 7,
-    height: 2,
-    backgroundColor: '#006FFD',
-    borderRadius: 1,
+    width: s(7),
+    height: s(2),
+    backgroundColor: Colors.primary,
+    borderRadius: s(1),
     position: 'absolute',
-    transform: [{ rotate: '-45deg' }, { translateY: 2 }],
+    transform: [{rotate: '-45deg'}, {translateY: s(2)}],
   },
 });
 
@@ -232,81 +235,81 @@ const iconStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
 
   /* Nav Bar */
   navBar: {
-    height: 56,
+    height: s(56),
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    backgroundColor: '#FFFFFF',
-    gap: 8,
+    paddingHorizontal: s(24),
+    backgroundColor: Colors.white,
+    gap: s(8),
   },
   backButton: {
-    width: 20,
-    height: 20,
+    width: s(20),
+    height: s(20),
     justifyContent: 'center',
     alignItems: 'center',
   },
   pageTitle: {
-    fontFamily: 'Inter',
+    fontFamily: Fonts.inter,
     fontWeight: '700',
-    fontSize: 14,
-    color: '#1F2024',
+    fontSize: ms(14),
+    color: Colors.textDark,
     textAlign: 'center',
   },
 
   /* List */
   listContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 24,
+    paddingHorizontal: s(16),
+    paddingTop: s(24),
   },
   listItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    minHeight: 64,
+    paddingHorizontal: s(16),
+    paddingVertical: s(16),
+    minHeight: s(64),
   },
   itemTitle: {
-    fontFamily: 'Inter',
+    fontFamily: Fonts.inter,
     fontWeight: '400',
-    fontSize: 14,
-    color: '#1F2024',
+    fontSize: ms(14),
+    color: Colors.textDark,
     flex: 1,
   },
   itemRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: s(16),
   },
 
   /* Checkbox */
   checkbox: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: s(32),
+    height: s(32),
+    borderRadius: s(8),
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#006FFD',
+    backgroundColor: Colors.primary,
     borderWidth: 1,
-    borderColor: '#006FFD',
+    borderColor: Colors.primary,
   },
   checkboxUnchecked: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderWidth: 1,
-    borderColor: '#C5C6CC',
+    borderColor: Colors.border,
   },
 
   /* Chevron */
   chevronButton: {
-    width: 12,
-    height: 12,
+    width: s(12),
+    height: s(12),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -314,7 +317,7 @@ const styles = StyleSheet.create({
   /* Divider */
   divider: {
     height: 1,
-    backgroundColor: '#D3D5DD',
+    backgroundColor: Colors.borderLight,
   },
 
   /* Submit Button */
@@ -322,20 +325,20 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: s(16),
   },
   submitButton: {
-    width: 153,
-    height: 38,
-    borderRadius: 15,
-    backgroundColor: '#006FFD',
+    width: s(153),
+    height: s(38),
+    borderRadius: s(15),
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   submitText: {
-    fontFamily: 'Inter',
+    fontFamily: Fonts.inter,
     fontWeight: '600',
-    fontSize: 14,
-    color: '#FFFFFF',
+    fontSize: ms(14),
+    color: Colors.white,
   },
 });

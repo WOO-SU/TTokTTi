@@ -1,5 +1,5 @@
 /* 현장 촬영 화면 */
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,12 @@ import {
   StatusBar,
   Modal,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RouteProp } from '@react-navigation/native';
-import type { RootStackParamList } from '../../App';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import type {RouteProp} from '@react-navigation/native';
+import type {RootStackParamList} from '../../App';
+import {s, ms} from '../utils';
+import {Colors, Fonts} from '../utils';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Camera'>;
@@ -43,19 +45,19 @@ function CameraIcon() {
 
 /* ──────── Main Component ──────── */
 
-export default function CameraScreen({ navigation, route }: Props) {
+export default function CameraScreen({navigation, route}: Props) {
   const insets = useSafeAreaInsets();
-  const { mode } = route.params;
+  const {mode} = route.params;
   const [alertVisible, setAlertVisible] = useState(true);
 
   const headerTitle = mode === 'all' ? '전체 촬영' : '작업자 환경 촬영';
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
 
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, {paddingTop: insets.top + s(12)}]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}>
@@ -76,9 +78,8 @@ export default function CameraScreen({ navigation, route }: Props) {
       <View
         style={[
           styles.continueSection,
-          { paddingBottom: insets.bottom + 16 },
-        ]}
-      >
+          {paddingBottom: insets.bottom + s(16)},
+        ]}>
         <TouchableOpacity style={styles.continueButton} activeOpacity={0.8}>
           <Text style={styles.continueText}>Continue</Text>
         </TouchableOpacity>
@@ -126,62 +127,63 @@ export default function CameraScreen({ navigation, route }: Props) {
 
 const iconStyles = StyleSheet.create({
   backContainer: {
-    width: 28,
-    height: 28,
+    width: s(28),
+    height: s(28),
     justifyContent: 'center',
     alignItems: 'center',
   },
 
+  arrowShaft: {},
   arrowTop: {
-    width: 12,
-    height: 2,
-    backgroundColor: '#006FFD',
-    borderRadius: 1,
+    width: s(12),
+    height: s(2),
+    backgroundColor: Colors.primary,
+    borderRadius: s(1),
     position: 'absolute',
     left: 0,
-    transform: [{ rotate: '-45deg' }, { translateX: -2 }, { translateY: -7 }],
+    transform: [{rotate: '-45deg'}, {translateX: s(-2)}, {translateY: s(-7)}],
   },
   arrowBottom: {
-    width: 12,
-    height: 2,
-    backgroundColor: '#006FFD',
-    borderRadius: 1,
+    width: s(12),
+    height: s(2),
+    backgroundColor: Colors.primary,
+    borderRadius: s(1),
     position: 'absolute',
     left: 0,
-    transform: [{ rotate: '45deg' }, { translateX: -2 }, { translateY: 7 }],
+    transform: [{rotate: '45deg'}, {translateX: s(-2)}, {translateY: s(7)}],
   },
   cameraContainer: {
-    width: 28,
-    height: 28,
+    width: s(28),
+    height: s(28),
     justifyContent: 'center',
     alignItems: 'center',
   },
   cameraBody: {
-    width: 24,
-    height: 18,
+    width: s(24),
+    height: s(18),
     borderWidth: 2,
-    borderColor: '#F8F8F8',
-    borderRadius: 4,
+    borderColor: Colors.borderSoft,
+    borderRadius: s(4),
     justifyContent: 'center',
     alignItems: 'center',
     position: 'absolute',
-    bottom: 2,
+    bottom: s(2),
   },
   cameraLens: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: s(10),
+    height: s(10),
+    borderRadius: s(5),
     borderWidth: 2,
-    borderColor: '#F8F8F8',
+    borderColor: Colors.borderSoft,
   },
   cameraTop: {
-    width: 10,
-    height: 4,
-    borderTopLeftRadius: 2,
-    borderTopRightRadius: 2,
-    backgroundColor: '#F8F8F8',
+    width: s(10),
+    height: s(4),
+    borderTopLeftRadius: s(2),
+    borderTopRightRadius: s(2),
+    backgroundColor: Colors.borderSoft,
     position: 'absolute',
-    top: 2,
+    top: s(2),
   },
 });
 
@@ -190,45 +192,45 @@ const iconStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
 
   /* Header */
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingBottom: 12,
-    backgroundColor: '#FFFFFF',
-    gap: 8,
+    paddingHorizontal: s(24),
+    paddingBottom: s(12),
+    backgroundColor: Colors.white,
+    gap: s(8),
   },
   backButton: {
-    width: 28,
-    height: 28,
+    width: s(28),
+    height: s(28),
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
-    fontFamily: 'Roboto',
+    fontFamily: Fonts.roboto,
     fontWeight: '400',
-    fontSize: 24,
-    color: '#363636',
+    fontSize: ms(24),
+    color: Colors.textDarkBody,
   },
 
   /* Camera Preview */
   cameraPreview: {
     flex: 1,
-    marginHorizontal: 15,
-    backgroundColor: '#D9D9D9',
+    marginHorizontal: s(15),
+    backgroundColor: Colors.bgGray,
     justifyContent: 'flex-end',
     alignItems: 'center',
-    paddingBottom: 24,
+    paddingBottom: s(24),
   },
   captureButton: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: '#006FFD',
+    width: s(58),
+    height: s(58),
+    borderRadius: s(29),
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -236,21 +238,21 @@ const styles = StyleSheet.create({
   /* Continue Button */
   continueSection: {
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: s(16),
   },
   continueButton: {
-    width: 153,
-    height: 38,
-    borderRadius: 15,
-    backgroundColor: '#006FFD',
+    width: s(153),
+    height: s(38),
+    borderRadius: s(15),
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   continueText: {
-    fontFamily: 'Roboto',
+    fontFamily: Fonts.roboto,
     fontWeight: '400',
-    fontSize: 14,
-    color: '#F6F6F6',
+    fontSize: ms(14),
+    color: Colors.bgLight,
   },
 
   /* Modal */
@@ -258,65 +260,65 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: Colors.overlay,
   },
   dialog: {
-    width: 300,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    gap: 20,
+    width: s(300),
+    backgroundColor: Colors.white,
+    borderRadius: s(16),
+    padding: s(16),
+    gap: s(20),
   },
   dialogContent: {
-    gap: 16,
+    gap: s(16),
     alignItems: 'center',
   },
   dialogTitle: {
-    fontFamily: 'Inter',
+    fontFamily: Fonts.inter,
     fontWeight: '800',
-    fontSize: 16,
-    color: '#1F2024',
+    fontSize: ms(16),
+    color: Colors.textDark,
     textAlign: 'center',
   },
   dialogDescription: {
-    fontFamily: 'Inter',
+    fontFamily: Fonts.inter,
     fontWeight: '400',
-    fontSize: 12,
-    color: '#71727A',
+    fontSize: ms(12),
+    color: Colors.textGray,
     textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: ms(16),
   },
   dialogActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: s(8),
   },
   dialogButtonOutline: {
     flex: 1,
-    height: 40,
-    borderRadius: 12,
+    height: s(40),
+    borderRadius: s(12),
     borderWidth: 1,
-    borderColor: '#006FFD',
+    borderColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   dialogButtonOutlineText: {
-    fontFamily: 'Inter',
+    fontFamily: Fonts.inter,
     fontWeight: '600',
-    fontSize: 12,
-    color: '#006FFD',
+    fontSize: ms(12),
+    color: Colors.primary,
   },
   dialogButtonFilled: {
     flex: 1,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#006FFD',
+    height: s(40),
+    borderRadius: s(12),
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   dialogButtonFilledText: {
-    fontFamily: 'Inter',
+    fontFamily: Fonts.inter,
     fontWeight: '600',
-    fontSize: 12,
-    color: '#FFFFFF',
+    fontSize: ms(12),
+    color: Colors.white,
   },
 });

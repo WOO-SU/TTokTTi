@@ -8,9 +8,11 @@ import {
   StatusBar,
   ScrollView,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../App';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import type {RootStackParamList} from '../../App';
+import {s, ms} from '../utils';
+import {Colors, Fonts} from '../utils';
 
 const tripodImage = require('../assets/tripod-character.png');
 const ladderImage = require('../assets/ladder-character.png');
@@ -32,15 +34,15 @@ function BackArrowIcon() {
 
 /* ──────── Main Component ──────── */
 
-export default function SelectModeScreen({ navigation }: Props) {
+export default function SelectModeScreen({navigation}: Props) {
   const insets = useSafeAreaInsets();
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
 
       {/* Nav Bar */}
-      <View style={[styles.navBar, { paddingTop: insets.top }]}>
+      <View style={[styles.navBar, {paddingTop: insets.top}]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}>
@@ -52,7 +54,7 @@ export default function SelectModeScreen({ navigation }: Props) {
 
       {/* Content */}
       <ScrollView
-        style={{ flex: 1 }}
+        style={{flex: 1}}
         contentContainerStyle={styles.scrollContent}
         bounces={false}
         showsVerticalScrollIndicator={false}>
@@ -61,7 +63,7 @@ export default function SelectModeScreen({ navigation }: Props) {
           <TouchableOpacity
             style={styles.card}
             activeOpacity={0.8}
-            onPress={() => navigation.navigate('Camera', { mode: 'all' })}>
+            onPress={() => navigation.navigate('Camera', {mode: 'all'})}>
             <View style={styles.cardBackground}>
               <Image
                 source={tripodImage}
@@ -76,7 +78,7 @@ export default function SelectModeScreen({ navigation }: Props) {
           <TouchableOpacity
             style={styles.card}
             activeOpacity={0.8}
-            onPress={() => navigation.navigate('Camera', { mode: 'worker' })}>
+            onPress={() => navigation.navigate('Camera', {mode: 'worker'})}>
             <View style={styles.cardBackground}>
               <Image
                 source={ladderImage}
@@ -96,26 +98,26 @@ export default function SelectModeScreen({ navigation }: Props) {
 
 const iconStyles = StyleSheet.create({
   backContainer: {
-    width: 20,
-    height: 20,
+    width: s(20),
+    height: s(20),
     justifyContent: 'center',
     alignItems: 'center',
   },
   backArrowTop: {
-    width: 12,
-    height: 2,
-    backgroundColor: '#006FFD',
-    borderRadius: 1,
+    width: s(12),
+    height: s(2),
+    backgroundColor: Colors.primary,
+    borderRadius: s(1),
     position: 'absolute',
-    transform: [{ rotate: '-45deg' }, { translateY: -3.5 }],
+    transform: [{rotate: '-45deg'}, {translateY: s(-3.5)}],
   },
   backArrowBottom: {
-    width: 12,
-    height: 2,
-    backgroundColor: '#006FFD',
-    borderRadius: 1,
+    width: s(12),
+    height: s(2),
+    backgroundColor: Colors.primary,
+    borderRadius: s(1),
     position: 'absolute',
-    transform: [{ rotate: '45deg' }, { translateY: 3.5 }],
+    transform: [{rotate: '45deg'}, {translateY: s(3.5)}],
   },
 });
 
@@ -124,70 +126,70 @@ const iconStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
 
   /* Nav Bar */
   navBar: {
-    height: 56,
+    height: s(56),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    backgroundColor: '#FFFFFF',
+    paddingHorizontal: s(24),
+    backgroundColor: Colors.white,
   },
   backButton: {
-    width: 20,
-    height: 20,
+    width: s(20),
+    height: s(20),
     justifyContent: 'center',
     alignItems: 'center',
   },
   pageTitle: {
-    fontFamily: 'Inter',
+    fontFamily: Fonts.inter,
     fontWeight: '700',
-    fontSize: 14,
-    color: '#1F2024',
+    fontSize: ms(14),
+    color: Colors.textDark,
     textAlign: 'center',
   },
 
   /* Content */
   scrollContent: {
     flexGrow: 1,
-    paddingTop: 24,
-    paddingBottom: 24,
+    paddingTop: s(24),
+    paddingBottom: s(24),
   },
   cardsContainer: {
     paddingHorizontal: 0,
-    gap: 20,
+    gap: s(20),
   },
 
   /* Card */
   card: {
-    paddingHorizontal: 20,
+    paddingHorizontal: s(20),
   },
   cardBackground: {
     width: '100%',
-    height: 214,
-    backgroundColor: '#EAF2FF',
-    borderRadius: 50,
+    height: s(214),
+    backgroundColor: Colors.primaryLight,
+    borderRadius: s(50),
     flexDirection: 'row',
     alignItems: 'center',
     overflow: 'hidden',
-    paddingHorizontal: 16,
+    paddingHorizontal: s(16),
   },
   cardImage1: {
-    width: 181,
-    height: 181,
+    width: s(181),
+    height: s(181),
   },
   cardImage2: {
-    width: 195,
-    height: 195,
+    width: s(195),
+    height: s(195),
   },
   cardText: {
-    fontFamily: 'Actor',
+    fontFamily: Fonts.actor,
     fontWeight: '400',
-    fontSize: 36,
-    color: '#000000',
+    fontSize: ms(36),
+    color: Colors.black,
     flex: 1,
     textAlign: 'center',
   },

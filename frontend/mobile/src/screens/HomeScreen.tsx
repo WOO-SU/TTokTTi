@@ -7,14 +7,14 @@ import {
   Image,
   StatusBar,
   ScrollView,
-  Dimensions,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {RootStackParamList} from '../../App';
+import {s, ms, SCREEN_WIDTH} from '../utils';
+import {Colors, Fonts} from '../utils';
 
-const {width: SCREEN_WIDTH} = Dimensions.get('window');
 const characterImage = require('../assets/safety-character.png');
 const equipmentImage = require('../assets/Risk-Assessment.png');
 
@@ -41,7 +41,7 @@ function MenuIcon() {
   return (
     <View style={iconStyles.menuContainer}>
       <View style={iconStyles.menuLine} />
-      <View style={[iconStyles.menuLine, {width: 16}]} />
+      <View style={[iconStyles.menuLine, {width: s(16)}]} />
       <View style={iconStyles.menuLine} />
     </View>
   );
@@ -62,13 +62,13 @@ function HomeIcon({active}: {active: boolean}) {
       <View
         style={[
           iconStyles.homeBase,
-          {borderColor: active ? '#1F2024' : '#71727A'},
+          {borderColor: active ? Colors.textDark : Colors.textGray},
         ]}
       />
       <View
         style={[
           iconStyles.homeRoof,
-          {borderBottomColor: active ? '#1F2024' : '#71727A'},
+          {borderBottomColor: active ? Colors.textDark : Colors.textGray},
         ]}
       />
     </View>
@@ -109,7 +109,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
 
       {/* Content */}
       <ScrollView
@@ -118,7 +118,7 @@ export default function HomeScreen() {
         bounces={false}
         showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={[styles.header, {paddingTop: insets.top + 24}]}>
+        <View style={[styles.header, {paddingTop: insets.top + s(24)}]}>
           <TouchableOpacity style={styles.headerIcon}>
             <SearchIcon />
           </TouchableOpacity>
@@ -166,9 +166,7 @@ export default function HomeScreen() {
               style={styles.characterImage}
               resizeMode="contain"
             />
-            <Text style={styles.bannerText}>
-              {'안전 장비 점검'}
-            </Text>
+            <Text style={styles.bannerText}>{'안전 장비 점검'}</Text>
           </View>
         </TouchableOpacity>
 
@@ -222,134 +220,134 @@ export default function HomeScreen() {
 
 const iconStyles = StyleSheet.create({
   searchContainer: {
-    width: 20,
-    height: 20,
+    width: s(20),
+    height: s(20),
     justifyContent: 'center',
     alignItems: 'center',
   },
   searchCircle: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
+    width: s(14),
+    height: s(14),
+    borderRadius: s(7),
     borderWidth: 2,
-    borderColor: '#1F2024',
+    borderColor: Colors.textDark,
     position: 'absolute',
     top: 0,
     left: 0,
   },
   searchHandle: {
-    width: 2,
-    height: 6,
-    backgroundColor: '#1F2024',
+    width: s(2),
+    height: s(6),
+    backgroundColor: Colors.textDark,
     position: 'absolute',
     bottom: 0,
-    right: 1,
+    right: s(1),
     transform: [{rotate: '-45deg'}],
-    borderRadius: 1,
+    borderRadius: s(1),
   },
   heartContainer: {
-    width: 24,
-    height: 24,
+    width: s(24),
+    height: s(24),
     justifyContent: 'center',
     alignItems: 'center',
   },
   heartText: {
-    fontSize: 22,
-    color: '#1F2024',
-    lineHeight: 24,
+    fontSize: ms(22),
+    color: Colors.textDark,
+    lineHeight: ms(24),
   },
   menuContainer: {
-    width: 24,
-    height: 18,
+    width: s(24),
+    height: s(18),
     justifyContent: 'space-between',
   },
   menuLine: {
-    width: 20,
-    height: 2,
-    backgroundColor: '#1F2024',
-    borderRadius: 1,
+    width: s(20),
+    height: s(2),
+    backgroundColor: Colors.textDark,
+    borderRadius: s(1),
     alignSelf: 'flex-end',
   },
   placeholderContainer: {
-    width: 40,
-    height: 40,
+    width: s(40),
+    height: s(40),
     justifyContent: 'center',
     alignItems: 'center',
     opacity: 0.3,
   },
   placeholderMountain: {
-    width: 24,
-    height: 16,
+    width: s(24),
+    height: s(16),
     borderWidth: 2,
-    borderColor: '#006FFD',
-    borderRadius: 2,
+    borderColor: Colors.primary,
+    borderRadius: s(2),
   },
   placeholderSun: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: s(8),
+    height: s(8),
+    borderRadius: s(4),
     borderWidth: 2,
-    borderColor: '#006FFD',
+    borderColor: Colors.primary,
     position: 'absolute',
-    top: 8,
-    right: 10,
+    top: s(8),
+    right: s(10),
   },
   tabIconContainer: {
-    width: 20,
-    height: 20,
+    width: s(20),
+    height: s(20),
     justifyContent: 'center',
     alignItems: 'center',
   },
   homeBase: {
-    width: 14,
-    height: 10,
+    width: s(14),
+    height: s(10),
     borderWidth: 2,
     borderTopWidth: 0,
-    borderBottomLeftRadius: 2,
-    borderBottomRightRadius: 2,
+    borderBottomLeftRadius: s(2),
+    borderBottomRightRadius: s(2),
     position: 'absolute',
     bottom: 0,
   },
   homeRoof: {
     width: 0,
     height: 0,
-    borderLeftWidth: 10,
-    borderRightWidth: 10,
-    borderBottomWidth: 8,
+    borderLeftWidth: s(10),
+    borderRightWidth: s(10),
+    borderBottomWidth: s(8),
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
     position: 'absolute',
     top: 0,
   },
   personHead: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: s(8),
+    height: s(8),
+    borderRadius: s(4),
     borderWidth: 1.5,
-    borderColor: '#71727A',
+    borderColor: Colors.textGray,
     position: 'absolute',
     top: 0,
   },
   personBody: {
-    width: 14,
-    height: 8,
-    borderTopLeftRadius: 7,
-    borderTopRightRadius: 7,
+    width: s(14),
+    height: s(8),
+    borderTopLeftRadius: s(7),
+    borderTopRightRadius: s(7),
     borderWidth: 1.5,
     borderBottomWidth: 0,
-    borderColor: '#71727A',
+    borderColor: Colors.textGray,
     position: 'absolute',
     bottom: 0,
   },
   starText: {
-    fontSize: 20,
-    color: '#71727A',
-    lineHeight: 22,
+    fontSize: ms(20),
+    color: Colors.textGray,
+    lineHeight: ms(22),
   },
   settingText: {
-    fontSize: 18,
-    color: '#71727A',
-    lineHeight: 20,
+    fontSize: ms(18),
+    color: Colors.textGray,
+    lineHeight: ms(20),
   },
 });
 
@@ -358,11 +356,11 @@ const iconStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 24,
+    paddingBottom: s(24),
   },
 
   /* Header */
@@ -370,78 +368,78 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingBottom: 24,
-    backgroundColor: '#FFFFFF',
+    paddingHorizontal: s(24),
+    paddingBottom: s(24),
+    backgroundColor: Colors.white,
   },
   headerIcon: {
-    width: 24,
-    height: 24,
+    width: s(24),
+    height: s(24),
     justifyContent: 'center',
     alignItems: 'center',
   },
   rightOptions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: s(16),
   },
   menuIconWrapper: {
-    width: 24,
-    height: 24,
+    width: s(24),
+    height: s(24),
     justifyContent: 'center',
     alignItems: 'center',
   },
   badge: {
     position: 'absolute',
-    top: -6,
-    right: -6,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#006FFD',
+    top: s(-6),
+    right: s(-6),
+    width: s(18),
+    height: s(18),
+    borderRadius: s(9),
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   badgeText: {
-    fontFamily: 'Inter',
+    fontFamily: Fonts.inter,
     fontWeight: '600',
-    fontSize: 10,
-    color: '#FFFFFF',
+    fontSize: ms(10),
+    color: Colors.white,
   },
 
   /* Banner */
   bannerSection: {
-    paddingHorizontal: 12,
-    marginBottom : 30,
+    paddingHorizontal: s(12),
+    marginBottom: s(30),
   },
   bannerCard: {
     width: '100%',
-    height: 214,
-    backgroundColor: '#EAF2FF',
-    borderRadius: 50,
+    height: s(214),
+    backgroundColor: Colors.primaryLight,
+    borderRadius: s(50),
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: s(16),
     overflow: 'hidden',
   },
   characterImage: {
-    width: 206,
-    height: 206,
+    width: s(206),
+    height: s(206),
   },
   bannerText: {
-    fontFamily: 'Inter',
+    fontFamily: Fonts.inter,
     fontWeight: '400',
-    fontSize: 20,
-    color: '#000000',
-    lineHeight: 28,
+    fontSize: ms(20),
+    color: Colors.black,
+    lineHeight: ms(28),
     flexShrink: 1,
   },
 
   /* Products Section */
   productsSection: {
-    paddingTop: 24,
-    paddingHorizontal: 16,
-    gap: 16,
+    paddingTop: s(24),
+    paddingHorizontal: s(16),
+    gap: s(16),
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -449,49 +447,49 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sectionTitle: {
-    fontFamily: 'Inter',
+    fontFamily: Fonts.inter,
     fontWeight: '700',
-    fontSize: 14,
-    color: '#000000',
+    fontSize: ms(14),
+    color: Colors.black,
   },
   seeMoreText: {
-    fontFamily: 'Inter',
+    fontFamily: Fonts.inter,
     fontWeight: '600',
-    fontSize: 12,
-    color: '#006FFD',
+    fontSize: ms(12),
+    color: Colors.primary,
   },
   cardsContainer: {
-    gap: 12,
+    gap: s(12),
   },
 
   /* Card */
   card: {
-    width: (SCREEN_WIDTH - 32 - 12) / 2,
-    borderRadius: 16,
-    backgroundColor: '#F8F9FF',
+    width: (SCREEN_WIDTH - s(32) - s(12)) / 2,
+    borderRadius: s(16),
+    backgroundColor: Colors.bgCard,
     overflow: 'hidden',
   },
   cardImageArea: {
-    height: 120,
-    backgroundColor: '#EAF2FF',
+    height: s(120),
+    backgroundColor: Colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
   cardContent: {
-    padding: 16,
-    gap: 4,
+    padding: s(16),
+    gap: s(4),
   },
   cardTitle: {
-    fontFamily: 'Inter',
+    fontFamily: Fonts.inter,
     fontWeight: '400',
-    fontSize: 12,
-    color: '#1F2024',
-    letterSpacing: 0.12,
+    fontSize: ms(12),
+    color: Colors.textDark,
+    letterSpacing: ms(0.12),
   },
   cardSubtitle: {
-    fontFamily: 'Inter',
+    fontFamily: Fonts.inter,
     fontWeight: '700',
-    fontSize: 14,
-    color: '#1F2024',
+    fontSize: ms(14),
+    color: Colors.textDark,
   },
 });

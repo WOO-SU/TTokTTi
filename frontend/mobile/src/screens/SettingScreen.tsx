@@ -12,6 +12,8 @@ import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {RootStackParamList} from '../../App';
 import {useAuth} from '../context/AuthContext';
+import {s, ms} from '../utils';
+import {Colors, Fonts} from '../utils';
 
 export default function SettingScreen() {
   const insets = useSafeAreaInsets();
@@ -35,7 +37,7 @@ export default function SettingScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
 
       {/* Nav Bar */}
       <View style={[styles.navBar, {paddingTop: insets.top}]}>
@@ -60,42 +62,42 @@ export default function SettingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
   navBar: {
-    height: 56,
+    height: s(56),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    backgroundColor: '#FFFFFF',
+    paddingHorizontal: s(24),
+    backgroundColor: Colors.white,
   },
   navSpacer: {
-    width: 20,
+    width: s(20),
   },
   pageTitle: {
-    fontFamily: 'Inter',
+    fontFamily: Fonts.inter,
     fontWeight: '700',
-    fontSize: 14,
-    color: '#1F2024',
+    fontSize: ms(14),
+    color: Colors.textDark,
     textAlign: 'center',
   },
   content: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 24,
+    paddingHorizontal: s(16),
+    paddingTop: s(24),
   },
   logoutButton: {
-    height: 48,
-    backgroundColor: '#FF3B30',
-    borderRadius: 12,
+    height: s(48),
+    backgroundColor: Colors.error,
+    borderRadius: s(12),
     justifyContent: 'center',
     alignItems: 'center',
   },
   logoutText: {
-    fontFamily: 'Inter',
+    fontFamily: Fonts.inter,
     fontWeight: '600',
-    fontSize: 14,
-    color: '#FFFFFF',
+    fontSize: ms(14),
+    color: Colors.white,
   },
 });

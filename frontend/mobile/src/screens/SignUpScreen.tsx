@@ -9,6 +9,8 @@ import {
   ScrollView,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {s, ms} from '../utils';
+import {Colors, Fonts} from '../utils';
 
 export default function SignUpScreen() {
   const insets = useSafeAreaInsets();
@@ -24,7 +26,7 @@ export default function SignUpScreen() {
 
   return (
     <View style={[styles.container, {paddingTop: insets.top}]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         bounces={false}
@@ -52,7 +54,7 @@ export default function SignUpScreen() {
                 <TextInput
                   style={styles.input}
                   placeholder="Name"
-                  placeholderTextColor="#8F9098"
+                  placeholderTextColor={Colors.textGrayAlt}
                   value={name}
                   onChangeText={setName}
                   autoCapitalize="words"
@@ -67,7 +69,7 @@ export default function SignUpScreen() {
                 <TextInput
                   style={styles.input}
                   placeholder="name@email.com"
-                  placeholderTextColor="#8F9098"
+                  placeholderTextColor={Colors.textGrayAlt}
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -83,7 +85,7 @@ export default function SignUpScreen() {
                 <TextInput
                   style={[styles.input, styles.passwordInput]}
                   placeholder="Create a password"
-                  placeholderTextColor="#8F9098"
+                  placeholderTextColor={Colors.textGrayAlt}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={securePassword}
@@ -91,7 +93,7 @@ export default function SignUpScreen() {
                 <TouchableOpacity
                   onPress={() => setSecurePassword(!securePassword)}
                   style={styles.eyeIconContainer}>
-                  <EyeIcon color="#8F9098" />
+                  <EyeIcon color={Colors.textGrayAlt} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -101,7 +103,7 @@ export default function SignUpScreen() {
               <TextInput
                 style={[styles.input, styles.passwordInput]}
                 placeholder="Confirm password"
-                placeholderTextColor="#8F9098"
+                placeholderTextColor={Colors.textGrayAlt}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry={secureConfirm}
@@ -109,7 +111,7 @@ export default function SignUpScreen() {
               <TouchableOpacity
                 onPress={() => setSecureConfirm(!secureConfirm)}
                 style={styles.eyeIconContainer}>
-                <EyeIcon color="#8F9098" />
+                <EyeIcon color={Colors.textGrayAlt} />
               </TouchableOpacity>
             </View>
           </View>
@@ -148,21 +150,21 @@ function EyeIcon({color}: {color: string}) {
 
 const iconStyles = StyleSheet.create({
   eyeContainer: {
-    width: 16,
-    height: 16,
+    width: s(16),
+    height: s(16),
     justifyContent: 'center',
     alignItems: 'center',
   },
   eyeOuter: {
-    width: 14,
-    height: 10,
+    width: s(14),
+    height: s(10),
     borderWidth: 1.5,
-    borderRadius: 7,
+    borderRadius: s(7),
   },
   eyeInner: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
+    width: s(5),
+    height: s(5),
+    borderRadius: s(2.5),
     position: 'absolute',
   },
 });
@@ -170,107 +172,107 @@ const iconStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
   scrollContent: {
     flexGrow: 1,
   },
   loginOptions: {
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 24,
-    gap: 24,
+    paddingHorizontal: s(24),
+    paddingTop: s(24),
+    paddingBottom: s(24),
+    gap: s(24),
   },
   headerSection: {
-    gap: 8,
+    gap: s(8),
   },
   title: {
-    fontFamily: 'Inter',
+    fontFamily: Fonts.inter,
     fontWeight: '800',
-    fontSize: 16,
-    color: '#1F2024',
+    fontSize: ms(16),
+    color: Colors.textDark,
   },
   subtitle: {
-    fontFamily: 'Inter',
+    fontFamily: Fonts.inter,
     fontWeight: '400',
-    fontSize: 12,
-    color: '#71727A',
+    fontSize: ms(12),
+    color: Colors.textGray,
   },
   form: {
-    gap: 16,
+    gap: s(16),
   },
   textFieldContainer: {
-    gap: 8,
+    gap: s(8),
   },
   fieldTitle: {
-    fontFamily: 'Inter',
+    fontFamily: Fonts.inter,
     fontWeight: '700',
-    fontSize: 12,
-    color: '#2E3036',
+    fontSize: ms(12),
+    color: Colors.textDarkSub,
   },
   field: {
-    height: 48,
+    height: s(48),
     borderWidth: 1,
-    borderColor: '#C5C6CC',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    borderColor: Colors.border,
+    borderRadius: s(12),
+    paddingHorizontal: s(16),
     flexDirection: 'row',
     alignItems: 'center',
   },
   fieldFocused: {
-    borderColor: '#006FFD',
+    borderColor: Colors.primary,
   },
   input: {
     flex: 1,
-    fontFamily: 'Inter',
+    fontFamily: Fonts.inter,
     fontWeight: '400',
-    fontSize: 14,
-    color: '#1F2024',
+    fontSize: ms(14),
+    color: Colors.textDark,
     padding: 0,
     height: '100%',
   },
   passwordInput: {
-    paddingRight: 8,
+    paddingRight: s(8),
   },
   eyeIconContainer: {
-    width: 24,
-    height: 24,
+    width: s(24),
+    height: s(24),
     justifyContent: 'center',
     alignItems: 'center',
   },
   termsRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: s(12),
     alignItems: 'flex-start',
   },
   checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
+    width: s(24),
+    height: s(24),
+    borderRadius: s(6),
     borderWidth: 1,
-    borderColor: '#C5C6CC',
+    borderColor: Colors.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#006FFD',
-    borderColor: '#006FFD',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   checkmark: {
-    color: '#FFFFFF',
-    fontSize: 14,
+    color: Colors.white,
+    fontSize: ms(14),
     fontWeight: '700',
   },
   termsText: {
     flex: 1,
-    fontFamily: 'Inter',
+    fontFamily: Fonts.inter,
     fontWeight: '400',
-    fontSize: 12,
-    color: '#71727A',
-    lineHeight: 16,
+    fontSize: ms(12),
+    color: Colors.textGray,
+    lineHeight: ms(16),
   },
   termsLink: {
-    color: '#006FFD',
+    color: Colors.primary,
     fontWeight: '600',
   },
 });
