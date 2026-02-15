@@ -183,7 +183,8 @@ def main():
             # 7️⃣ rule evaluation
             events = []
             for rule in rules:
-                events.extend(rule.evaluate(ctx)) # 각 rule에 대한 평가를 Event 객체로 저장함
+                if rule.is_active(ctx):
+                    events.extend(rule.evaluate(ctx)) # 각 rule에 대한 평가를 Event 객체로 저장함
 
             # 8️⃣ emit
             if events:

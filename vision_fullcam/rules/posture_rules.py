@@ -9,6 +9,9 @@ class ExcessiveBodyTiltRule(Rule):
     def __init__(self, cfg: Config):
         self.cfg = cfg
         self.db_dict = {}  # person별 debounce 관리
+    
+    def is_active(self, ctx):
+        return ctx.state.person_on_ladder()
 
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp
@@ -58,6 +61,9 @@ class TopStepUsageRule(Rule):
     def __init__(self, cfg: Config):
         self.cfg = cfg
         self.db_dict = {}  # ladder별 debounce 관리
+    
+    def is_active(self, ctx):
+        return ctx.state.person_on_ladder()
 
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp

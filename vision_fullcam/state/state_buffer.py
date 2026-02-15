@@ -16,7 +16,18 @@ class StateBuffer:
         self.site = SiteState()
         self.persons: Dict[int, PersonState] = {}
         self.ladders: Dict[int, LadderState] = {}
-        self.ppe_observer = PPEObserver()   # ✅ 이 줄 추가
+        self.ppe_observer = PPEObserver()  
+    
+    # for context-based rule activation
+    def has_person(self):
+        return len(self.persons) > 0
+    
+    def person_on_ladder(self):
+        for person in self.persons.values():
+            for ladder in self.ladders.values():
+                if self._iou(person.bbox, ladder.bbox) > 0.3:
+                    return True
+        return False
 
     def update(self, tracked: Dict[int, "Tracked"], frame, now: float):  # ✅ frame 받도록 변경
         # 1) site 요약 업데이트
@@ -62,3 +73,25 @@ class StateBuffer:
             tracked=tracked,
             frame_shape=frame.shape[:2],
         )
+    
+    def _iou(self, boxA, boxB):
+        # box: (x1, y1, x2, y2)
+
+        xA = max(boxA[0], boxB[0])
+        yA = max(boxA[1], boxB[1])
+        xB = min(boxA[2], boxB[2])
+        yB = min(boxA[3], boxB[3])
+
+        inter_w = max(0, xB - xA)
+        inter_h = max(0, yB - yA)
+        inter_area = inter_w * inter_h
+
+        if inter_area == 0:
+            return 0.0
+
+        boxA_area = (boxA[2] - boxA[0]) * (boxA[3] - boxA[1])
+        boxB_area = (boxB[2] - boxB[0]) * (boxB[3] - boxB[1])
+
+        union_area = boxA_area + boxB_area - inter_area
+
+        return inter_area / union_area

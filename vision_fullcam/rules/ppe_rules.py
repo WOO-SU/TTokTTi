@@ -9,6 +9,9 @@ class HelmetNotWornRule(Rule):
     def __init__(self, cfg: Config):
         self.cfg = cfg
         self.db_dict = {}  # person별 debounce 관리
+    
+    def is_active(self, ctx):
+        return ctx.state.has_person()
 
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp
@@ -41,6 +44,9 @@ class SafetyVestNotWornRule(Rule):
     def __init__(self, cfg: Config):
         self.cfg = cfg
         self.db_dict = {}
+    
+    def is_active(self, ctx):
+        return ctx.state.has_person()
 
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp

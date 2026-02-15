@@ -39,6 +39,9 @@ class LadderTiltRule(Rule):
         # 특정 각도가 지속 시간 이상 유지되면 이벤트 발생
         # 한 번 울리면 쿨다운 동안은 울리지 않도록
 
+    def is_active(self, ctx):
+        return ctx.state.person_on_ladder()
+    
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp
         events = []
@@ -98,6 +101,9 @@ class LadderMovementWithPersonRule(Rule):
         self.cfg = cfg
         self.db = Debounce(cfg.ladder_move_sec, cfg.cooldown_sec)
 
+    def is_active(self, ctx):
+        return ctx.state.person_on_ladder()
+    
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp
         events: List[Event] = []
