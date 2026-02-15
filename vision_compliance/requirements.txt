@@ -1,0 +1,6 @@
+redis
+requests
+ultralytics
+opencv-python
+numpy
+azure-storage-blob
