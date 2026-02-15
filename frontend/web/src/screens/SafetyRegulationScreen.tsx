@@ -1,163 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { apiFetch } from '../api/client';
 import logoImg from '../assets/logo.png';
 import useUnreadAlertCount from '../hooks/useUnreadAlertCount';
 
 // ── Types ──
 
-type RiskLevel = '높음' | '보통' | '낮음';
+type EquipmentTarget = '안전모' | '안전조끼' | '안전장갑';
 
-type CheckItem = {
+type EquipmentItem = {
+  target: EquipmentTarget;
   label: string;
-  checked: boolean;
+  icon: string;
 };
 
-type RegulationCard = {
+type ComplianceRecord = {
   id: number;
-  status: 'danger' | 'warning' | 'default' | 'done';
-  title: string;
-  riskLevel: RiskLevel;
-  legislation: string;
-  dueLabel: string;
-  dueOverdue: boolean;
-  tags: string[];
-  progress: [number, number];
-  progressColor: string;
-  description?: string;
-  checklist: CheckItem[];
+  employee: number;
+  is_complied: boolean;
+  target: string;
+  original_image: string | null;
+  detected_image: string | null;
+  is_updated: boolean;
+  created_at: string;
 };
 
 type WorkerGroup = {
   id: number;
   name: string;
   members: { employeeId: number; name: string; color: string }[];
-  regulationIds: number[];
 };
 
 // ── Data ──
 
-const regulations: RegulationCard[] = [
-  {
-    id: 1,
-    status: 'danger',
-    title: '사다리식 통로 구조 점검',
-    riskLevel: '높음',
-    legislation: '산업안전보건기준 제24조',
-    dueLabel: '2일 초과',
-    dueOverdue: true,
-    tags: ['구조점검', '제24조'],
-    progress: [2, 5],
-    progressColor: '#006FFD',
-    checklist: [
-      { label: '사다리 발판 간격 규정 확인 (30cm 이내)', checked: true },
-      { label: '사다리 기울기 적정성 점검 (75도)', checked: true },
-      { label: '미끄럼 방지 장치 설치 여부', checked: false },
-      { label: '사다리 상단 고정 상태 확인', checked: false },
-      { label: '통로 폭 규정 준수 여부 (60cm 이상)', checked: false },
-    ],
-  },
-  {
-    id: 2,
-    status: 'warning',
-    title: '이동식 사다리 넘어짐 방지 조치',
-    riskLevel: '높음',
-    legislation: '산업안전보건기준 제24조 6항',
-    dueLabel: '내일 마감',
-    dueOverdue: true,
-    tags: ['넘어짐방지', '제24조'],
-    progress: [1, 2],
-    progressColor: '#006FFD',
-    checklist: [
-      { label: '아웃트리거 설치 및 고정 확인', checked: true },
-      { label: '바닥면 수평 상태 확인', checked: false },
-    ],
-  },
-  {
-    id: 3,
-    status: 'warning',
-    title: '발붙임 사다리(A형) 작업높이별 안전조치',
-    riskLevel: '보통',
-    legislation: '이동식사다리 안전작업지침',
-    dueLabel: '3일 남음',
-    dueOverdue: false,
-    tags: ['발붙임사다리', '안전대'],
-    progress: [2, 4],
-    progressColor: '#006FFD',
-    checklist: [
-      { label: '2m 이상 작업 시 안전대 착용 확인', checked: true },
-      { label: '사다리 벌림 각도 확인 (1/4 이하)', checked: true },
-      { label: '상부 작업 시 헬멧 착용 확인', checked: false },
-      { label: '작업 도구 낙하 방지 조치', checked: false },
-    ],
-  },
-  {
-    id: 4,
-    status: 'default',
-    title: '추락 방지용 비계 설치 확인',
-    riskLevel: '보통',
-    legislation: '산업안전보건기준 제42조',
-    dueLabel: '5일 남음',
-    dueOverdue: false,
-    tags: ['추락방지', '비계', '제42조'],
-    progress: [0, 2],
-    progressColor: '#8F9098',
-    description: '추락 위험 장소에서 비계 조립 등 작업발판 설치 여부 확인',
-    checklist: [
-      { label: '비계 설치 여부 확인', checked: false },
-      { label: '작업발판 안전 상태 점검', checked: false },
-    ],
-  },
-  {
-    id: 5,
-    status: 'default',
-    title: '접이식 사다리 철물 고정 점검',
-    riskLevel: '낮음',
-    legislation: '산업안전보건기준 제24조 10항',
-    dueLabel: '6일 남음',
-    dueOverdue: false,
-    tags: ['접이식', '철물고정'],
-    progress: [0, 2],
-    progressColor: '#8F9098',
-    checklist: [
-      { label: '힌지 부위 볼트 조임 상태 확인', checked: false },
-      { label: '잠금 장치 정상 작동 확인', checked: false },
-    ],
-  },
-  {
-    id: 6,
-    status: 'default',
-    title: '안전대 부착설비 설치 확인',
-    riskLevel: '높음',
-    legislation: '산업안전보건기준 제44조',
-    dueLabel: '2일 남음',
-    dueOverdue: false,
-    tags: ['안전대', '제44조'],
-    progress: [0, 3],
-    progressColor: '#8F9098',
-    checklist: [
-      { label: '안전대 부착설비 설치 위치 적정성 확인', checked: false },
-      { label: '부착설비 내하중 시험 확인', checked: false },
-      { label: '안전대 연결 고리 상태 점검', checked: false },
-    ],
-  },
-  {
-    id: 7,
-    status: 'done',
-    title: '경작업 대상 작업 분류 및 게시',
-    riskLevel: '낮음',
-    legislation: '이동식사다리 안전작업지침',
-    dueLabel: '4일 초과',
-    dueOverdue: true,
-    tags: ['경작업', '게시'],
-    progress: [3, 3],
-    progressColor: '#22A06B',
-    checklist: [
-      { label: '경작업 대상 작업 목록 작성', checked: true },
-      { label: '작업 분류 기준표 게시', checked: true },
-      { label: '작업자 교육 실시 확인', checked: true },
-    ],
-  },
+const equipmentItems: EquipmentItem[] = [
+  { target: '안전모', label: '안전모 착용', icon: '⛑️' },
+  { target: '안전조끼', label: '안전조끼 착용', icon: '🦺' },
+  { target: '안전장갑', label: '안전장갑 착용', icon: '🧤' },
 ];
 
 const workerGroups: WorkerGroup[] = [
@@ -168,7 +48,6 @@ const workerGroups: WorkerGroup[] = [
       { employeeId: 2, name: '송영민', color: '#006FFD' },
       { employeeId: 3, name: '임정원', color: '#E87C5D' },
     ],
-    regulationIds: [1, 2],
   },
   {
     id: 2,
@@ -177,7 +56,6 @@ const workerGroups: WorkerGroup[] = [
       { employeeId: 4, name: '김태호', color: '#22A06B' },
       { employeeId: 5, name: '박지수', color: '#8F9098' },
     ],
-    regulationIds: [3, 4],
   },
   {
     id: 3,
@@ -186,33 +64,64 @@ const workerGroups: WorkerGroup[] = [
       { employeeId: 6, name: '이준혁', color: '#7B61FF' },
       { employeeId: 7, name: '최서연', color: '#E85DBF' },
     ],
-    regulationIds: [5, 6, 7],
   },
 ];
 
-const regulationMap = new Map(regulations.map(r => [r.id, r]));
-
 const sidebarItems = [
   { label: 'Home', icon: '🏠', path: '/home' },
-  { label: '안전 규정 확인', icon: '🛡️', path: '/safety' },
+  { label: '안전 장비 점검', icon: '🛡️', path: '/safety' },
   { label: '위험성 평가', icon: '👷', path: '/risk' },
   { label: '보고서 작성', icon: '✏️', path: '/report' },
 ];
 
-// ── Helper ──
+const POLL_INTERVAL = 15_000;
 
-const riskColors: Record<RiskLevel, { bg: string; text: string }> = {
-  '높음': { bg: '#FFEAEA', text: '#D32F2F' },
-  '보통': { bg: '#E8F0FE', text: '#1565C0' },
-  '낮음': { bg: '#E8F5E9', text: '#2E7D32' },
-};
+// ── Helpers ──
 
-const statusIcons: Record<string, { emoji: string; bg: string }> = {
-  danger: { emoji: '⚠️', bg: '#D32F2F' },
-  warning: { emoji: 'ℹ️', bg: '#1565C0' },
-  default: { emoji: '○', bg: 'transparent' },
-  done: { emoji: '✔️', bg: '#22A06B' },
-};
+function getStatusInfo(records: ComplianceRecord[], employeeId: number, target: EquipmentTarget): { label: string; color: string; bg: string } {
+  const match = records.find(r => r.employee === employeeId && r.target === target);
+  if (!match) return { label: '미확인', color: '#71727A', bg: '#F0F1F3' };
+  if (!match.is_updated) return { label: '검사중', color: '#E37D00', bg: '#FFF3E0' };
+  if (match.is_complied) return { label: '준수', color: '#22A06B', bg: '#E8F5E9' };
+  return { label: '미준수', color: '#D32F2F', bg: '#FFEAEA' };
+}
+
+function getEquipmentGroupStatus(records: ComplianceRecord[], members: WorkerGroup['members'], target: EquipmentTarget): { done: number; total: number } {
+  let done = 0;
+  members.forEach(m => {
+    const match = records.find(r => r.employee === m.employeeId && r.target === target);
+    if (match?.is_updated && match.is_complied) done++;
+  });
+  return { done, total: members.length };
+}
+
+function getGroupOverallStatus(records: ComplianceRecord[], members: WorkerGroup['members']): { label: string; color: string; bg: string } {
+  const total = members.length * equipmentItems.length;
+  let complied = 0;
+  let checked = 0;
+  members.forEach(m => {
+    equipmentItems.forEach(eq => {
+      const match = records.find(r => r.employee === m.employeeId && r.target === eq.target);
+      if (match?.is_updated) {
+        checked++;
+        if (match.is_complied) complied++;
+      }
+    });
+  });
+  if (checked === total && complied === total) return { label: '완료', color: '#22A06B', bg: '#E8F5E9' };
+  if (checked > 0) return { label: '진행중', color: '#1565C0', bg: '#E8F0FE' };
+  return { label: '미시작', color: '#71727A', bg: '#F0F1F3' };
+}
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return '방금 전';
+  if (mins < 60) return `${mins}분 전`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}시간 전`;
+  return `${Math.floor(hrs / 24)}일 전`;
+}
 
 // ── Main Component ──
 
@@ -222,62 +131,43 @@ export default function SafetyRegulationScreen() {
   const { logout } = useAuth();
   const isProfileActive = location.pathname === '/profile';
   const unreadCount = useUnreadAlertCount();
+
+  const [expandedGroupId, setExpandedGroupId] = useState<number | null>(1);
+  const [expandedEquipment, setExpandedEquipment] = useState<string | null>(null);
+  const [records, setRecords] = useState<ComplianceRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const fetchRecords = useCallback(async () => {
+    try {
+      const res = await apiFetch('/api/check/update/?all=true');
+      if (res.ok) {
+        const data = await res.json();
+        const list: ComplianceRecord[] = data.data ?? data.results ?? data ?? [];
+        if (Array.isArray(list)) setRecords(list);
+      }
+    } catch { /* ignore */ }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => {
+    fetchRecords();
+    pollingRef.current = setInterval(fetchRecords, POLL_INTERVAL);
+    return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
+  }, [fetchRecords]);
+
   const handleLogout = async () => {
     await logout();
     navigate('/login');
   };
-  const [expandedGroupId, setExpandedGroupId] = useState<number | null>(1);
-  const [expandedRegId, setExpandedRegId] = useState<number | null>(null);
 
-  const groups = workerGroups;
-  const [checkStates, setCheckStates] = useState<Record<number, boolean[]>>(() => {
-    const init: Record<number, boolean[]> = {};
-    regulations.forEach(r => {
-      init[r.id] = r.checklist.map(c => c.checked);
-    });
-    return init;
-  });
-
-  const toggleGroupExpand = (id: number) => {
+  const toggleGroup = (id: number) => {
     setExpandedGroupId(prev => (prev === id ? null : id));
-    setExpandedRegId(null);
+    setExpandedEquipment(null);
   };
 
-  const toggleRegExpand = (id: number) => {
-    setExpandedRegId(prev => (prev === id ? null : id));
-  };
-
-  const toggleCheck = (cardId: number, checkIdx: number) => {
-    setCheckStates(prev => {
-      const arr = [...prev[cardId]];
-      arr[checkIdx] = !arr[checkIdx];
-      return { ...prev, [cardId]: arr };
-    });
-  };
-
-  const getProgress = (cardId: number): [number, number] => {
-    const checks = checkStates[cardId];
-    if (!checks) return [0, 0];
-    const done = checks.filter(Boolean).length;
-    return [done, checks.length];
-  };
-
-  const getGroupProgress = (group: WorkerGroup): [number, number] => {
-    let totalDone = 0;
-    let totalAll = 0;
-    group.regulationIds.forEach(rid => {
-      const [d, t] = getProgress(rid);
-      totalDone += d;
-      totalAll += t;
-    });
-    return [totalDone, totalAll];
-  };
-
-  const getGroupStatus = (group: WorkerGroup): { label: string; color: string; bg: string } => {
-    const [done, total] = getGroupProgress(group);
-    if (total > 0 && done === total) return { label: '완료', color: '#22A06B', bg: '#E8F5E9' };
-    if (done > 0) return { label: '진행중', color: '#1565C0', bg: '#E8F0FE' };
-    return { label: '미시작', color: '#71727A', bg: '#F0F1F3' };
+  const toggleEquipment = (key: string) => {
+    setExpandedEquipment(prev => (prev === key ? null : key));
   };
 
   return (
@@ -309,7 +199,7 @@ export default function SafetyRegulationScreen() {
 
         <nav style={styles.sidebarNav}>
           {sidebarItems.map(item => {
-            const isActive = item.label === '안전 규정 확인';
+            const isActive = item.label === '안전 장비 점검';
             return (
               <button
                 key={item.label}
@@ -329,185 +219,181 @@ export default function SafetyRegulationScreen() {
       {/* ── Main Content ── */}
       <main style={styles.main}>
         <div style={styles.header}>
-          <h1 style={styles.headerTitle}>안전 규정 확인</h1>
-          <button type="button" style={styles.logoutBtn} onClick={handleLogout}>
-            Logout
-          </button>
+          <h1 style={styles.headerTitle}>안전 장비 점검</h1>
+          <button type="button" style={styles.logoutBtn} onClick={handleLogout}>Logout</button>
+        </div>
+
+        {/* Summary Badges */}
+        <div style={styles.summaryRow}>
+          {equipmentItems.map(eq => {
+            const allMembers = workerGroups.flatMap(g => g.members);
+            const { done, total } = getEquipmentGroupStatus(records, allMembers, eq.target);
+            return (
+              <div key={eq.target} style={styles.summaryCard}>
+                <span style={{ fontSize: 24 }}>{eq.icon}</span>
+                <span style={styles.summaryLabel}>{eq.label}</span>
+                <span style={{
+                  ...styles.summaryCount,
+                  color: done === total && total > 0 ? '#22A06B' : '#006FFD',
+                }}>
+                  {done}/{total}
+                </span>
+              </div>
+            );
+          })}
         </div>
 
         {/* Worker Group Cards */}
         <div style={styles.cardList}>
-          {groups.map(group => {
-            const isGroupExpanded = expandedGroupId === group.id;
-            const [groupDone, groupTotal] = getGroupProgress(group);
-            const groupPct = groupTotal > 0 ? (groupDone / groupTotal) * 100 : 0;
-            const groupStatus = getGroupStatus(group);
-            const groupRegs = group.regulationIds.map(rid => regulationMap.get(rid)!).filter(Boolean);
+          {loading ? (
+            <div style={styles.loadingWrap}>
+              <span style={styles.loadingText}>로딩 중...</span>
+            </div>
+          ) : (
+            workerGroups.map(group => {
+              const isGroupExpanded = expandedGroupId === group.id;
+              const groupStatus = getGroupOverallStatus(records, group.members);
 
-            return (
-              <div key={group.id} style={styles.groupCard}>
-                {/* Group Header */}
-                <button
-                  type="button"
-                  style={styles.groupHeaderBtn}
-                  onClick={() => toggleGroupExpand(group.id)}>
-                  <div style={styles.groupHeaderLeft}>
-                    <span style={styles.groupName}>{group.name}</span>
+              // Group progress
+              const totalChecks = group.members.length * equipmentItems.length;
+              let groupDone = 0;
+              group.members.forEach(m => {
+                equipmentItems.forEach(eq => {
+                  const match = records.find(r => r.employee === m.employeeId && r.target === eq.target);
+                  if (match?.is_updated && match.is_complied) groupDone++;
+                });
+              });
+              const groupPct = totalChecks > 0 ? (groupDone / totalChecks) * 100 : 0;
+
+              return (
+                <div key={group.id} style={styles.groupCard}>
+                  {/* Group Header */}
+                  <button type="button" style={styles.groupHeaderBtn} onClick={() => toggleGroup(group.id)}>
+                    <div style={styles.groupHeaderLeft}>
+                      <span style={styles.groupName}>{group.name}</span>
+                      <span style={{
+                        ...styles.groupStatusBadge,
+                        backgroundColor: groupStatus.bg,
+                        color: groupStatus.color,
+                      }}>
+                        {groupStatus.label}
+                      </span>
+                    </div>
+                    <span style={styles.expandArrow}>{isGroupExpanded ? '▲' : '▼'}</span>
+                  </button>
+
+                  {/* Group Members */}
+                  <div style={styles.groupMembersRow}>
+                    {group.members.map(member => (
+                      <button
+                        key={member.employeeId}
+                        type="button"
+                        style={styles.groupMember}
+                        onClick={() => navigate(`/employee/${member.employeeId}`, { state: { siteName: group.name } })}>
+                        <span style={{ ...styles.memberAvatar, backgroundColor: member.color }}>
+                          {member.name[0]}{member.name[member.name.length - 1]}
+                        </span>
+                        <span style={styles.memberNameLink}>{member.name}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Group Progress */}
+                  <div style={styles.groupProgressRow}>
+                    <div style={styles.progressBarBg}>
+                      <div style={{
+                        ...styles.progressBarFill,
+                        width: `${groupPct}%`,
+                        backgroundColor: groupDone === totalChecks && totalChecks > 0 ? '#22A06B' : '#006FFD',
+                      }} />
+                    </div>
                     <span style={{
-                      ...styles.groupStatusBadge,
-                      backgroundColor: groupStatus.bg,
-                      color: groupStatus.color,
+                      ...styles.progressText,
+                      color: groupDone === totalChecks && totalChecks > 0 ? '#22A06B' : '#71727A',
                     }}>
-                      {groupStatus.label}
+                      {groupDone}/{totalChecks}
                     </span>
                   </div>
-                  <span style={styles.expandArrow}>{isGroupExpanded ? '▲' : '▼'}</span>
-                </button>
 
-                {/* Group Members */}
-                <div style={styles.groupMembersRow}>
-                  {group.members.map(member => (
-                    <button
-                      key={member.name}
-                      type="button"
-                      style={styles.groupMember}
-                      onClick={() => navigate(`/employee/${member.employeeId}`, { state: { siteName: group.name } })}>
-                      <span style={{ ...styles.memberAvatar, backgroundColor: member.color }}>
-                        {member.name[0]}{member.name[member.name.length - 1]}
-                      </span>
-                      <span style={styles.memberNameLink}>{member.name}</span>
-                    </button>
-                  ))}
-                </div>
+                  {/* Expanded: Equipment Items */}
+                  {isGroupExpanded && (
+                    <div style={styles.groupEquipments}>
+                      {equipmentItems.map(eq => {
+                        const eqKey = `${group.id}-${eq.target}`;
+                        const isEqExpanded = expandedEquipment === eqKey;
+                        const { done, total } = getEquipmentGroupStatus(records, group.members, eq.target);
+                        const allDone = done === total && total > 0;
+                        const pct = total > 0 ? (done / total) * 100 : 0;
 
-                {/* Group Progress */}
-                <div style={styles.groupProgressRow}>
-                  <div style={styles.progressBarBg}>
-                    <div style={{
-                      ...styles.progressBarFill,
-                      width: `${groupPct}%`,
-                      backgroundColor: groupDone === groupTotal && groupTotal > 0 ? '#22A06B' : '#006FFD',
-                    }} />
-                  </div>
-                  <span style={{
-                    ...styles.progressText,
-                    color: groupDone === groupTotal && groupTotal > 0 ? '#22A06B' : '#71727A',
-                  }}>
-                    {groupDone}/{groupTotal}
-                  </span>
-                </div>
-
-                {/* Expanded: Regulation Cards */}
-                {isGroupExpanded && (
-                  <div style={styles.groupRegulations}>
-                    {groupRegs.map(card => {
-                      const isRegExpanded = expandedRegId === card.id;
-                      const risk = riskColors[card.riskLevel];
-                      const statusIcon = statusIcons[card.status];
-                      const [done, total] = getProgress(card.id);
-                      const progressPct = total > 0 ? (done / total) * 100 : 0;
-                      const checks = checkStates[card.id] || [];
-
-                      return (
-                        <div key={card.id} style={styles.regulationCard}>
-                          {/* Regulation Header */}
-                          <button
-                            type="button"
-                            style={styles.cardHeaderBtn}
-                            onClick={() => toggleRegExpand(card.id)}>
-                            <div style={{
-                              ...styles.statusIcon,
-                              backgroundColor: statusIcon.bg !== 'transparent' ? statusIcon.bg : undefined,
-                              border: statusIcon.bg === 'transparent' ? '2px solid #C5C6CC' : 'none',
-                            }}>
-                              {card.status === 'default' ? (
-                                <span style={{ fontSize: 14, color: '#C5C6CC' }}>○</span>
-                              ) : (
-                                <span style={{ fontSize: 14 }}>{statusIcon.emoji}</span>
-                              )}
-                            </div>
-
-                            <div style={styles.cardTitleArea}>
-                              <div style={styles.cardTitleRow}>
-                                <span style={styles.cardTitle}>{card.title}</span>
+                        return (
+                          <div key={eq.target} style={styles.equipmentCard}>
+                            {/* Equipment Header */}
+                            <button type="button" style={styles.equipmentHeaderBtn} onClick={() => toggleEquipment(eqKey)}>
+                              <div style={styles.equipmentHeaderLeft}>
+                                <span style={{ fontSize: 20 }}>{eq.icon}</span>
+                                <span style={styles.equipmentLabel}>{eq.label}</span>
                                 <span style={{
-                                  ...styles.riskBadge,
-                                  backgroundColor: risk.bg,
-                                  color: risk.text,
+                                  ...styles.equipmentBadge,
+                                  backgroundColor: allDone ? '#E8F5E9' : '#EAF2FF',
+                                  color: allDone ? '#22A06B' : '#006FFD',
                                 }}>
-                                  {card.riskLevel}
+                                  {done}/{total}
                                 </span>
                               </div>
-                              <span style={styles.cardLegislation}>{card.legislation}</span>
-                            </div>
+                              <span style={styles.expandArrowSmall}>{isEqExpanded ? '▲' : '▼'}</span>
+                            </button>
 
-                            <span style={styles.expandArrow}>{isRegExpanded ? '▲' : '▼'}</span>
-                          </button>
-
-                          {/* Meta Row */}
-                          <div style={styles.metaRow}>
-                            <span style={styles.metaDivider}>📅</span>
-                            <span style={{ ...styles.dueLabel, color: card.dueOverdue ? '#D32F2F' : '#71727A' }}>
-                              {card.dueLabel}
-                            </span>
-                            {card.tags.map(tag => (
-                              <span key={tag} style={styles.tag}>{tag}</span>
-                            ))}
-                          </div>
-
-                          {/* Progress Bar */}
-                          <div style={styles.progressSection}>
-                            <div style={styles.progressBarBg}>
-                              <div style={{
-                                ...styles.progressBarFill,
-                                width: `${progressPct}%`,
-                                backgroundColor: done === total && total > 0 ? '#22A06B' : card.progressColor,
-                              }} />
-                            </div>
-                            <span style={{
-                              ...styles.progressText,
-                              color: done === total && total > 0 ? '#22A06B' : '#71727A',
-                            }}>
-                              {done}/{total}
-                            </span>
-                          </div>
-
-                          {/* Expanded: Checklist */}
-                          {isRegExpanded && (
-                            <div style={styles.expandedContent}>
-                              {card.description && (
-                                <p style={styles.description}>{card.description}</p>
-                              )}
-                              <div style={styles.checklistSection}>
-                                <span style={styles.checklistTitle}>체크리스트</span>
-                                {card.checklist.map((item, idx) => (
-                                  <label key={idx} style={styles.checkItem}>
-                                    <input
-                                      type="checkbox"
-                                      checked={checks[idx] || false}
-                                      onChange={() => toggleCheck(card.id, idx)}
-                                      style={styles.checkInput}
-                                    />
-                                    <span style={{
-                                      ...styles.checkLabel,
-                                      textDecoration: checks[idx] ? 'line-through' : 'none',
-                                      color: checks[idx] ? '#8F9098' : '#1F2024',
-                                    }}>
-                                      {item.label}
-                                    </span>
-                                  </label>
-                                ))}
+                            {/* Equipment Progress Bar */}
+                            <div style={styles.equipmentProgressRow}>
+                              <div style={styles.progressBarBg}>
+                                <div style={{
+                                  ...styles.progressBarFill,
+                                  width: `${pct}%`,
+                                  backgroundColor: allDone ? '#22A06B' : '#006FFD',
+                                }} />
                               </div>
                             </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+
+                            {/* Expanded: Per-member status */}
+                            {isEqExpanded && (
+                              <div style={styles.memberStatusList}>
+                                {group.members.map(member => {
+                                  const status = getStatusInfo(records, member.employeeId, eq.target);
+                                  const matchRecord = records.find(r => r.employee === member.employeeId && r.target === eq.target);
+                                  return (
+                                    <div key={member.employeeId} style={styles.memberStatusRow}>
+                                      <div style={styles.memberStatusLeft}>
+                                        <span style={{ ...styles.memberAvatarSmall, backgroundColor: member.color }}>
+                                          {member.name[0]}{member.name[member.name.length - 1]}
+                                        </span>
+                                        <span style={styles.memberStatusName}>{member.name}</span>
+                                      </div>
+                                      <div style={styles.memberStatusRight}>
+                                        {matchRecord && (
+                                          <span style={styles.memberStatusTime}>{timeAgo(matchRecord.created_at)}</span>
+                                        )}
+                                        <span style={{
+                                          ...styles.statusBadge,
+                                          backgroundColor: status.bg,
+                                          color: status.color,
+                                        }}>
+                                          {status.label}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
       </main>
     </div>
@@ -591,17 +477,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 9,
     fontWeight: 700,
   },
-  logoutBtn: {
-    fontFamily: 'Inter, sans-serif',
-    fontWeight: 600,
-    fontSize: 13,
-    color: '#71727A',
-    padding: '8px 16px',
-    borderRadius: 8,
-    background: 'none',
-    border: '1px solid #E8E9EB',
-    cursor: 'pointer',
-  },
   sidebarSearch: {
     display: 'flex',
     flexDirection: 'row',
@@ -657,6 +532,17 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#006FFD',
     fontWeight: 600,
   },
+  logoutBtn: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
+    fontSize: 13,
+    color: '#71727A',
+    padding: '8px 16px',
+    borderRadius: 8,
+    background: 'none',
+    border: '1px solid #E8E9EB',
+    cursor: 'pointer',
+  },
 
   // Main
   main: {
@@ -683,83 +569,50 @@ const styles: Record<string, React.CSSProperties> = {
     margin: 0,
   },
 
-  // Tabs
-  tabRow: {
+  // Summary Row
+  summaryRow: {
+    display: 'flex',
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 20,
+  },
+  summaryCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    border: '1px solid #E8E9EB',
+    borderRadius: 12,
+    padding: '16px 20px',
     display: 'flex',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottom: '1px solid #E8E9EB',
-    marginBottom: 24,
+    gap: 12,
   },
-  tabs: {
-    display: 'flex',
-    flexDirection: 'row',
-    gap: 4,
+  summaryLabel: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
+    fontSize: 14,
+    color: '#1F2024',
+    flex: 1,
   },
-  tab: {
+  summaryCount: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 700,
+    fontSize: 18,
+  },
+
+  // Loading
+  loadingWrap: {
     display: 'flex',
-    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 6,
-    padding: '10px 12px',
-    background: 'none',
-    border: 'none',
-    borderBottom: '2px solid transparent',
-    cursor: 'pointer',
+    flex: 1,
+    paddingTop: 60,
   },
-  tabActive: {
-    borderBottomColor: '#006FFD',
-  },
-  tabLabel: {
+  loadingText: {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 500,
-    fontSize: 14,
-    color: '#71727A',
-  },
-  tabLabelActive: {
-    color: '#1F2024',
-    fontWeight: 600,
-  },
-  tabBadge: {
-    backgroundColor: '#E8E9EB',
-    borderRadius: 10,
-    padding: '2px 6px',
-    fontFamily: 'Inter, sans-serif',
-    fontWeight: 600,
-    fontSize: 11,
-    color: '#71727A',
-    minWidth: 20,
-    textAlign: 'center',
-  },
-  tabBadgeActive: {
-    backgroundColor: '#006FFD',
-    color: '#FFFFFF',
-  },
-  headerSearch: {
-    display: 'flex',
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 36,
-    border: '1px solid #E8E9EB',
-    borderRadius: 8,
-    paddingLeft: 10,
-    paddingRight: 10,
-    gap: 8,
-    width: 180,
-    boxSizing: 'border-box',
-  },
-  headerSearchInput: {
-    flex: 1,
-    fontFamily: 'Inter, sans-serif',
-    fontWeight: 400,
-    fontSize: 13,
-    color: '#1F2024',
-    border: 'none',
-    outline: 'none',
-    padding: 0,
-    height: '100%',
-    backgroundColor: 'transparent',
+    fontSize: 16,
+    color: '#8F9098',
   },
 
   // Card List
@@ -839,12 +692,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     flexShrink: 0,
   },
-  memberName: {
-    fontFamily: 'Inter, sans-serif',
-    fontWeight: 500,
-    fontSize: 13,
-    color: '#1F2024',
-  },
   memberNameLink: {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 600,
@@ -857,9 +704,15 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: 12,
   },
+  expandArrow: {
+    fontFamily: 'Inter, sans-serif',
+    fontSize: 12,
+    color: '#8F9098',
+    flexShrink: 0,
+  },
 
-  // Regulations inside group
-  groupRegulations: {
+  // Equipment section inside group
+  groupEquipments: {
     display: 'flex',
     flexDirection: 'column',
     gap: 0,
@@ -868,114 +721,61 @@ const styles: Record<string, React.CSSProperties> = {
     paddingTop: 16,
   },
 
-  // Regulation Card
-  regulationCard: {
+  // Equipment Card
+  equipmentCard: {
     backgroundColor: '#F8F9FA',
     borderBottom: '1px solid #E8E9EB',
-    padding: '16px 20px',
+    padding: '14px 20px',
     display: 'flex',
     flexDirection: 'column',
     gap: 10,
     borderRadius: 8,
     marginBottom: 8,
   },
-  cardHeaderBtn: {
+  equipmentHeaderBtn: {
     display: 'flex',
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 14,
+    alignItems: 'center',
+    justifyContent: 'space-between',
     background: 'none',
     border: 'none',
     cursor: 'pointer',
     padding: 0,
-    textAlign: 'left',
     width: '100%',
   },
-  statusIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: '50%',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexShrink: 0,
-    marginTop: 2,
-  },
-  cardTitleArea: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 4,
-  },
-  cardTitleRow: {
+  equipmentHeaderLeft: {
     display: 'flex',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
-  cardTitle: {
+  equipmentLabel: {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 700,
     fontSize: 15,
     color: '#1F2024',
   },
-  riskBadge: {
+  equipmentBadge: {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 600,
-    fontSize: 11,
+    fontSize: 12,
     padding: '2px 10px',
     borderRadius: 4,
-    flexShrink: 0,
   },
-  cardLegislation: {
+  expandArrowSmall: {
     fontFamily: 'Inter, sans-serif',
-    fontWeight: 400,
-    fontSize: 13,
-    color: '#71727A',
-  },
-  expandArrow: {
-    fontFamily: 'Inter, sans-serif',
-    fontSize: 12,
-    color: '#8F9098',
-    marginTop: 6,
-    flexShrink: 0,
-  },
-
-  // Meta Row
-  metaRow: {
-    display: 'flex',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingLeft: 42,
-    flexWrap: 'wrap',
-  },
-  metaDivider: {
-    fontSize: 14,
-  },
-  dueLabel: {
-    fontFamily: 'Inter, sans-serif',
-    fontWeight: 600,
-    fontSize: 12,
-  },
-  tag: {
-    fontFamily: 'Inter, sans-serif',
-    fontWeight: 500,
     fontSize: 11,
-    color: '#006FFD',
-    backgroundColor: '#EAF2FF',
-    padding: '3px 10px',
-    borderRadius: 4,
+    color: '#8F9098',
+    flexShrink: 0,
   },
-
-  // Progress
-  progressSection: {
+  equipmentProgressRow: {
     display: 'flex',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingLeft: 42,
   },
+
+  // Progress bar
   progressBarBg: {
     flex: 1,
     height: 4,
@@ -996,54 +796,66 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: 'right',
   },
 
-  // Expanded Content
-  expandedContent: {
-    paddingLeft: 42,
-    paddingTop: 8,
+  // Member status list (expanded equipment)
+  memberStatusList: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 12,
+    gap: 0,
     borderTop: '1px solid #E8E9EB',
     marginTop: 4,
-  },
-  description: {
-    fontFamily: 'Inter, sans-serif',
-    fontWeight: 400,
-    fontSize: 13,
-    color: '#71727A',
-    lineHeight: '20px',
-    margin: 0,
     paddingTop: 8,
   },
-  checklistSection: {
+  memberStatusRow: {
     display: 'flex',
-    flexDirection: 'column',
-    gap: 10,
-    paddingTop: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '10px 4px',
+    borderBottom: '1px solid #F0F1F3',
   },
-  checklistTitle: {
-    fontFamily: 'Inter, sans-serif',
-    fontWeight: 700,
-    fontSize: 13,
-    color: '#1F2024',
-  },
-  checkItem: {
+  memberStatusLeft: {
     display: 'flex',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    cursor: 'pointer',
   },
-  checkInput: {
-    width: 18,
-    height: 18,
-    accentColor: '#006FFD',
-    cursor: 'pointer',
+  memberAvatarSmall: {
+    width: 24,
+    height: 24,
+    borderRadius: '50%',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: 700,
     flexShrink: 0,
   },
-  checkLabel: {
+  memberStatusName: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
+    fontSize: 13,
+    color: '#1F2024',
+  },
+  memberStatusRight: {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  memberStatusTime: {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 400,
-    fontSize: 13,
+    fontSize: 12,
+    color: '#8F9098',
+  },
+  statusBadge: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
+    fontSize: 11,
+    padding: '3px 12px',
+    borderRadius: 6,
+    minWidth: 48,
+    textAlign: 'center',
   },
 };

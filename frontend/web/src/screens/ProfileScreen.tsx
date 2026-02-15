@@ -18,7 +18,7 @@ type UserProfile = {
 
 const sidebarItems = [
   { label: 'Home', icon: '\u{1F3E0}', path: '/home' },
-  { label: '\uC548\uC804 \uADDC\uC815 \uD655\uC778', icon: '\u{1F6E1}\uFE0F', path: '/safety' },
+  { label: '\uC548\uC804 \uC7A5\uBE44 \uC810\uAC80', icon: '\u{1F6E1}\uFE0F', path: '/safety' },
   { label: '\uC704\uD5D8\uC131 \uD3C9\uAC00', icon: '\u{1F477}', path: '/risk' },
   { label: '\uBCF4\uACE0\uC11C \uC791\uC131', icon: '\u270F\uFE0F', path: '/report' },
 ];

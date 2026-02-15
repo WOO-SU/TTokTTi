@@ -8,7 +8,7 @@ import useUnreadAlertCount from '../hooks/useUnreadAlertCount';
 
 const sidebarItems = [
   { label: 'Home', icon: '🏠', path: '/home' },
-  { label: '안전 규정 확인', icon: '🛡️', path: '/safety' },
+  { label: '안전 장비 점검', icon: '🛡️', path: '/safety' },
   { label: '위험성 평가', icon: '👷', path: '/risk' },
   { label: '보고서 작성', icon: '✏️', path: '/report' },
 ];
