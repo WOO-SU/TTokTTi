@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import logoImg from '../assets/logo.png';
+import useUnreadAlertCount from '../hooks/useUnreadAlertCount';
 
 // ── Data ──
 
 const sidebarItems = [
   { label: 'Home', icon: '🏠', path: '/home' },
   { label: '안전 규정 확인', icon: '🛡️', path: '/safety' },
-  { label: '위험성 평가', icon: '👤', path: '/risk' },
+  { label: '위험성 평가', icon: '👷', path: '/risk' },
   { label: '보고서 작성', icon: '✏️', path: '/report' },
 ];
 
@@ -30,6 +31,7 @@ export default function ReportScreen() {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
+  const unreadCount = useUnreadAlertCount();
   const [activeSidebar, setActiveSidebar] = useState('보고서 작성');
   const isProfileActive = location.pathname === '/profile';
 
@@ -62,9 +64,11 @@ export default function ReportScreen() {
           <button type="button" style={styles.sidebarIconBtn}>⚙️</button>
           <button type="button" style={{ ...styles.sidebarIconBtn, position: 'relative' }}>
             🔔
-            <div style={styles.notifBadge}>
-              <span style={styles.notifBadgeText}>9</span>
-            </div>
+            {unreadCount > 0 && (
+              <div style={styles.notifBadge}>
+                <span style={styles.notifBadgeText}>{unreadCount > 99 ? '99' : unreadCount}</span>
+              </div>
+            )}
           </button>
         </div>
 

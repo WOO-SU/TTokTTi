@@ -3,6 +3,7 @@ import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../api/client';
 import logoImg from '../assets/logo.png';
+import useUnreadAlertCount from '../hooks/useUnreadAlertCount';
 
 type EmployeeInfo = {
   id: number;
@@ -18,7 +19,7 @@ type EmployeeInfo = {
 const sidebarItems = [
   { label: 'Home', icon: '🏠', path: '/home' },
   { label: '안전 규정 확인', icon: '🛡️', path: '/safety' },
-  { label: '근로자 위험도', icon: '👷', path: '/risk' },
+  { label: '위험성 평가', icon: '👷', path: '/risk' },
   { label: '보고서 작성', icon: '✏️', path: '/report' },
 ];
 
@@ -27,6 +28,7 @@ export default function EmployeeDetailScreen() {
   const location = useLocation();
   const { id } = useParams<{ id: string }>();
   const { logout } = useAuth();
+  const unreadCount = useUnreadAlertCount();
   const [activeSidebar, setActiveSidebar] = useState('');
   const [loading, setLoading] = useState(true);
   const [employee, setEmployee] = useState<EmployeeInfo | null>(null);
@@ -82,9 +84,11 @@ export default function EmployeeDetailScreen() {
           <button type="button" style={styles.sidebarIconBtn}>⚙️</button>
           <button type="button" style={{ ...styles.sidebarIconBtn, position: 'relative' }}>
             🔔
-            <div style={styles.notifBadge}>
-              <span style={styles.notifBadgeText}>9</span>
-            </div>
+            {unreadCount > 0 && (
+              <div style={styles.notifBadge}>
+                <span style={styles.notifBadgeText}>{unreadCount > 99 ? '99' : unreadCount}</span>
+              </div>
+            )}
           </button>
         </div>
 

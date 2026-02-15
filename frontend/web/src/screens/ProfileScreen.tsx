@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../api/client';
 import logoImg from '../assets/logo.png';
+import useUnreadAlertCount from '../hooks/useUnreadAlertCount';
 
 type UserProfile = {
   id: number;
@@ -18,7 +19,7 @@ type UserProfile = {
 const sidebarItems = [
   { label: 'Home', icon: '\u{1F3E0}', path: '/home' },
   { label: '\uC548\uC804 \uADDC\uC815 \uD655\uC778', icon: '\u{1F6E1}\uFE0F', path: '/safety' },
-  { label: '\uADFC\uB85C\uC790 \uC704\uD5D8\uB3C4', icon: '\u{1F468}\u200D\u{1F527}', path: '/risk' },
+  { label: '\uC704\uD5D8\uC131 \uD3C9\uAC00', icon: '\u{1F477}', path: '/risk' },
   { label: '\uBCF4\uACE0\uC11C \uC791\uC131', icon: '\u270F\uFE0F', path: '/report' },
 ];
 
@@ -26,6 +27,7 @@ export default function ProfileScreen() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  const unreadCount = useUnreadAlertCount();
   const [activeSidebar, setActiveSidebar] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -117,9 +119,11 @@ export default function ProfileScreen() {
           <button type="button" style={styles.sidebarIconBtn}>{'\u2699\uFE0F'}</button>
           <button type="button" style={{ ...styles.sidebarIconBtn, position: 'relative' }}>
             {'\u{1F514}'}
-            <div style={styles.notifBadge}>
-              <span style={styles.notifBadgeText}>9</span>
-            </div>
+            {unreadCount > 0 && (
+              <div style={styles.notifBadge}>
+                <span style={styles.notifBadgeText}>{unreadCount > 99 ? '99' : unreadCount}</span>
+              </div>
+            )}
           </button>
         </div>
 
@@ -439,6 +443,7 @@ const styles: Record<string, React.CSSProperties> = {
     paddingRight: 32,
     display: 'flex',
     flexDirection: 'column',
+    alignItems: 'center',
     overflow: 'auto',
   },
   header: {
@@ -447,6 +452,8 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    width: '100%',
+    maxWidth: 680,
   },
   headerTitle: {
     fontFamily: 'Inter, sans-serif',
@@ -476,6 +483,8 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     gap: 20,
     maxWidth: 680,
+    width: '100%',
+    alignSelf: 'center',
     paddingBottom: 40,
   },
 
