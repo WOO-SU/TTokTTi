@@ -23,6 +23,9 @@ services:
       - "6379:6379"
     restart: always
 
+    command: redis-server --protected-mode no
+
+
   # 3. Backend (Django) - UPDATED
   backend:
     build: ./backend
