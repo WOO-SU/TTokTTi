@@ -6,7 +6,7 @@ import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
 import SignUpScreen from './screens/SignUpScreen';
 import SignUpFreeScreen from './screens/SignUpFreeScreen';
 import HomeScreen from './screens/HomeScreen';
-import SafetyRegulationScreen from './screens/SafetyRegulationScreen';
+import EquipmentCheckScreen from './screens/EquipmentCheckScreen';
 import ReportScreen from './screens/ReportScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import EmployeeDetailScreen from './screens/EmployeeDetailScreen';
@@ -28,7 +28,7 @@ export default function App() {
           <Route path="/signup" element={<SignUpScreen />} />
           <Route path="/signup-free" element={<SignUpFreeScreen />} />
           <Route path="/home" element={<ProtectedRoute><HomeScreen /></ProtectedRoute>} />
-          <Route path="/safety" element={<ProtectedRoute><SafetyRegulationScreen /></ProtectedRoute>} />
+          <Route path="/safety" element={<ProtectedRoute><EquipmentCheckScreen /></ProtectedRoute>} />
           <Route path="/report" element={<ProtectedRoute><ReportScreen /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><ProfileScreen /></ProtectedRoute>} />
           <Route path="/risk" element={<ProtectedRoute><WorkerRiskScreen /></ProtectedRoute>} />
