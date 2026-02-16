@@ -15,6 +15,9 @@ class Config:
     REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
     REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
     REDIS_QUEUE = os.getenv("REDIS_QUEUE", "compliance:queue")
+    REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", None)
+    # Azure Redis typically uses SSL (port 6380); Local uses non-SSL (port 6379)
+    REDIS_SSL = os.getenv("REDIS_SSL", "False").lower() in ("true", "1", "t")
 
     # ── Azure Blob ──
     AZURE_ACCOUNT_NAME = os.getenv("AZURE_STORAGE_ACCOUNT_NAME", "")
