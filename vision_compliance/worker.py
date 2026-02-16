@@ -1,8 +1,9 @@
+# -*- coding: utf-8 -*-
+
 """
 vision_compliance worker
 ========================
 Redis 큐에서 compliance 작업을 받아 처리하는 메인 루프.
-
 큐 메시지 형식 (JSON):
 {
     "compliance_id": 123,
