@@ -31,3 +31,9 @@ class UploadResultResponseSerializer(serializers.Serializer):
 class RequestDetectionResponseSerializer(serializers.Serializer):
     ok = serializers.BooleanField()
     compliance_id = serializers.IntegerField()
+
+# "/api/check/target" 요청 시리얼라이저
+class TargetPhotoRequestSerializer(serializers.Serializer):
+    worksession_id = serializers.IntegerField()
+    status = serializers.CharField(max_length=10)  # BEFORE or AFTER
+    image_path = serializers.CharField(max_length=200)

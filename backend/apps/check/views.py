@@ -6,8 +6,16 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 
-from .models import Compliance
-from .serializers import ComplianceSerializer, ComplianceRequestSerializer, ComplianceResultSerializer, CheckUpdateResponseSerializer, UploadResultResponseSerializer, RequestDetectionResponseSerializer
+from .models import Compliance, Photo
+from .serializers import (
+    ComplianceSerializer, 
+    ComplianceRequestSerializer,
+    ComplianceResultSerializer, 
+    CheckUpdateResponseSerializer, 
+    UploadResultResponseSerializer, 
+    RequestDetectionResponseSerializer,
+    TargetPhotoRequestSerializer
+)
 
 
 @swagger_auto_schema(
@@ -91,3 +99,36 @@ def request_detection(request):
     )
 
     return Response({"ok": True, "compliance_id": compliance.id})
+
+@swagger_auto_schema(
+    method='post',
+    request_body=TargetPhotoRequestSerializer,
+    responses={200: UploadResultResponseSerializer}
+)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def target_photo(request):
+    """
+    "/api/check/target": 타겟 사진을 DB에 업로드 한다. (프론트 -> 백 -> DB)
+    request body: { "worksession_id": int, "status": str, "image_path": str }
+    """
+    user = request.user
+    worksession_id = request.data.get("worksession_id")
+    status = request.data.get("status")
+    image_path = request.data.get("image_path")
+
+    if not worksession_id:
+        return Response({"ok": False, "detail": "worksession_id is required"}, status=400)
+    if not status:
+        return Response({"ok": False, "detail": "status (BEFORE or AFTER) is required"}, status=400)
+    if not image_path:
+        return Response({"ok": False, "detail": "image_path is required"}, status=400)
+    
+    photo = Photo.objects.create(
+        employee=user,
+        worksession_id=request.data.get("worksession_id"),
+        status=request.data.get("status"),
+        image_path=request.data.get("image_path")
+    )
+
+    return Response({"ok": True})
