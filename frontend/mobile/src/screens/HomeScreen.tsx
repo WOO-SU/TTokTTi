@@ -7,16 +7,15 @@ import {
   Image,
   StatusBar,
   ScrollView,
-  Dimensions,
 } from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {useNavigation} from '@react-navigation/native';
-import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import type {RootStackParamList} from '../../App';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../App';
 
-const {width: SCREEN_WIDTH} = Dimensions.get('window');
 const characterImage = require('../assets/safety-character.png');
 const equipmentImage = require('../assets/Risk-Assessment.png');
+const riskAssessmentImage = require('../assets/tripod-character.png');
 
 /* ──────────────── Icon Components ──────────────── */
 
@@ -41,7 +40,7 @@ function MenuIcon() {
   return (
     <View style={iconStyles.menuContainer}>
       <View style={iconStyles.menuLine} />
-      <View style={[iconStyles.menuLine, {width: 16}]} />
+      <View style={[iconStyles.menuLine, { width: 16 }]} />
       <View style={iconStyles.menuLine} />
     </View>
   );
@@ -56,19 +55,19 @@ function ImagePlaceholderIcon() {
   );
 }
 
-function HomeIcon({active}: {active: boolean}) {
+function HomeIcon({ active }: { active: boolean }) {
   return (
     <View style={iconStyles.tabIconContainer}>
       <View
         style={[
           iconStyles.homeBase,
-          {borderColor: active ? '#1F2024' : '#71727A'},
+          { borderColor: active ? '#1F2024' : '#71727A' },
         ]}
       />
       <View
         style={[
           iconStyles.homeRoof,
-          {borderBottomColor: active ? '#1F2024' : '#71727A'},
+          { borderBottomColor: active ? '#1F2024' : '#71727A' },
         ]}
       />
     </View>
@@ -111,14 +110,13 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Content */}
       <ScrollView
-        style={{flex: 1}}
+        style={{ flex: 1 }}
         contentContainerStyle={styles.scrollContent}
         bounces={false}
         showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={[styles.header, {paddingTop: insets.top + 24}]}>
+        <View style={[styles.header, { paddingTop: insets.top + 24 }]}>
           <TouchableOpacity style={styles.headerIcon}>
             <SearchIcon />
           </TouchableOpacity>
@@ -138,7 +136,41 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Banner */}
+        {/* Banner 1: 안전 장비 점검 */}
+        <TouchableOpacity
+          style={styles.bannerSection}
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate('SafetyEquipmentCheck')}>
+          <View style={styles.bannerCard}>
+            <Image
+              source={equipmentImage}
+              style={styles.bannerImage1}
+              resizeMode="contain"
+            />
+            <Text style={styles.bannerText}>
+              {'안전 장비 점검'}
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Banner 2: 위험성 평가 */}
+        <TouchableOpacity
+          style={styles.bannerSection}
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate('RiskAssessment')}>
+          <View style={styles.bannerCard}>
+            <Image
+              source={riskAssessmentImage}
+              style={styles.bannerImage2}
+              resizeMode="contain"
+            />
+            <Text style={styles.bannerText}>
+              {'위험성 평가'}
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Banner 3: 작업시작하기 (실시간 촬영) */}
         <TouchableOpacity
           style={styles.bannerSection}
           activeOpacity={0.8}
@@ -146,28 +178,11 @@ export default function HomeScreen() {
           <View style={styles.bannerCard}>
             <Image
               source={characterImage}
-              style={styles.characterImage}
+              style={styles.bannerImage3}
               resizeMode="contain"
             />
             <Text style={styles.bannerText}>
               {'작업시작하기\n(실시간 촬영)'}
-            </Text>
-          </View>
-        </TouchableOpacity>
-
-        {/* 안전 장비 점검 Banner */}
-        <TouchableOpacity
-          style={styles.bannerSection}
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate('RiskAssessment')}>
-          <View style={styles.bannerCard}>
-            <Image
-              source={equipmentImage}
-              style={styles.characterImage}
-              resizeMode="contain"
-            />
-            <Text style={styles.bannerText}>
-              {'안전 장비 점검'}
             </Text>
           </View>
         </TouchableOpacity>
@@ -187,21 +202,7 @@ export default function HomeScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.cardsContainer}>
-            {/* Card 1: 위험성 평가 */}
-            <TouchableOpacity
-              style={styles.card}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate('RiskAssessment')}>
-              <View style={styles.cardImageArea}>
-                <ImagePlaceholderIcon />
-              </View>
-              <View style={styles.cardContent}>
-                <Text style={styles.cardTitle}>현황</Text>
-                <Text style={styles.cardSubtitle}>위험성 평가</Text>
-              </View>
-            </TouchableOpacity>
-
-            {/* Card 2: 알람 */}
+            {/* Card: 알람 */}
             <TouchableOpacity style={styles.card} activeOpacity={0.8}>
               <View style={styles.cardImageArea}>
                 <ImagePlaceholderIcon />
@@ -244,7 +245,7 @@ const iconStyles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 1,
-    transform: [{rotate: '-45deg'}],
+    transform: [{ rotate: '-45deg' }],
     borderRadius: 1,
   },
   heartContainer: {
@@ -362,6 +363,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    gap: 15,
     paddingBottom: 24,
   },
 
@@ -412,19 +414,37 @@ const styles = StyleSheet.create({
   /* Banner */
   bannerSection: {
     paddingHorizontal: 12,
-    marginBottom : 30,
   },
   bannerCard: {
     width: '100%',
     height: 214,
-    backgroundColor: '#EAF2FF',
     borderRadius: 50,
+    borderWidth: 5,
+    borderColor: '#EAF2FF',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     overflow: 'hidden',
+    boxShadow: [
+      {
+        offsetX: 0,
+        offsetY: 4,
+        blurRadius: 4,
+        spreadDistance: 0,
+        color: 'rgba(0, 0, 0, 0.25)',
+        outset: true,
+      },
+    ],
   },
-  characterImage: {
+  bannerImage1: {
+    width: 224,
+    height: 224,
+  },
+  bannerImage2: {
+    width: 207,
+    height: 207,
+  },
+  bannerImage3: {
     width: 206,
     height: 206,
   },
@@ -433,7 +453,7 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     fontSize: 20,
     color: '#000000',
-    lineHeight: 28,
+    lineHeight: 24,
     flexShrink: 1,
   },
 
@@ -466,9 +486,9 @@ const styles = StyleSheet.create({
 
   /* Card */
   card: {
-    width: (SCREEN_WIDTH - 32 - 12) / 2,
+    width: 200,
     borderRadius: 16,
-    backgroundColor: '#F8F9FF',
+    backgroundColor: '#F8F9FE',
     overflow: 'hidden',
   },
   cardImageArea: {
@@ -479,7 +499,7 @@ const styles = StyleSheet.create({
   },
   cardContent: {
     padding: 16,
-    gap: 4,
+    gap: 16,
   },
   cardTitle: {
     fontFamily: 'Inter',

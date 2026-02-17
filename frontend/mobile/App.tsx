@@ -9,11 +9,16 @@ import SignUpScreen from './src/screens/SignUpScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import SelectModeScreen from './src/screens/SelectModeScreen';
 import CameraScreen from './src/screens/CameraScreen';
-import RiskAssessmentScreen from './src/screens/RiskAssessmentScreen';
+import SafetyEquipmentCheckScreen from './src/screens/SafetyEquipmentCheckScreen';
 import EquipmentCameraScreen from './src/screens/EquipmentCameraScreen';
+import RiskAssessmentScreen from './src/screens/RiskAssessmentScreen';
+import RiskCheckScreen from './src/screens/RiskCheckScreen';
+import RiskResultScreen from './src/screens/RiskResultScreen';
+import RiskCameraScreen from './src/screens/RiskCameraScreen';
 import PersonalScreen from './src/screens/PersonalScreen';
 import SettingScreen from './src/screens/SettingScreen';
 import {AuthProvider} from './src/context/AuthContext';
+import {RiskPhotoProvider} from './src/context/RiskPhotoContext';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -21,8 +26,12 @@ export type RootStackParamList = {
   Main: undefined;
   SelectMode: undefined;
   Camera: {mode: 'all' | 'worker'};
-  RiskAssessment: { completedTitle?: string } | undefined;
+  SafetyEquipmentCheck: { completedTitle?: string } | undefined;
   EquipmentCamera: {title: string};
+  RiskAssessment: undefined;
+  RiskCheck: undefined;
+  RiskResult: undefined;
+  RiskCamera: {title: string};
 };
 
 export type TabParamList = {
@@ -230,6 +239,7 @@ function MainTabs() {
 function App() {
   return (
     <AuthProvider>
+      <RiskPhotoProvider>
       <SafeAreaProvider>
         <NavigationContainer>
           <Stack.Navigator
@@ -240,11 +250,16 @@ function App() {
             <Stack.Screen name="Main" component={MainTabs} />
             <Stack.Screen name="SelectMode" component={SelectModeScreen} />
             <Stack.Screen name="Camera" component={CameraScreen} />
-            <Stack.Screen name="RiskAssessment" component={RiskAssessmentScreen} />
+            <Stack.Screen name="SafetyEquipmentCheck" component={SafetyEquipmentCheckScreen} />
             <Stack.Screen name="EquipmentCamera" component={EquipmentCameraScreen} />
+            <Stack.Screen name="RiskAssessment" component={RiskAssessmentScreen} />
+            <Stack.Screen name="RiskCheck" component={RiskCheckScreen} />
+            <Stack.Screen name="RiskResult" component={RiskResultScreen} />
+            <Stack.Screen name="RiskCamera" component={RiskCameraScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaProvider>
+      </RiskPhotoProvider>
     </AuthProvider>
   );
 }

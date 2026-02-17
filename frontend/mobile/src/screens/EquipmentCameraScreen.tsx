@@ -174,7 +174,7 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
   }, []);
 
   const handleContinue = () => {
-    navigation.navigate('RiskAssessment', { completedTitle: title });
+    navigation.navigate('SafetyEquipmentCheck', { completedTitle: title });
   };
 
   const isProcessing = screenState === 'uploading' || screenState === 'analyzing';
