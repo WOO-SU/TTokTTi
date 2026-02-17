@@ -1,3 +1,4 @@
+from __future__ import annotations
 """YOLO 기반 장비 탐지 + 결과 이미지 생성"""
 
 import cv2

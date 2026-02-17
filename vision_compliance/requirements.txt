@@ -1,6 +1,6 @@
 redis
 requests
-ultralytics
+ultralytics==8.3.50
 opencv-python
-numpy
+numpy==1.23.0
 azure-storage-blob
