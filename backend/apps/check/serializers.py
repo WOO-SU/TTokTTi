@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Compliance
+from ..detect.models import VideoLog
 
 class ComplianceSerializer(serializers.ModelSerializer):
     class Meta:
@@ -31,3 +32,31 @@ class UploadResultResponseSerializer(serializers.Serializer):
 class RequestDetectionResponseSerializer(serializers.Serializer):
     ok = serializers.BooleanField()
     compliance_id = serializers.IntegerField()
+
+# "/api/check/target" 요청 시리얼라이저
+class TargetPhotoRequestSerializer(serializers.Serializer):
+    worksession_id = serializers.IntegerField()
+    status = serializers.CharField(max_length=10)  # BEFORE or AFTER
+    image_path = serializers.CharField(max_length=200)
+
+# "/api/check/request" 요청 시리얼라이저
+class RequestCheckSerializer(serializers.Serializer):
+    worksession_id = serializers.IntegerField()
+    compliance_id = serializers.IntegerField()
+
+# "/api/check/approve" 요청 시리얼라이저
+class ApproveCheckSerializer(serializers.Serializer):
+    video_log_id = serializers.IntegerField()
+    is_approved = serializers.BooleanField()
+
+class ApproveCheckResultSerializer(serializers.Serializer):
+    video_log_id = serializers.IntegerField()
+    status = serializers.ChoiceField(
+        choices=VideoLog.StatusChoices.choices
+    )
+
+# "/api/check/approve" 응답 시리얼라이저
+class ApproveCheckResponseSerializer(serializers.Serializer):
+    ok = serializers.BooleanField()
+    data = ApproveCheckResultSerializer(required=False)
+    detail = serializers.CharField(required=False)
