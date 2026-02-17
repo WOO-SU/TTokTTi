@@ -28,6 +28,8 @@ erDiagram
         VARCHAR photo "path to blob storage"
         ENUM sex "['F', 'M']"
         BOOLEAN is_manager "true only for manager"
+        BOOLEAN is_active "just for django auth"
+        BOOLEAN is_staff  "just for django auth"
         DATETIME created_at
         DATETIME updated_at
     }
