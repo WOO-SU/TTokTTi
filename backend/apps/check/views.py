@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from .models import Compliance, Photo
+from ..detect.models import VideoLog
 from .serializers import (
     ComplianceSerializer, 
     ComplianceRequestSerializer,
@@ -14,7 +15,10 @@ from .serializers import (
     CheckUpdateResponseSerializer, 
     UploadResultResponseSerializer, 
     RequestDetectionResponseSerializer,
-    TargetPhotoRequestSerializer
+    TargetPhotoRequestSerializer,
+    RequestCheckSerializer,
+    ApproveCheckSerializer,
+    ApproveCheckResponseSerializer
 )
 
 
@@ -132,3 +136,98 @@ def target_photo(request):
     )
 
     return Response({"ok": True})
+
+@swagger_auto_schema(
+    method="post",
+    request_body = RequestCheckSerializer,
+    responses = {
+        200: UploadResultResponseSerializer,
+        400: UploadResultResponseSerializer,
+    }
+)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def request_check(request):   
+    """
+    "/api/check/request": 근로자 -> 관리자 수동 점검 요청
+    request body: { "worksession_id": int, "compliance_id": int }
+    """
+    worksession_id = request.data.get("worksession_id")
+    compliance_id = request.data.get("compliance_id")
+
+    if not worksession_id:
+        return Response(
+            {"ok": False, "detail": "worksession_id required"},
+            status=400
+        )
+    if not compliance_id:
+        return Response(
+            {"ok": False, "detail": "compliance_id required"},
+            status=400
+        )
+    
+    log = VideoLog.objects.create(
+        worksession_id=worksession_id,
+        compliance_id=compliance_id,
+        source=VideoLog.SourceChoices.MANUAL,
+        status=VideoLog.StatusChoices.PENDING,
+    )
+
+    return Response({"ok": True}, status=200)
+
+@swagger_auto_schema(
+    method="patch",
+    request_body=ApproveCheckSerializer,
+    responses={
+        200: ApproveCheckResponseSerializer,
+        400: ApproveCheckResponseSerializer,
+        404: ApproveCheckResponseSerializer,
+        403: ApproveCheckResponseSerializer,
+    }
+)
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def approve_check(request):
+    """
+    "/api/check/approve": 관리자 -> 근로자 수동 점검 승인
+    request body: { "video_log_id": int, "approval": bool }
+    """
+
+    video_log_id = request.data.get("video_log_id")
+    approval = request.data.get("approval")
+
+    if request.user.is_manager == False:
+        return Response(
+            {"ok": False, "detail": "Only managers can approve checks"},
+            status=403
+        )
+
+    if video_log_id is None or approval is None:
+        return Response(
+            {"ok": False, "detail": "video_log_id and approval required"},
+            status=400
+        )
+
+    try:
+        log = VideoLog.objects.get(id=video_log_id)
+    except VideoLog.DoesNotExist:
+        return Response(
+            {"ok": False, "detail": "VideoLog not found"},
+            status=404
+        )
+
+    # 상태 변경
+    log.status = (
+        VideoLog.StatusChoices.APPROVED
+        if approval
+        else VideoLog.StatusChoices.REJECTED
+    )
+    log.save()
+
+    return Response({
+        "ok": True,
+        "data": {
+            "video_log_id": log.id,
+            "status": log.status
+        }
+    }, status=200)
