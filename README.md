@@ -2,49 +2,111 @@
 ### ERD
 ```mermaid
 erDiagram
-    USER }o--o{ TEAM : belongs_to
+    WORKSITE ||--o{ WORKSESSION : has
+    WORKSESSION ||--o{ WORKSESSION_MEMBER : includes
+    USER ||--o{ WORKSESSION_MEMBER : participates
+
+    WORKSESSION ||--o{ COMPLIANCE : generates
     USER ||--o{ COMPLIANCE : checked
-    USER ||--o{ VIDEO : recorded
+
+    WORKSESSION ||--o{ VIDEOLOG : generates
+    RISK_TYPE ||--o{ VIDEOLOG : classifies
+
+    VIDEOLOG ||--o{ VIDEOLOG_READ : read_status
+    USER ||--o{ VIDEOLOG_READ : reads
+
+    WORKSESSION ||--o{ PHOTO : has
+    USER ||--o{ PHOTO : uploads
     USER {
         int id PK 
-        char(20) username "id used for login"
-        char(20) password "pw used for login"
-        bool is_manager "true only for manager"
-        char(20) name "full name for each user"
-        char(20) phone "nullable"
-        char(100) address "nullable"
-        date birth_date "nullable"
-        char(200) photo "nullable: path to blob storage"
-        char(1) sex "F for female, M for male"
-        date created_at
-        date updated_at
+        VARCHAR username "id used for login"
+        VARCHAR password "pw used for login"
+        VARCHAR name "full name for each user"
+        VARCHAR phone 
+        VARCHAR address 
+        VARCHAR birth_date 
+        VARCHAR photo "path to blob storage"
+        ENUM sex "['F', 'M']"
+        BOOLEAN is_manager "true only for manager"
+        DATETIME created_at
+        DATETIME updated_at
     }
+    WORKSITE {
+        INT id PK
+        VARCHAR name
+        VARCHAR address
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    WORKSESSION {
+        INT id PK
+        INT worksite_id FK
+        DATETIME starts_at
+        DATETIME ends_at
+        ENUM status "['READY', 'IN_PROGRESS', 'DONE']"
+        VARCHAR fullcam_video "blob path to full fullcam video"
+        VARCHAR bodycam_video "blob path to full bodycam video"
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    WORKSESSION_MEMBER {
+        INT id PK
+        INT worksession_id FK
+        INT user_id FK
+        ENUM role "['HEAD', 'RELATED', 'WORKER']"
+    }
+
     COMPLIANCE {
-        int id PK
-        int employee_id FK
-        bool is_complied "nullable"
-        char(200) original_image "nullable: blob path to original image"
-        char(200) detected_image "nullable: blob path to detected image"
-        bool is_updated "is processed by model?"
-        date created_at
-        date updated_at
+        INT id PK
+        INT employee_id FK
+        INT worksession_id FK
+        ENUM category "['HELMET', 'VEST', 'SHOES']"
+        BOOLEAN is_complied
+        VARCHAR original_image "blob path"
+        VARCHAR detected_image "blob path"
+        DATETIME created_at
+        DATETIME updated_at
     }
-    VIDEO {
-        int id PK
-        int employee_id FK
-        bool is_risky "default = false"
-        char(200) original_video "nullable: blob path to original video"
-        char(4) camera_type "nullable: BODY or FULL"
-        date created_at
-        date updated_at
+
+    RISK_TYPE {
+        INT id PK
+        VARCHAR code "used for model"
+        VARCHAR name "used for UI"
+        VARCHAR description
+        ENUM camera_type "['BODY', 'FULL']"
+        DATETIME created_at
+        DATETIME updated_at
     }
-    TEAM {
-        int id PK
-        int employee1_id FK
-        int employee2_id FK
-        date created_at
-        date updated_at
+
+    VIDEOLOG {
+        INT id PK
+        INT worksession_id FK
+        INT risk_type_id FK
+        VARCHAR original_video "path to blob"
+        DATETIME created_at
+        DATETIME updated_at
     }
+
+    VIDEOLOG_READ {
+        INT id PK
+        INT videolog_id FK
+        INT user_id FK
+        BOOLEAN is_read
+        DATETIME read_at
+    }
+
+    PHOTO {
+        INT id PK
+        INT employee_id FK
+        INT worksession_id FK
+        ENUM status "['BEFORE', 'AFTER']"
+        VARCHAR image_path "path to blob"
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    
     
 ```
 
@@ -66,4 +128,4 @@ erDiagram
 
 
 ---
-Last Updated: Feb 13, 2026
+Last Updated: Feb 17, 2026
