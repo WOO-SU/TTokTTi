@@ -18,5 +18,5 @@ urlpatterns = [
     path("target/", target_photo, name="target_photo"),
     path("request/", request_check, name="request_check"),
     path("approve/", approve_check, name="approve_check"),
-    path("pass/<int:worksession_id>/", check_pass, name="check_pass"),
+    path("pass/", check_pass, name="check_pass"),
 ]
