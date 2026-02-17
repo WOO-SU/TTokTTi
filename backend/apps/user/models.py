@@ -36,13 +36,18 @@ class User(AbstractBaseUser, PermissionsMixin):
         MALE = "M", "Male"
         FEMALE = "F", "Female"
 
-    username = models.CharField(max_length=20, unique=True)
-    name = models.CharField(max_length=20)
+    username = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=50)
+
     phone = models.CharField(max_length=20, null=True, blank=True)
-    address = models.CharField(max_length=100, null=True, blank=True)
-    birth_date = models.DateTimeField(null=True, blank=True)
-    photo = models.CharField(max_length=200, null=True, blank=True)
-    sex = models.CharField(max_length=1, choices=SexChoices.choices)
+    address = models.CharField(max_length=255, null=True, blank=True)
+    birth_date = models.DateField(null=True, blank=True)
+    photo = models.CharField(max_length=255, null=True, blank=True)
+
+    sex = models.CharField(
+        max_length=1,
+        choices=SexChoices.choices
+    )
 
     is_manager = models.BooleanField(default=False)
 
@@ -55,25 +60,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     USERNAME_FIELD = "username"
-    REQUIRED_FIELDS: list[str] = ["name", "sex"]
+    REQUIRED_FIELDS = ["name", "sex"]
 
-    def __str__(self) -> str:
+    def __str__(self):
         return self.username
-
-class Team(models.Model):
-    employee1 = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name="teams_as_employee1"
-    )
-    employee2 = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name="teams_as_employee2"
-    )
-
-    created_at = models.DateTimeField(auto_now_add=True)  
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ["-created_at"]

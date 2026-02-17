@@ -78,11 +78,13 @@ def request_detection(request):
     serializer.is_valid(raise_exception=True)
 
     user = request.user
+    worksession_id = request.data.get("worksession_id")
     target = serializer.validated_data["target"]
     original_image = serializer.validated_data["original_image"]
 
     # Compliance 레코드 생성
     compliance = Compliance.objects.create(
+        worksession_id=worksession_id,
         employee=user,
         target=target,
         original_image=original_image

@@ -6,8 +6,9 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Video
-from .serializers import VideoSerializer, SaveVideoResponseSerializer
+from .models import VideoLog, RiskType
+from ..worksession.models import WorkSession
+from .serializers import VideoSerializer, SaveVideoResponseSerializer, VideoSearchResponseSerializer
 
 @swagger_auto_schema(
     method='post',
@@ -19,10 +20,21 @@ def save_video(request):
     """
     "/api/detect/save": 영상 path 저장
     """
-    user = request.user
-    is_risky = request.data.get("is_risky", False)
-    video_path = request.data.get("video_path", "")
-    camera_type = request.data.get("camera_type")
+    worksession_id = request.data.get("worksession_id") # 프론트 단에서 확인할 수 있는지 검토 필요
+    risk_type_id = request.data.get("risk_type_id")
+    video_path = request.data.get("video_path")
+
+    if not worksession_id:
+        return Response(
+            {"ok": False, "data": None, "detail": "worksession_id required"},
+            status=400
+        )
+
+    if not risk_type_id:
+        return Response(
+            {"ok": False, "data": None, "detail": "risk_type_id required"},
+            status=400
+        )
 
     if not video_path:
         return Response(
@@ -30,65 +42,104 @@ def save_video(request):
             status=400
         )
 
-    if camera_type not in ["BODY", "FULL"]:
+    try:
+        worksession = WorkSession.objects.get(id=worksession_id)
+    except WorkSession.DoesNotExist:
         return Response(
-            {"ok": False, "data": None, "detail": "camera_type must be BODY or FULL"},
-            status=400
+            {"ok": False, "data": None, "detail": "invalid worksession_id"},
+            status=404
         )
 
-    video = Video.objects.create(
-        employee=user,
-        is_risky=is_risky,
-        video_path=video_path,
-        camera_type=camera_type
+    try:
+        risk_type = RiskType.objects.get(id=risk_type_id)
+    except RiskType.DoesNotExist:
+        return Response(
+            {"ok": False, "data": None, "detail": "invalid risk_type_id"},
+            status=404
+        )
+    
+    try:
+        worksession = WorkSession.objects.get(id=worksession_id)
+    except WorkSession.DoesNotExist:
+        return Response(
+            {"ok": False, "data": None, "detail": "invalid worksession_id"},
+            status=404
+        )
+
+    try:
+        risk_type = RiskType.objects.get(id=risk_type_id)
+    except RiskType.DoesNotExist:
+        return Response(
+            {"ok": False, "data": None, "detail": "invalid risk_type_id"},
+            status=404
+        )
+
+    video = VideoLog.objects.create(
+        worksession=worksession,
+        risk_type=risk_type,
+        original_video=video_path
     )
 
     serializer = VideoSerializer(video)
-    return Response({"ok": True, "data": serializer.data})
+
+    return Response(
+        {"ok": True, "data": serializer.data},
+        status=200
+    )
 
 
 @swagger_auto_schema(
-    method='get',
-    responses={200: VideoSerializer(many=True)}
+    method="get",
+    responses={200: VideoSearchResponseSerializer}
 )
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def search_video(request):
     """
-    "/api/detect/search": 특정 영상을 검색한다. (작업자 또는 날짜로 검색 가능)
+    "/api/detect/search": 위험 감지 영상 검색
     query params:
-        - employee_id (optional): 작업자 ID
-        - start_date (optional): 조회 시작 날짜 (ISO 형식)
-        - end_date (optional): 조회 종료 날짜 (ISO 형식)
-        - is_risky (optional): 위험 영상 여부 (true/false)
-        - camera_type (optional): 카메라 타입 (BODY/FULL)
+        - employee_id (optional)
+        - worksession_id (optional)
+        - start_date (optional, ISO format)
+        - end_date (optional, ISO format)
+        - risk_type_id (optional)
     """
-    videos = Video.objects.all()
-    
+
+    videos = VideoLog.objects.select_related(
+        "worksession", "risk_type"
+    ).all()
+
     employee_id = request.query_params.get("employee_id")
+    worksession_id = request.query_params.get("worksession_id")
     start_date = request.query_params.get("start_date")
     end_date = request.query_params.get("end_date")
-    is_risky = request.query_params.get("is_risky")
-    camera_type = request.query_params.get("camera_type")
+    risk_type_id = request.query_params.get("risk_type_id")
+
+    if worksession_id:
+        videos = videos.filter(worksession_id=worksession_id)
 
     if employee_id:
-        videos = videos.filter(employee_id=employee_id)
-    
+        videos = videos.filter(
+            worksession__members__user_id=employee_id
+        ).distinct()
+
     if start_date:
         start_dt = parse_datetime(start_date)
         if start_dt:
             videos = videos.filter(created_at__gte=start_dt)
-    
+
     if end_date:
         end_dt = parse_datetime(end_date)
         if end_dt:
             videos = videos.filter(created_at__lte=end_dt)
-    
-    if is_risky is not None:
-        videos = videos.filter(is_risky=is_risky.lower() == "true")
 
-    if camera_type:
-        videos = videos.filter(camera_type=camera_type)
-    
+    if risk_type_id:
+        videos = videos.filter(risk_type_id=risk_type_id)
+
     serializer = VideoSerializer(videos, many=True)
-    return Response({"ok": True, "data": serializer.data})
+
+    return Response({
+        "ok": True,
+        "count": videos.count(),
+        "data": serializer.data
+    })
