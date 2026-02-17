@@ -16,6 +16,7 @@ erDiagram
     USER ||--o{ VIDEOLOG_READ : reads
 
     WORKSESSION ||--o{ PHOTO : has
+    COMPLIANCE ||--o{ VIDEOLOG : related_to
     USER ||--o{ PHOTO : uploads
     USER {
         int id PK 
@@ -86,6 +87,9 @@ erDiagram
         INT id PK
         INT worksession_id FK
         INT risk_type_id FK
+        INT compliance_id FK
+        ENUM source "['AUTO', 'MANUAL']"
+        ENUM status "['PENDING', 'APPROVED', 'REJECTED']"
         VARCHAR original_video "path to blob"
         DATETIME created_at
         DATETIME updated_at
@@ -108,7 +112,6 @@ erDiagram
         DATETIME created_at
         DATETIME updated_at
     }
-    
     
 ```
 
