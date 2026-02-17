@@ -78,38 +78,32 @@ const POLL_INTERVAL = 15_000;
 
 // ── Helpers ──
 
-function getStatusInfo(records: ComplianceRecord[], employeeId: number, target: EquipmentTarget): { label: string; color: string; bg: string } {
-  const match = records.find(r => r.employee === employeeId && r.target === target);
-  if (!match) return { label: '미확인', color: '#71727A', bg: '#F0F1F3' };
-  if (!match.is_updated) return { label: '검사중', color: '#E37D00', bg: '#FFF3E0' };
-  if (match.is_complied) return { label: '준수', color: '#22A06B', bg: '#E8F5E9' };
-  return { label: '미준수', color: '#D32F2F', bg: '#FFEAEA' };
-}
 
-function getEquipmentGroupStatus(records: ComplianceRecord[], members: WorkerGroup['members'], target: EquipmentTarget): { done: number; total: number } {
+// How many equipment categories (out of 3) have ALL members in a group compliant
+function getGroupCategoryProgress(records: ComplianceRecord[], members: WorkerGroup['members']): { done: number; total: number } {
   let done = 0;
-  members.forEach(m => {
-    const match = records.find(r => r.employee === m.employeeId && r.target === target);
-    if (match?.is_updated && match.is_complied) done++;
+  equipmentItems.forEach(eq => {
+    const allComplied = members.every(m => {
+      const match = records.find(r => r.employee === m.employeeId && r.target === eq.target);
+      return match?.is_updated && match.is_complied;
+    });
+    if (allComplied) done++;
   });
-  return { done, total: members.length };
+  return { done, total: equipmentItems.length };
 }
 
 function getGroupOverallStatus(records: ComplianceRecord[], members: WorkerGroup['members']): { label: string; color: string; bg: string } {
-  const total = members.length * equipmentItems.length;
-  let complied = 0;
-  let checked = 0;
+  const { done, total } = getGroupCategoryProgress(records, members);
+  if (done === total) return { label: '완료', color: '#22A06B', bg: '#E8F5E9' };
+  if (done > 0) return { label: '진행중', color: '#1565C0', bg: '#E8F0FE' };
+  // check if any individual check has started
+  let anyStarted = false;
   members.forEach(m => {
     equipmentItems.forEach(eq => {
-      const match = records.find(r => r.employee === m.employeeId && r.target === eq.target);
-      if (match?.is_updated) {
-        checked++;
-        if (match.is_complied) complied++;
-      }
+      if (records.find(r => r.employee === m.employeeId && r.target === eq.target)) anyStarted = true;
     });
   });
-  if (checked === total && complied === total) return { label: '완료', color: '#22A06B', bg: '#E8F5E9' };
-  if (checked > 0) return { label: '진행중', color: '#1565C0', bg: '#E8F0FE' };
+  if (anyStarted) return { label: '진행중', color: '#1565C0', bg: '#E8F0FE' };
   return { label: '미시작', color: '#71727A', bg: '#F0F1F3' };
 }
 
@@ -223,15 +217,23 @@ export default function SafetyRegulationScreen() {
           <button type="button" style={styles.logoutBtn} onClick={handleLogout}>Logout</button>
         </div>
 
-        {/* Summary Badges */}
+        {/* Summary — 작업공간 */}
         <div style={styles.summaryRow}>
-          {equipmentItems.map(eq => {
-            const allMembers = workerGroups.flatMap(g => g.members);
-            const { done, total } = getEquipmentGroupStatus(records, allMembers, eq.target);
+          {workerGroups.map(group => {
+            const { done, total } = getGroupCategoryProgress(records, group.members);
+            const status = getGroupOverallStatus(records, group.members);
             return (
-              <div key={eq.target} style={styles.summaryCard}>
-                <span style={{ fontSize: 24 }}>{eq.icon}</span>
-                <span style={styles.summaryLabel}>{eq.label}</span>
+              <div key={group.id} style={styles.summaryCard}>
+                <div style={styles.summarySiteInfo}>
+                  <span style={styles.summaryLabel}>{group.name}</span>
+                  <span style={{
+                    ...styles.summarySiteBadge,
+                    backgroundColor: status.bg,
+                    color: status.color,
+                  }}>
+                    {status.label}
+                  </span>
+                </div>
                 <span style={{
                   ...styles.summaryCount,
                   color: done === total && total > 0 ? '#22A06B' : '#006FFD',
@@ -254,15 +256,8 @@ export default function SafetyRegulationScreen() {
               const isGroupExpanded = expandedGroupId === group.id;
               const groupStatus = getGroupOverallStatus(records, group.members);
 
-              // Group progress
-              const totalChecks = group.members.length * equipmentItems.length;
-              let groupDone = 0;
-              group.members.forEach(m => {
-                equipmentItems.forEach(eq => {
-                  const match = records.find(r => r.employee === m.employeeId && r.target === eq.target);
-                  if (match?.is_updated && match.is_complied) groupDone++;
-                });
-              });
+              // Group progress: count categories (out of 3) where ALL members comply
+              const { done: groupDone, total: totalChecks } = getGroupCategoryProgress(records, group.members);
               const groupPct = totalChecks > 0 ? (groupDone / totalChecks) * 100 : 0;
 
               return (
@@ -321,7 +316,13 @@ export default function SafetyRegulationScreen() {
                       {equipmentItems.map(eq => {
                         const eqKey = `${group.id}-${eq.target}`;
                         const isEqExpanded = expandedEquipment === eqKey;
-                        const { done, total } = getEquipmentGroupStatus(records, group.members, eq.target);
+                        // Count members compliant for this equipment type
+                        let done = 0;
+                        group.members.forEach(m => {
+                          const match = records.find(r => r.employee === m.employeeId && r.target === eq.target);
+                          if (match?.is_updated && match.is_complied) done++;
+                        });
+                        const total = group.members.length;
                         const allDone = done === total && total > 0;
                         const pct = total > 0 ? (done / total) * 100 : 0;
 
@@ -354,12 +355,13 @@ export default function SafetyRegulationScreen() {
                               </div>
                             </div>
 
-                            {/* Expanded: Per-member status */}
+                            {/* Expanded: Per-member checklist */}
                             {isEqExpanded && (
                               <div style={styles.memberStatusList}>
                                 {group.members.map(member => {
-                                  const status = getStatusInfo(records, member.employeeId, eq.target);
                                   const matchRecord = records.find(r => r.employee === member.employeeId && r.target === eq.target);
+                                  const isChecked = matchRecord?.is_updated === true && matchRecord.is_complied === true;
+                                  const isPending = matchRecord && !matchRecord.is_updated;
                                   return (
                                     <div key={member.employeeId} style={styles.memberStatusRow}>
                                       <div style={styles.memberStatusLeft}>
@@ -372,13 +374,21 @@ export default function SafetyRegulationScreen() {
                                         {matchRecord && (
                                           <span style={styles.memberStatusTime}>{timeAgo(matchRecord.created_at)}</span>
                                         )}
-                                        <span style={{
-                                          ...styles.statusBadge,
-                                          backgroundColor: status.bg,
-                                          color: status.color,
+                                        {/* Checkbox — API-driven, read-only */}
+                                        <div style={{
+                                          ...styles.checkbox,
+                                          backgroundColor: isChecked ? '#006FFD' : '#FFFFFF',
+                                          borderColor: isChecked ? '#006FFD' : isPending ? '#E37D00' : '#C5C6CC',
                                         }}>
-                                          {status.label}
-                                        </span>
+                                          {isChecked && (
+                                            <svg width="14" height="10" viewBox="0 0 14 10" fill="none">
+                                              <path d="M1.5 5L5.5 9L12.5 1" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                          )}
+                                          {isPending && !isChecked && (
+                                            <div style={styles.checkboxPendingDot} />
+                                          )}
+                                        </div>
                                       </div>
                                     </div>
                                   );
@@ -585,14 +595,28 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 12,
+  },
+  summarySiteInfo: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+    flex: 1,
   },
   summaryLabel: {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 600,
     fontSize: 14,
     color: '#1F2024',
-    flex: 1,
+  },
+  summarySiteBadge: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
+    fontSize: 11,
+    padding: '2px 10px',
+    borderRadius: 6,
+    alignSelf: 'flex-start',
   },
   summaryCount: {
     fontFamily: 'Inter, sans-serif',
@@ -849,13 +873,21 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 12,
     color: '#8F9098',
   },
-  statusBadge: {
-    fontFamily: 'Inter, sans-serif',
-    fontWeight: 600,
-    fontSize: 11,
-    padding: '3px 12px',
-    borderRadius: 6,
-    minWidth: 48,
-    textAlign: 'center',
+  checkbox: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    border: '1.5px solid',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+    transition: 'background-color 0.15s, border-color 0.15s',
+  },
+  checkboxPendingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: '50%',
+    backgroundColor: '#E37D00',
   },
 };
