@@ -44,3 +44,7 @@ frontend/mobile/android/app/*.keystore
 !frontend/mobile/android/app/debug.keystore # 디버그용만 허용하고 싶을 때
 
 vision_fullcam/data/
+
+# 모델들
+*.pt
+*.onnx
