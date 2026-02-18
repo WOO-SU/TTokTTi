@@ -271,9 +271,9 @@ export default function WorkSessionDetailScreen() {
                 {/* Header */}
                 <div style={styles.equipHeaderRow}>
                   <span style={{ ...styles.equipCell, ...styles.equipHeaderCell }}>작업자</span>
-                  <span style={{ ...styles.equipCell, ...styles.equipHeaderCell }}>⛑️ 안전모</span>
-                  <span style={{ ...styles.equipCell, ...styles.equipHeaderCell }}>🦺 안전조끼</span>
-                  <span style={{ ...styles.equipCell, ...styles.equipHeaderCell }}>🧤 안전장갑</span>
+                  <span style={{ ...styles.equipCell, ...styles.equipHeaderCell, justifyContent: 'center' }}>⛑️ 안전모</span>
+                  <span style={{ ...styles.equipCell, ...styles.equipHeaderCell, justifyContent: 'center' }}>🦺 안전조끼</span>
+                  <span style={{ ...styles.equipCell, ...styles.equipHeaderCell, justifyContent: 'center' }}>🧤 안전장갑</span>
                 </div>
                 {equipmentResults.map((eq, i) => (
                   <div key={i} style={{ ...styles.equipRow, backgroundColor: i % 2 === 0 ? '#FFFFFF' : '#F8F9FA' }}>

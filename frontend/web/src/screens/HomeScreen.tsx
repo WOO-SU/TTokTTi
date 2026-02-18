@@ -38,7 +38,7 @@ const workSiteCards: WorkSiteCard[] = [
     startTime: '08:30',
     location: '봉천동',
     members: [{ id: 1, name: '송영민' }, { id: 2, name: '임정원' }],
-    workStatus: '작업 중',
+    workStatus: '작업 전',
     equipmentCheck: [
       { memberId: 1, name: '송영민', complied: true },
       { memberId: 2, name: '임정원', complied: false },
@@ -66,7 +66,7 @@ const workSiteCards: WorkSiteCard[] = [
     startTime: '08:50',
     location: '신림동',
     members: [{ id: 5, name: '이준혁' }, { id: 6, name: '최서연' }],
-    workStatus: '작업 전',
+    workStatus: '작업 중',
     equipmentCheck: [
       { memberId: 5, name: '이준혁', complied: false },
       { memberId: 6, name: '최서연', complied: false },
