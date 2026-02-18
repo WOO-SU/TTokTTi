@@ -143,3 +143,4 @@ def search_video(request):
         "count": videos.count(),
         "data": serializer.data
     })
+

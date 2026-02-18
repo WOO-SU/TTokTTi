@@ -18,7 +18,9 @@ from .serializers import (
     TargetPhotoRequestSerializer,
     RequestCheckSerializer,
     ApproveCheckSerializer,
-    ApproveCheckResponseSerializer
+    ApproveCheckResponseSerializer,
+    CheckPassRequestSerializer,
+    CheckPassResponseSerializer
 )
 
 
@@ -231,3 +233,40 @@ def approve_check(request):
             "status": log.status
         }
     }, status=200)
+
+@swagger_auto_schema(
+    method="get",
+    query_serializer=CheckPassRequestSerializer,
+    responses={
+        200: CheckPassResponseSerializer,
+        400: CheckPassResponseSerializer,
+    }
+)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def check_pass(request):
+    """
+    "/api/check/pass": 모든 category에 대한 사용자의 탐지 통과 여부 확인
+    query param: ?worksession_id=1
+    """
+
+    worksession_id = request.query_params.get("worksession_id")
+    employee = request.user
+
+    if not worksession_id:
+        return Response(
+            {"ok": False, "detail": "worksession_id required"},
+            status=400
+        )
+
+    compliances = Compliance.objects.filter(
+        worksession_id=worksession_id,
+        employee=employee
+    )
+
+    all_passed = all(c.is_complied for c in compliances)
+
+    return Response({
+        "ok": True,
+        "passed": all_passed
+    })

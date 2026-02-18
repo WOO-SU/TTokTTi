@@ -60,3 +60,13 @@ class ApproveCheckResponseSerializer(serializers.Serializer):
     ok = serializers.BooleanField()
     data = ApproveCheckResultSerializer(required=False)
     detail = serializers.CharField(required=False)
+
+# "/api/check/pass" 요청 시리얼라이저
+class CheckPassRequestSerializer(serializers.Serializer):
+    worksession_id = serializers.IntegerField()
+
+# "/api/check/pass" 응답 시리얼라이저
+class CheckPassResponseSerializer(serializers.Serializer):
+    ok = serializers.BooleanField()
+    passed = serializers.BooleanField(required=False)
+    detail = serializers.CharField(required=False)
