@@ -12,6 +12,7 @@ import ProfileScreen from './screens/ProfileScreen';
 import EmployeeDetailScreen from './screens/EmployeeDetailScreen';
 import WorkerRiskScreen from './screens/WorkerRiskScreen';
 import WorkSessionDetailScreen from './screens/WorkSessionDetailScreen';
+import EmployeeListScreen from './screens/EmployeeListScreen';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="/report" element={<ProtectedRoute><ReportScreen /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><ProfileScreen /></ProtectedRoute>} />
           <Route path="/risk" element={<ProtectedRoute><WorkerRiskScreen /></ProtectedRoute>} />
+          <Route path="/employees" element={<ProtectedRoute><EmployeeListScreen /></ProtectedRoute>} />
           <Route path="/employee/:id" element={<ProtectedRoute><EmployeeDetailScreen /></ProtectedRoute>} />
           <Route path="/worksession/:id" element={<ProtectedRoute><WorkSessionDetailScreen /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/login" replace />} />

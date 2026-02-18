@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../api/client';
 import logoImg from '../assets/logo.png';
@@ -18,6 +18,7 @@ type EmployeeInfo = {
 
 const sidebarItems = [
   { label: 'Home', icon: '🏠', path: '/home' },
+  { label: '직원 관리', icon: '👥', path: '/employees' },
   { label: '안전 장비 점검', icon: '🛡️', path: '/safety' },
   { label: '위험성 평가', icon: '👷', path: '/risk' },
   { label: '보고서 작성', icon: '✏️', path: '/report' },
@@ -25,15 +26,21 @@ const sidebarItems = [
 
 export default function EmployeeDetailScreen() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { id } = useParams<{ id: string }>();
   const { logout } = useAuth();
   const unreadCount = useUnreadAlertCount();
-  const [activeSidebar, setActiveSidebar] = useState('');
+  const [activeSidebar, setActiveSidebar] = useState('직원 관리');
   const [loading, setLoading] = useState(true);
   const [employee, setEmployee] = useState<EmployeeInfo | null>(null);
-
-  const siteName = (location.state as { siteName?: string })?.siteName ?? null;
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    name: '',
+    phone: '',
+    address: '',
+    birth_date: '',
+    sex: 'M' as 'M' | 'F',
+  });
 
   useEffect(() => {
     if (!id) return;
@@ -44,6 +51,13 @@ export default function EmployeeDetailScreen() {
         if (res.ok) {
           const data: EmployeeInfo = await res.json();
           setEmployee(data);
+          setForm({
+            name: data.name ?? '',
+            phone: data.phone ?? '',
+            address: data.address ?? '',
+            birth_date: data.birth_date ? data.birth_date.slice(0, 10) : '',
+            sex: data.sex ?? 'M',
+          });
         }
       } catch {
         // ignore
@@ -52,6 +66,55 @@ export default function EmployeeDetailScreen() {
       }
     })();
   }, [id]);
+
+  const handleSave = async () => {
+    if (!id) return;
+    setSaving(true);
+    try {
+      const body: Record<string, unknown> = { ...form };
+      if (body.birth_date === '') delete body.birth_date;
+
+      const res = await apiFetch(`/user/user/${id}/`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        const data: EmployeeInfo = await res.json();
+        setEmployee(data);
+        setIsEditing(false);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!id || !employee) return;
+    if (!window.confirm(`"${employee.name}" 직원을 삭제하시겠습니까?`)) return;
+    try {
+      const res = await apiFetch(`/user/user/${id}/`, { method: 'DELETE' });
+      if (res.ok) {
+        navigate('/employees');
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    if (employee) {
+      setForm({
+        name: employee.name ?? '',
+        phone: employee.phone ?? '',
+        address: employee.address ?? '',
+        birth_date: employee.birth_date ? employee.birth_date.slice(0, 10) : '',
+        sex: employee.sex ?? 'M',
+      });
+    }
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -63,11 +126,6 @@ export default function EmployeeDetailScreen() {
     const d = dateStr.slice(0, 10);
     const [y, m, day] = d.split('-');
     return `${y}년 ${parseInt(m)}월 ${parseInt(day)}일`;
-  };
-
-  const formatPhone = (phone: string | null) => {
-    if (!phone) return '-';
-    return phone;
   };
 
   return (
@@ -126,8 +184,8 @@ export default function EmployeeDetailScreen() {
       <main style={styles.main}>
         <div style={styles.header}>
           <div style={styles.headerLeft}>
-            <button type="button" style={styles.backBtn} onClick={() => navigate(-1)}>
-              ← 돌아가기
+            <button type="button" style={styles.backBtn} onClick={() => navigate('/employees')}>
+              ← 직원 목록
             </button>
             <h1 style={styles.headerTitle}>근무자 정보</h1>
           </div>
@@ -164,43 +222,123 @@ export default function EmployeeDetailScreen() {
             <div style={styles.infoCard}>
               <div style={styles.infoTitle}>상세 정보</div>
 
-              <div style={styles.infoRow}>
-                <div style={styles.infoIcon}>👤</div>
-                <div style={styles.infoContent}>
-                  <div style={styles.infoLabel}>이름</div>
-                  <div style={styles.infoValue}>{employee.name}</div>
-                </div>
-              </div>
+              {isEditing ? (
+                <>
+                  <div style={styles.fieldRow}>
+                    <div style={styles.fieldHalf}>
+                      <label style={styles.fieldLabel}>이름</label>
+                      <input
+                        style={styles.fieldInput}
+                        value={form.name}
+                        onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                        placeholder="이름"
+                      />
+                    </div>
+                    <div style={styles.fieldHalf}>
+                      <label style={styles.fieldLabel}>성별</label>
+                      <select
+                        style={styles.fieldSelect}
+                        value={form.sex}
+                        onChange={e => setForm(f => ({ ...f, sex: e.target.value as 'M' | 'F' }))}>
+                        <option value="M">남성</option>
+                        <option value="F">여성</option>
+                      </select>
+                    </div>
+                  </div>
 
-              <div style={styles.divider} />
+                  <div style={styles.fieldFull}>
+                    <label style={styles.fieldLabel}>전화번호</label>
+                    <input
+                      style={styles.fieldInput}
+                      value={form.phone}
+                      onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                      placeholder="010-0000-0000"
+                    />
+                  </div>
 
-              <div style={styles.infoRow}>
-                <div style={styles.infoIcon}>🎂</div>
-                <div style={styles.infoContent}>
-                  <div style={styles.infoLabel}>생년월일</div>
-                  <div style={styles.infoValue}>{formatBirthDate(employee.birth_date)}</div>
-                </div>
-              </div>
+                  <div style={styles.fieldFull}>
+                    <label style={styles.fieldLabel}>주소</label>
+                    <input
+                      style={styles.fieldInput}
+                      value={form.address}
+                      onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
+                      placeholder="주소"
+                    />
+                  </div>
 
-              <div style={styles.divider} />
+                  <div style={styles.fieldFull}>
+                    <label style={styles.fieldLabel}>생년월일</label>
+                    <input
+                      type="date"
+                      style={styles.fieldInput}
+                      value={form.birth_date}
+                      onChange={e => setForm(f => ({ ...f, birth_date: e.target.value }))}
+                    />
+                  </div>
 
-              <div style={styles.infoRow}>
-                <div style={styles.infoIcon}>📞</div>
-                <div style={styles.infoContent}>
-                  <div style={styles.infoLabel}>전화번호</div>
-                  <div style={styles.infoValue}>{formatPhone(employee.phone)}</div>
-                </div>
-              </div>
+                  <div style={styles.btnRow}>
+                    <button type="button" style={styles.cancelBtn} onClick={handleCancel}>취소</button>
+                    <button type="button" style={styles.saveBtn} onClick={handleSave} disabled={saving}>
+                      {saving ? '저장 중...' : '저장하기'}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={styles.infoRow}>
+                    <div style={styles.infoIcon}>👤</div>
+                    <div style={styles.infoContent}>
+                      <div style={styles.infoLabel}>이름</div>
+                      <div style={styles.infoValue}>{employee.name}</div>
+                    </div>
+                  </div>
 
-              <div style={styles.divider} />
+                  <div style={styles.divider} />
 
-              <div style={styles.infoRow}>
-                <div style={styles.infoIcon}>📍</div>
-                <div style={styles.infoContent}>
-                  <div style={styles.infoLabel}>작업구역</div>
-                  <div style={styles.infoValue}>{siteName ?? employee.address ?? '-'}</div>
-                </div>
-              </div>
+                  <div style={styles.infoRow}>
+                    <div style={styles.infoIcon}>🚻</div>
+                    <div style={styles.infoContent}>
+                      <div style={styles.infoLabel}>성별</div>
+                      <div style={styles.infoValue}>{employee.sex === 'M' ? '남성' : '여성'}</div>
+                    </div>
+                  </div>
+
+                  <div style={styles.divider} />
+
+                  <div style={styles.infoRow}>
+                    <div style={styles.infoIcon}>🎂</div>
+                    <div style={styles.infoContent}>
+                      <div style={styles.infoLabel}>생년월일</div>
+                      <div style={styles.infoValue}>{formatBirthDate(employee.birth_date)}</div>
+                    </div>
+                  </div>
+
+                  <div style={styles.divider} />
+
+                  <div style={styles.infoRow}>
+                    <div style={styles.infoIcon}>📞</div>
+                    <div style={styles.infoContent}>
+                      <div style={styles.infoLabel}>전화번호</div>
+                      <div style={styles.infoValue}>{employee.phone ?? '-'}</div>
+                    </div>
+                  </div>
+
+                  <div style={styles.divider} />
+
+                  <div style={styles.infoRow}>
+                    <div style={styles.infoIcon}>📍</div>
+                    <div style={styles.infoContent}>
+                      <div style={styles.infoLabel}>주소</div>
+                      <div style={styles.infoValue}>{employee.address ?? '-'}</div>
+                    </div>
+                  </div>
+
+                  <div style={styles.btnRow}>
+                    <button type="button" style={styles.deleteBtnLarge} onClick={handleDelete}>삭제</button>
+                    <button type="button" style={styles.editBtn} onClick={() => setIsEditing(true)}>수정하기</button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -512,5 +650,111 @@ const styles: Record<string, React.CSSProperties> = {
   divider: {
     height: 1,
     backgroundColor: '#F0F1F3',
+  },
+
+  // Edit form fields
+  fieldRow: {
+    display: 'flex',
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 12,
+  },
+  fieldHalf: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+  },
+  fieldFull: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+    marginBottom: 12,
+  },
+  fieldLabel: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
+    fontSize: 13,
+    color: '#1F2024',
+  },
+  fieldInput: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 400,
+    fontSize: 14,
+    color: '#1F2024',
+    padding: '10px 14px',
+    borderRadius: 10,
+    border: '1px solid #E8E9EB',
+    backgroundColor: '#F8F9FA',
+    outline: 'none',
+    boxSizing: 'border-box',
+    width: '100%',
+  },
+  fieldSelect: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 400,
+    fontSize: 14,
+    color: '#1F2024',
+    padding: '10px 14px',
+    borderRadius: 10,
+    border: '1px solid #E8E9EB',
+    backgroundColor: '#F8F9FA',
+    outline: 'none',
+    boxSizing: 'border-box',
+    width: '100%',
+    cursor: 'pointer',
+  },
+
+  // Buttons
+  btnRow: {
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 20,
+  },
+  editBtn: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
+    fontSize: 14,
+    color: '#FFFFFF',
+    backgroundColor: '#006FFD',
+    padding: '12px 28px',
+    borderRadius: 10,
+    border: 'none',
+    cursor: 'pointer',
+  },
+  saveBtn: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
+    fontSize: 14,
+    color: '#FFFFFF',
+    backgroundColor: '#006FFD',
+    padding: '12px 28px',
+    borderRadius: 10,
+    border: 'none',
+    cursor: 'pointer',
+  },
+  cancelBtn: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
+    fontSize: 14,
+    color: '#71727A',
+    backgroundColor: 'transparent',
+    padding: '12px 28px',
+    borderRadius: 10,
+    border: '1px solid #E8E9EB',
+    cursor: 'pointer',
+  },
+  deleteBtnLarge: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
+    fontSize: 14,
+    color: '#ED3241',
+    backgroundColor: 'transparent',
+    padding: '12px 28px',
+    borderRadius: 10,
+    border: '1px solid #ED3241',
+    cursor: 'pointer',
   },
 };

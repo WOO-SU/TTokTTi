@@ -45,30 +45,39 @@ const workerGroups: WorkerGroup[] = [
     id: 1,
     name: '봉천동 작업현장1',
     members: [
-      { employeeId: 2, name: '송영민', color: '#006FFD' },
-      { employeeId: 3, name: '임정원', color: '#E87C5D' },
+      { employeeId: 1, name: '송영민', color: '#006FFD' },
+      { employeeId: 2, name: '임정원', color: '#E87C5D' },
     ],
   },
   {
     id: 2,
     name: '신림동 작업현장2',
     members: [
-      { employeeId: 4, name: '김태호', color: '#22A06B' },
-      { employeeId: 5, name: '박지수', color: '#8F9098' },
+      { employeeId: 3, name: '김태호', color: '#22A06B' },
+      { employeeId: 4, name: '박지수', color: '#8F9098' },
     ],
   },
   {
     id: 3,
     name: '관악구 작업현장3',
     members: [
-      { employeeId: 6, name: '이준혁', color: '#7B61FF' },
-      { employeeId: 7, name: '최서연', color: '#E85DBF' },
+      { employeeId: 5, name: '이준혁', color: '#7B61FF' },
+      { employeeId: 6, name: '최서연', color: '#E85DBF' },
+    ],
+  },
+  {
+    id: 4,
+    name: '보라매동 작업현장4',
+    members: [
+      { employeeId: 7, name: '우수연', color: '#FF6B35' },
+      { employeeId: 8, name: '원인영', color: '#9B59B6' },
     ],
   },
 ];
 
 const sidebarItems = [
   { label: 'Home', icon: '🏠', path: '/home' },
+  { label: '직원 관리', icon: '👥', path: '/employees' },
   { label: '안전 장비 점검', icon: '🛡️', path: '/safety' },
   { label: '위험성 평가', icon: '👷', path: '/risk' },
   { label: '보고서 작성', icon: '✏️', path: '/report' },

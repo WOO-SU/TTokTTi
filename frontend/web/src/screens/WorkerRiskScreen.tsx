@@ -24,6 +24,7 @@ type CameraTab = 'FULL' | 'BODY';
 
 const sidebarItems = [
   { label: 'Home', icon: '🏠', path: '/home' },
+  { label: '직원 관리', icon: '👥', path: '/employees' },
   { label: '안전 장비 점검', icon: '🛡️', path: '/safety' },
   { label: '위험성 평가', icon: '👷', path: '/risk' },
   { label: '보고서 작성', icon: '✏️', path: '/report' },
@@ -31,21 +32,25 @@ const sidebarItems = [
 
 // Employee name map (shared with HomeScreen work site data)
 const employeeNames: Record<number, string> = {
-  2: '송영민',
-  3: '임정원',
-  4: '김태호',
-  5: '박지수',
-  6: '이준혁',
-  7: '최서연',
+  1: '송영민',
+  2: '임정원',
+  3: '김태호',
+  4: '박지수',
+  5: '이준혁',
+  6: '최서연',
+  7: '우수연',
+  8: '원인영',
 };
 
 const siteLookup: Record<number, string> = {
+  1: '봉천동 작업현장1',
   2: '봉천동 작업현장1',
-  3: '봉천동 작업현장1',
+  3: '신림동 작업현장2',
   4: '신림동 작업현장2',
-  5: '신림동 작업현장2',
+  5: '관악구 작업현장3',
   6: '관악구 작업현장3',
-  7: '관악구 작업현장3',
+  7: '보라매동 작업현장4',
+  8: '보라매동 작업현장4',
 };
 
 const POLL_INTERVAL = 15_000;
