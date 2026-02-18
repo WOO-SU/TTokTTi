@@ -8,7 +8,7 @@ class WorkSessionListSerializer(serializers.ModelSerializer):
         model = WorkSession
         fields = [
             "id",
-            "title",
+            "name",
             "status",
             "starts_at",
             "ends_at",
@@ -24,6 +24,5 @@ class ActivateWorkSessionRequestSerializer(serializers.Serializer):
 
 class ActivateWorkSessionResponseSerializer(serializers.Serializer):
     ok = serializers.BooleanField()
-    worksession_id = serializers.IntegerField()
     status = serializers.CharField()
     detail = serializers.CharField(required=False)
