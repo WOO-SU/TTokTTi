@@ -53,7 +53,7 @@ export default function SelectModeScreen({ navigation }: Props) {
       {/* Content */}
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, {paddingBottom: insets.bottom + 24}]}
         bounces={false}
         showsVerticalScrollIndicator={false}>
         <View style={styles.cardsContainer}>
@@ -96,26 +96,26 @@ export default function SelectModeScreen({ navigation }: Props) {
 
 const iconStyles = StyleSheet.create({
   backContainer: {
-    width: 20,
-    height: 20,
+    width: 28,
+    height: 28,
     justifyContent: 'center',
     alignItems: 'center',
   },
   backArrowTop: {
-    width: 12,
+    width: 14,
     height: 2,
     backgroundColor: '#006FFD',
     borderRadius: 1,
     position: 'absolute',
-    transform: [{ rotate: '-45deg' }, { translateY: -3.5 }],
+    transform: [{ rotate: '-45deg' }, { translateY: -5.5 }],
   },
   backArrowBottom: {
-    width: 12,
+    width: 14,
     height: 2,
     backgroundColor: '#006FFD',
     borderRadius: 1,
     position: 'absolute',
-    transform: [{ rotate: '45deg' }, { translateY: 3.5 }],
+    transform: [{ rotate: '45deg' }, { translateY: 5.5 }],
   },
 });
 
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
 
   /* Nav Bar */
   navBar: {
-    height: 56,
+    height: 64,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -137,15 +137,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   backButton: {
-    width: 20,
-    height: 20,
+    width: 28,
+    height: 28,
     justifyContent: 'center',
     alignItems: 'center',
   },
   pageTitle: {
     fontFamily: 'Inter',
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: 18,
     color: '#1F2024',
     textAlign: 'center',
   },
@@ -163,17 +163,28 @@ const styles = StyleSheet.create({
 
   /* Card */
   card: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
   },
   cardBackground: {
     width: '100%',
     height: 214,
-    backgroundColor: '#EAF2FF',
     borderRadius: 50,
+    borderWidth: 5,
+    borderColor: '#EAF2FF',
     flexDirection: 'row',
     alignItems: 'center',
     overflow: 'hidden',
     paddingHorizontal: 16,
+    boxShadow: [
+      {
+        offsetX: 0,
+        offsetY: 4,
+        blurRadius: 4,
+        spreadDistance: 0,
+        color: 'rgba(0, 0, 0, 0.25)',
+        outset: true,
+      },
+    ],
   },
   cardImage1: {
     width: 181,
@@ -184,11 +195,11 @@ const styles = StyleSheet.create({
     height: 195,
   },
   cardText: {
-    fontFamily: 'Actor',
+    fontFamily: 'Inter',
     fontWeight: '400',
-    fontSize: 36,
+    fontSize: 20,
     color: '#000000',
-    flex: 1,
-    textAlign: 'center',
+    lineHeight: 24,
+    flexShrink: 1,
   },
 });

@@ -1,17 +1,22 @@
 /* 현장 촬영 화면 */
-import React, { useState } from 'react';
+import React, {useState, useRef, useCallback, useEffect} from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   StatusBar,
-  Modal,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RouteProp } from '@react-navigation/native';
-import type { RootStackParamList } from '../../App';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {
+  Camera,
+  useCameraDevice,
+  useCameraPermission,
+  useMicrophonePermission,
+} from 'react-native-vision-camera';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import type {RouteProp} from '@react-navigation/native';
+import type {RootStackParamList} from '../../App';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Camera'>;
@@ -23,7 +28,6 @@ type Props = {
 function BackArrowIcon() {
   return (
     <View style={iconStyles.backContainer}>
-      <View style={iconStyles.arrowShaft} />
       <View style={iconStyles.arrowTop} />
       <View style={iconStyles.arrowBottom} />
     </View>
@@ -41,21 +45,68 @@ function CameraIcon() {
   );
 }
 
+function StopIcon() {
+  return (
+    <View style={iconStyles.stopContainer}>
+      <View style={iconStyles.stopSquare} />
+    </View>
+  );
+}
+
 /* ──────── Main Component ──────── */
 
-export default function CameraScreen({ navigation, route }: Props) {
+export default function CameraScreen({navigation, route}: Props) {
   const insets = useSafeAreaInsets();
-  const { mode } = route.params;
-  const [alertVisible, setAlertVisible] = useState(true);
+  const {mode} = route.params;
+  const [isRecording, setIsRecording] = useState(false);
+
+  const cameraRef = useRef<Camera>(null);
+  const device = useCameraDevice('back');
+  const {hasPermission, requestPermission} = useCameraPermission();
+  const {
+    hasPermission: hasMicPermission,
+    requestPermission: requestMicPermission,
+  } = useMicrophonePermission();
+
+  useEffect(() => {
+    if (!hasPermission) {
+      requestPermission();
+    }
+    if (!hasMicPermission) {
+      requestMicPermission();
+    }
+  }, [hasPermission, requestPermission, hasMicPermission, requestMicPermission]);
 
   const headerTitle = mode === 'all' ? '전체 촬영' : '작업자 환경 촬영';
+
+  const handleToggleRecording = useCallback(async () => {
+    if (!cameraRef.current) {
+      return;
+    }
+
+    if (isRecording) {
+      await cameraRef.current.stopRecording();
+      setIsRecording(false);
+    } else {
+      setIsRecording(true);
+      cameraRef.current.startRecording({
+        onRecordingFinished: video => {
+          console.log('Recording finished:', video.path);
+        },
+        onRecordingError: error => {
+          console.error('Recording error:', error);
+          setIsRecording(false);
+        },
+      });
+    }
+  }, [isRecording]);
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, {paddingTop: insets.top + 12}]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}>
@@ -66,58 +117,42 @@ export default function CameraScreen({ navigation, route }: Props) {
 
       {/* Camera Preview Area */}
       <View style={styles.cameraPreview}>
-        {/* Camera Capture Button */}
-        <TouchableOpacity style={styles.captureButton} activeOpacity={0.7}>
-          <CameraIcon />
+        {device && hasPermission ? (
+          <Camera
+            ref={cameraRef}
+            style={StyleSheet.absoluteFill}
+            device={device}
+            isActive={true}
+            video={true}
+            audio={true}
+          />
+        ) : (
+          <Text style={styles.noCameraText}>
+            {!hasPermission
+              ? '카메라 권한이 필요합니다'
+              : '카메라를 불러오는 중...'}
+          </Text>
+        )}
+
+        {/* Record / Stop Button */}
+        <TouchableOpacity
+          style={[
+            styles.captureButton,
+            isRecording && styles.captureButtonRecording,
+          ]}
+          activeOpacity={0.7}
+          onPress={handleToggleRecording}>
+          {isRecording ? <StopIcon /> : <CameraIcon />}
         </TouchableOpacity>
       </View>
 
       {/* Continue Button */}
       <View
-        style={[
-          styles.continueSection,
-          { paddingBottom: insets.bottom + 16 },
-        ]}
-      >
+        style={[styles.continueSection, {paddingBottom: insets.bottom + 16}]}>
         <TouchableOpacity style={styles.continueButton} activeOpacity={0.8}>
           <Text style={styles.continueText}>Continue</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Alert Dialog Modal */}
-      <Modal
-        visible={alertVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setAlertVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.dialog}>
-            {/* Content */}
-            <View style={styles.dialogContent}>
-              <Text style={styles.dialogTitle}>위험 감지!</Text>
-              <Text style={styles.dialogDescription}>
-                {'안전모가 감지되지 않았습니다.\n안전모를 착용해 주세요!'}
-              </Text>
-            </View>
-
-            {/* Actions */}
-            <View style={styles.dialogActions}>
-              <TouchableOpacity
-                style={styles.dialogButtonOutline}
-                activeOpacity={0.7}
-                onPress={() => setAlertVisible(false)}>
-                <Text style={styles.dialogButtonOutlineText}>오류 전송</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.dialogButtonFilled}
-                activeOpacity={0.7}
-                onPress={() => setAlertVisible(false)}>
-                <Text style={styles.dialogButtonFilledText}>확인</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -131,24 +166,21 @@ const iconStyles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   arrowTop: {
-    width: 12,
+    width: 14,
     height: 2,
     backgroundColor: '#006FFD',
     borderRadius: 1,
     position: 'absolute',
-    left: 0,
-    transform: [{ rotate: '-45deg' }, { translateX: -2 }, { translateY: -7 }],
+    transform: [{rotate: '-45deg'}, {translateY: -5.5}],
   },
   arrowBottom: {
-    width: 12,
+    width: 14,
     height: 2,
     backgroundColor: '#006FFD',
     borderRadius: 1,
     position: 'absolute',
-    left: 0,
-    transform: [{ rotate: '45deg' }, { translateX: -2 }, { translateY: 7 }],
+    transform: [{rotate: '45deg'}, {translateY: 5.5}],
   },
   cameraContainer: {
     width: 28,
@@ -183,6 +215,18 @@ const iconStyles = StyleSheet.create({
     position: 'absolute',
     top: 2,
   },
+  stopContainer: {
+    width: 28,
+    height: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stopSquare: {
+    width: 16,
+    height: 16,
+    borderRadius: 3,
+    backgroundColor: '#FFFFFF',
+  },
 });
 
 /* ──────── Main Styles ──────── */
@@ -195,10 +239,10 @@ const styles = StyleSheet.create({
 
   /* Header */
   header: {
+    height: 64,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingBottom: 12,
     backgroundColor: '#FFFFFF',
     gap: 8,
   },
@@ -209,20 +253,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontFamily: 'Roboto',
-    fontWeight: '400',
-    fontSize: 24,
-    color: '#363636',
+    fontFamily: 'Inter',
+    fontWeight: '700',
+    fontSize: 18,
+    color: '#1F2024',
   },
 
   /* Camera Preview */
   cameraPreview: {
     flex: 1,
     marginHorizontal: 15,
-    backgroundColor: '#D9D9D9',
+    backgroundColor: '#000000',
     justifyContent: 'flex-end',
     alignItems: 'center',
     paddingBottom: 24,
+    overflow: 'hidden',
+  },
+  noCameraText: {
+    fontFamily: 'Inter',
+    fontSize: 14,
+    color: '#FFFFFF',
   },
   captureButton: {
     width: 58,
@@ -231,6 +281,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#006FFD',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  captureButtonRecording: {
+    backgroundColor: '#FF3B30',
   },
 
   /* Continue Button */
@@ -251,72 +304,5 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     fontSize: 14,
     color: '#F6F6F6',
-  },
-
-  /* Modal */
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-  },
-  dialog: {
-    width: 300,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    gap: 20,
-  },
-  dialogContent: {
-    gap: 16,
-    alignItems: 'center',
-  },
-  dialogTitle: {
-    fontFamily: 'Inter',
-    fontWeight: '800',
-    fontSize: 16,
-    color: '#1F2024',
-    textAlign: 'center',
-  },
-  dialogDescription: {
-    fontFamily: 'Inter',
-    fontWeight: '400',
-    fontSize: 12,
-    color: '#71727A',
-    textAlign: 'center',
-    lineHeight: 16,
-  },
-  dialogActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  dialogButtonOutline: {
-    flex: 1,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#006FFD',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dialogButtonOutlineText: {
-    fontFamily: 'Inter',
-    fontWeight: '600',
-    fontSize: 12,
-    color: '#006FFD',
-  },
-  dialogButtonFilled: {
-    flex: 1,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#006FFD',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dialogButtonFilledText: {
-    fontFamily: 'Inter',
-    fontWeight: '600',
-    fontSize: 12,
-    color: '#FFFFFF',
   },
 });
