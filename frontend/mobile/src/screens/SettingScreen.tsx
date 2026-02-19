@@ -45,7 +45,7 @@ export default function SettingScreen() {
       </View>
 
       {/* Content */}
-      <View style={styles.content}>
+      <View style={[styles.content, {paddingBottom: insets.bottom + 16}]}>
         <TouchableOpacity
           style={styles.logoutButton}
           activeOpacity={0.8}
