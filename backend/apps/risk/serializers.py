@@ -1,33 +1,24 @@
 from rest_framework import serializers
+from .models import (
+    RiskAssessment,
+    RiskAssessmentImage,
+    RiskReport,
+    WorkerRecommendation,
+)
 
-
-# -------------------------
+# =========================
 # Common / Media
-# -------------------------
-class SasIssueRequestSerializer(serializers.Serializer):
-    blob_name = serializers.CharField(help_text="Azure Blob에 저장된 파일명")
-
+# =========================
 
 class SasIssueResponseSerializer(serializers.Serializer):
     ok = serializers.BooleanField()
     blob_name = serializers.CharField()
-    url = serializers.JSONField(help_text="{'download_url':..., 'expires_at':...}")
+    url = serializers.JSONField()
 
 
-# -------------------------
-# Assess (blob_name)
-# -------------------------
-class RiskAssessRequestSerializer(serializers.Serializer):
-    blob_name = serializers.CharField(help_text="예: test.png")
-
-class RiskAssessMultiRequestSerializer(serializers.Serializer):
-    blob_names = serializers.ListField(
-        child=serializers.CharField(),
-        min_length=1,
-        help_text="예: ['a.jpg','b.jpg','c.jpg']"
-    )
-    site_label = serializers.CharField(required=False)
-
+# =========================
+# Assessment 실행 응답
+# =========================
 
 class RiskAssessResponseSerializer(serializers.Serializer):
     ok = serializers.BooleanField()
@@ -35,121 +26,91 @@ class RiskAssessResponseSerializer(serializers.Serializer):
     result_urls = serializers.DictField(
         child=serializers.CharField(),
         required=False,
-        help_text="선택: {'admin':'/api/risk/admin/{id}','worker':'/api/risk/worker/{id}'}",
     )
 
 
-# -------------------------
-# Assess by URL
-# -------------------------
-class RiskAssessUrlRequestSerializer(serializers.Serializer):
-    image_url = serializers.URLField()
-    site_label = serializers.CharField(required=False)
+# =========================
+# RiskAssessmentImage
+# =========================
+
+class RiskAssessmentImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RiskAssessmentImage
+        fields = [
+            "id",
+            "blob_name",
+            "created_at",
+        ]
 
 
-# -------------------------
-# Admin Report (nested)
-# -------------------------
-class ReportHeaderSerializer(serializers.Serializer):
-    overall_grade = serializers.CharField()
-    overall_risk_score = serializers.IntegerField()
-    work_permission = serializers.CharField()
+# =========================
+# Admin Report (조회용)
+# =========================
 
-
-class KeyRiskSerializer(serializers.Serializer):
-    type = serializers.CharField()
-    risk_grade = serializers.CharField()
-    risk_score = serializers.IntegerField()
-
-
-class ExecutiveSummarySerializer(serializers.Serializer):
-    summary_text = serializers.CharField()
-    key_risks = KeyRiskSerializer(many=True)
-
-
-class WorkEnvironmentSerializer(serializers.Serializer):
-    environment = serializers.CharField(allow_blank=True, required=False)
-    height_or_location = serializers.CharField(allow_blank=True, required=False)
-    existing_safety_measures = serializers.ListField(child=serializers.CharField(), required=False)
-    items_requiring_verification = serializers.ListField(child=serializers.CharField(), required=False)
-
-
-class RiskDetailSerializer(serializers.Serializer):
-    risk_type = serializers.CharField()
-    risk_id = serializers.CharField()
-    evidence = serializers.CharField(allow_blank=True, required=False)
-    expected_accident = serializers.CharField(allow_blank=True, required=False)
-    risk_level = serializers.CharField()
-    risk_score = serializers.IntegerField()
-    required_actions_before_work = serializers.ListField(child=serializers.CharField(), required=False)
-    residual_risk_level = serializers.CharField(required=False, allow_blank=True)
-    residual_risk_score = serializers.IntegerField(required=False)
-
-
-class AdminReportSerializer(serializers.Serializer):
-    header = ReportHeaderSerializer()
-    executive_summary = ExecutiveSummarySerializer()
-    work_environment = WorkEnvironmentSerializer()
-    risk_details = RiskDetailSerializer(many=True)
-    mandatory_actions_before_work = serializers.ListField(child=serializers.CharField(), required=False)
+class AdminReportInnerSerializer(serializers.Serializer):
+    scene_summary = serializers.JSONField()
+    hazards = serializers.JSONField()
+    overall = serializers.JSONField()
+    version = serializers.CharField()
 
 
 class AdminReportResponseSerializer(serializers.Serializer):
     assessment_id = serializers.IntegerField()
-    blob_path = serializers.CharField()
     site_label = serializers.CharField()
-    work_type_fixed = serializers.CharField()
+    status = serializers.CharField()
 
-    report = AdminReportSerializer()
+    images = RiskAssessmentImageSerializer(many=True)
 
-    # 아래는 선택(디버깅/감사용으로 같이 내려줄 때)
-    scene_summary = serializers.JSONField(required=False)
-    hazards = serializers.JSONField(required=False)
-    overall = serializers.JSONField(required=False)
+    report = AdminReportInnerSerializer()
 
-    generated_at = serializers.CharField()
+    generated_at = serializers.DateTimeField()
 
 
-# -------------------------
-# Worker Message (nested)
-# -------------------------
-class WorkerStatusSerializer(serializers.Serializer):
-    overall_grade = serializers.CharField()
-    work_permission = serializers.CharField()
-
-
-class WorkerMainRiskSerializer(serializers.Serializer):
-    type = serializers.CharField()
-    what_can_happen = serializers.CharField()
-
-
-class WorkerMessageSerializer(serializers.Serializer):
-    status = WorkerStatusSerializer()
-    alert_message = serializers.CharField()
-    main_risks = WorkerMainRiskSerializer(many=True)
-    action_checklist = serializers.ListField(child=serializers.CharField(), required=False)
-    guide_message = serializers.CharField(required=False, allow_blank=True)
-
+# =========================
+# Worker Recommendation (조회용)
+# =========================
 
 class WorkerResponseSerializer(serializers.Serializer):
     assessment_id = serializers.IntegerField()
-    blob_path = serializers.CharField()
+    status = serializers.CharField()
 
-    message = WorkerMessageSerializer()
+    images = RiskAssessmentImageSerializer(many=True)
 
-    # 선택: 기존 필드 유지 시
-    overall_grade = serializers.CharField(required=False)
-    work_permission = serializers.CharField(required=False)
-    short_message = serializers.CharField(required=False)
-    immediate_actions = serializers.JSONField(required=False)
-    top_risks = serializers.JSONField(required=False)
+    short_message = serializers.CharField()
+    top_risks = serializers.JSONField()
+    immediate_actions = serializers.JSONField()
 
-    generated_at = serializers.CharField()
+    generated_at = serializers.DateTimeField()
 
 
-# -------------------------
+# =========================
+# Assessment 존재 여부
+# =========================
+
+class AssessmentExistenceResponseSerializer(serializers.Serializer):
+    exists = serializers.BooleanField()
+    assessment_id = serializers.IntegerField(required=False)
+    created_at = serializers.DateTimeField(required=False)
+
+
+# =========================
+# Assessment 생성
+# =========================
+
+class AssessmentCreationResponseSerializer(serializers.Serializer):
+    assessment_id = serializers.IntegerField()
+    created_at = serializers.DateTimeField()
+    message = serializers.CharField()
+
+
+class ErrorAssessmentCreationResponseSerializer(serializers.Serializer):
+    detail = serializers.CharField()
+
+
+# =========================
 # Error
-# -------------------------
+# =========================
+
 class ErrorResponseSerializer(serializers.Serializer):
     error = serializers.CharField()
     type = serializers.CharField(required=False)

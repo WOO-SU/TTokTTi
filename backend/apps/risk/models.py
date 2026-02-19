@@ -33,11 +33,11 @@ class RiskAssessment(models.Model):
     site_label = models.CharField(max_length=255) # = worksession.name
 
     # LLM 전체 결과 저장
-    llm_result = models.JSONField()
+    llm_result = models.JSONField(null=True, blank=True)
 
-    overall_grade = models.CharField(max_length=5)
-    overall_max_R = models.IntegerField()
-    work_permission = models.BooleanField()
+    overall_grade = models.CharField(max_length=5, null=True, blank=True)
+    overall_max_R = models.IntegerField(null=True, blank=True)
+    work_permission = models.BooleanField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
 

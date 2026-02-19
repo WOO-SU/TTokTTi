@@ -15,4 +15,14 @@ urlpatterns = [
         views.worker_recommendation_detail,
         name="risk-worker-detail",
     ),
+    path(
+        "latest/<int:worksession_id>",
+        views.get_assessment_by_session,
+        name="risk-latest-assessment",
+    ),
+    path(
+        "start/<int:worksession_id>",
+        views.start_assessment_for_session,
+        name="risk-start-assessment-session",
+    )
 ]
