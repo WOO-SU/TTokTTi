@@ -18,6 +18,14 @@ erDiagram
     WORKSESSION ||--o{ PHOTO : has
     COMPLIANCE ||--o{ VIDEOLOG : related_to
     USER ||--o{ PHOTO : uploads
+
+    WORKSESSION ||--o{ RISKASSESSMENT : generates
+    RISKASSESSMENT ||--o{ RISKASSESSMENTIMAGE : has
+    USER ||--o{ RISKASSESSMENT : creates
+
+    RISKASSESSMENT ||--|| WORKERRECOMMENDATION : produces
+    RISKASSESSMENT ||--|| RISKREPORT : produces
+
     USER {
         int id PK 
         VARCHAR username "id used for login"
@@ -45,6 +53,7 @@ erDiagram
     WORKSESSION {
         INT id PK
         INT worksite_id FK
+        VARCHAR name
         DATETIME starts_at
         DATETIME ends_at
         ENUM status "['READY', 'IN_PROGRESS', 'DONE']"
@@ -113,6 +122,44 @@ erDiagram
         DATETIME updated_at
     }
     
+    RISKASSESSMENTIMAGE {
+        INT id PK
+        INT assessment_id FK
+        VARCHAR blob_name
+        DATETIME created_at
+    }
+
+    RISKASSESSMENT {
+        INT id PK
+        INT worksession_id FK
+        ENUM status "['PENDING', 'COMPLETED', 'FAILED']"
+        VARCHAR site_label "worksession.name"
+        JSON llm_result
+        VARCHAR overall_grade
+        INT overall_max_R
+        VARCHAR work_permission
+        DATETIME created_at
+    }
+
+    WORKERRECOMMENDATION {
+        INT id PK
+        INT assessment_id FK
+        JSON top_risks
+        JSON immediate_actions
+        VARCHAR short_message
+        DATETIME generated_at
+    }
+
+    RISKREPORT {
+        INT id PK
+        INT assessment_id FK
+        VARCHAR report_version 
+        JSON scene_summary
+        JSON hazards
+        JSON overall
+        DATETIME generatd_at
+    }
+    
 ```
 
 ---
@@ -133,4 +180,4 @@ erDiagram
 
 
 ---
-Last Updated: Feb 17, 2026
+Last Updated: Feb 19, 2026
