@@ -10,16 +10,11 @@ docker compose up
 - In some cases, the backend container does not start automatically
 → If so, start it manually using the Run button in Docker Desktop
 
-## Full Reset (Including DB Volume) — Use With Caution
-- This will remove all data, including the database volume.
-- Use this only when necessary (for example, when re-running migrations).
-- **Always notify the team before running this command.**
+## Full Reset (Including DB Volume)
+- This will remove all data, including the database volume. Use this when you’ve changed .env or need a full clean slate.
 ```bash
 docker compose down -v
-```
-Then restart containers in detached mode:
-```
-docker compose up -d
+docker compose up --build
 ```
 
 
