@@ -11,7 +11,7 @@ load_dotenv()
 
 # Configuration
 REDIS_URL = "redis://localhost"
-VLLM_URL = os.getenv("VLLM_URL", "http://localhost:8000/v1")
+VLLM_URL = os.getenv("VLLM_URL", "http://localhost:8889/v1")
 DJANGO_API_URL = os.getenv("DJANGO_API_URL", "http://localhost:8000/api/incidents/")
 DJANGO_API_KEY = os.getenv("DJANGO_API_KEY", "secret_internal_key")
 
