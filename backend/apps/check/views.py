@@ -24,6 +24,7 @@ from .serializers import (
     CheckPassResponseSerializer
 )
 
+from ..worksession.models import WorkSession
 # temporary measure. if two redis queues are needed,, pull the client code .
 import os
 import redis
@@ -274,23 +275,24 @@ def approve_check(request):
     responses={
         200: CheckPassResponseSerializer,
         400: CheckPassResponseSerializer,
+        404: CheckPassResponseSerializer,
     }
 )
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def check_pass(request):
+def check_pass(request, worksession_id):
     """
-    "/api/check/pass": 모든 category에 대한 사용자의 탐지 통과 여부 확인
-    query param: ?worksession_id=1
+    GET /api/check/pass/{worksession_id}?category=helmet
+    query parameter(category)가 없으면 전체 cateogry에 대한 준수 여부 조회
     """
 
-    worksession_id = request.query_params.get("worksession_id")
     employee = request.user
+    category = request.query_params.get("category")
 
-    if not worksession_id:
+    if not WorkSession.objects.filter(id=worksession_id).exists():
         return Response(
-            {"ok": False, "detail": "worksession_id required"},
-            status=400
+            {"ok": False, "detail": "WorkSession not found"},
+            status=404
         )
 
     compliances = Compliance.objects.filter(
@@ -298,7 +300,28 @@ def check_pass(request):
         employee=employee
     )
 
-    all_passed = all(c.is_complied for c in compliances)
+    if category:
+        category = category.upper()
+
+        if category not in Compliance.CategoryChoices.values:
+            return Response(
+                {"ok": False, "detail": "Invalid category"},
+                status=400
+            )
+
+        compliances = compliances.filter(target=category)
+
+    if not compliances.exists():
+        return Response(
+            {
+                "ok": True,
+                "passed": False,
+                "detail": "No compliance records found"
+            },
+            status=200
+        )
+
+    all_passed = not compliances.filter(is_complied=False).exists()
 
     return Response({
         "ok": True,

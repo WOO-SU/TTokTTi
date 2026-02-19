@@ -1,50 +1,65 @@
 # apps/risk/models.py
 from django.db import models
-
+from ..worksession.models import WorkSession
+from ..user.models import User
+from django.conf import settings
 
 class RiskAssessment(models.Model):
-    """
-    Single Source of Truth (SSOT)
-    - 한 번의 평가(이미지 1장 + 작업 고정값)에 대한 '원본' 저장
-    - llm_result는 원본 그대로 보관(감사/재현/책임)
-    - overall_*는 리스트/필터/정렬을 빠르게 하기 위한 핵심 요약 필드
-    """
-    blob_path = models.CharField(max_length=255, db_index=True)
-    blob_paths = models.JSONField(default=list)  # ✅ 추가: 여러 장 원본 저장
-    site_label = models.CharField(max_length=255) # 평가 컨텍스트 고정값
-    work_type_fixed = models.CharField(max_length=255) # 작업 내용 
 
-    llm_result = models.JSONField()  # LLM 결과 원본 전체(JSON)
+    class StatusChoices(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        COMPLETED = "COMPLETED", "Completed"
+        FAILED = "FAILED", "Failed"
 
-    overall_grade = models.CharField(max_length=16, db_index=True)      # Low/Medium/High/Critical
-    overall_max_R = models.IntegerField(db_index=True)                  # 1~25
-    work_permission = models.CharField(max_length=32, db_index=True)    # 작업 가능/개선조치 후 작업/조치 전 작업 금지
+    worksession = models.ForeignKey(
+        WorkSession,
+        on_delete=models.CASCADE,
+        related_name="assessments"
+    )
 
-    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    employee = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=StatusChoices.choices,
+        default=StatusChoices.PENDING
+    )
+
+    site_label = models.CharField(max_length=255) # = worksession.name
+
+    # LLM 전체 결과 저장
+    llm_result = models.JSONField(null=True, blank=True)
+
+    overall_grade = models.CharField(max_length=5, null=True, blank=True)
+    overall_max_R = models.IntegerField(null=True, blank=True)
+    work_permission = models.BooleanField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = "risk_assessments"
+        db_table = "risk_assessment"
         ordering = ["-created_at"]
-        indexes = [
-            models.Index(fields=["blob_path", "created_at"]),
-            models.Index(fields=["overall_grade", "created_at"]),
-        ]
 
-    def __str__(self) -> str:
-        return f"RiskAssessment(id={self.id}, grade={self.overall_grade}, R={self.overall_max_R})"
+    def __str__(self):
+        return f"Assessment({self.id}) - {self.status}"
 
 class RiskAssessmentImage(models.Model):
     assessment = models.ForeignKey(RiskAssessment, on_delete=models.CASCADE, related_name="images")
     blob_name = models.CharField(max_length=255, db_index=True)
-    order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:        
         db_table = "risk_assessment_images"  # ✅ 추천
-        ordering = ["order", "id"]
+        ordering = ["-created_at"]
         indexes = [models.Index(fields=["blob_name"])]
         
     def __str__(self):
-        return f"RiskAssessmentImage(assessment_id={self.assessment_id}, order={self.order})"
+        return f"RiskAssessmentImage(assessment_id={self.assessment_id}, blob_name={self.blob_name})"
 
 class RiskReport(models.Model):
     """
