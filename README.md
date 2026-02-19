@@ -1,5 +1,30 @@
 # RiskPulse
 
+## Now working (`2/19` 16:20) 
+```bash
+cd RiskPulse # at project root, 
+docker compose up
+```
+- After running docker compose up, check Docker Desktop
+- Make sure the backend container is running
+- In some cases, the backend container does not start automatically
+→ If so, start it manually using the Run button in Docker Desktop
+
+## Full Reset (Including DB Volume) — Use With Caution
+- This will remove all data, including the database volume.
+- Use this only when necessary (for example, when re-running migrations).
+- **Always notify the team before running this command.**
+```bash
+docker compose down -v
+```
+Then restart containers in detached mode:
+```
+docker compose up -d
+```
+
+
+---
+
 ```bash
 docker compose --env-file .env up -d --build
 ```
