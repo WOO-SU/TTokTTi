@@ -5,6 +5,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+import json
 
 from .models import Compliance, Photo
 from ..detect.models import VideoLog
@@ -24,6 +25,17 @@ from .serializers import (
 )
 
 from ..worksession.models import WorkSession
+# temporary measure. if two redis queues are needed,, pull the client code .
+import os
+import redis
+redis_client = redis.Redis(
+    host=os.getenv("REDIS_HOST", "redis"),
+    port=int(os.getenv("REDIS_PORT", 6379)),
+    password=os.getenv("REDIS_PASSWORD", None),
+    ssl=os.getenv("REDIS_SSL", "False").lower() in ("true", "1", "t"),
+    decode_responses=True
+)
+
 
 @swagger_auto_schema(
     method='get',
@@ -105,7 +117,26 @@ def request_detection(request):
         original_image=original_image
     )
 
+    message = {
+        "compliance_id": compliance.id,
+        "original_image": original_image,
+        "target": target
+    }
+
+    try:
+        # Queue 이름은 Worker의 REDIS_QUEUE와 동일해야 함 (기본: "compliance:queue")
+        queue_name = os.getenv("REDIS_QUEUE", "compliance:queue")
+
+        # RPUSH: 리스트의 오른쪽에 추가 (Worker는 BLPOP으로 왼쪽에서 가져감 -> FIFO 구조)
+        redis_client.rpush(queue_name, json.dumps(message))
+
+    except redis.RedisError as e:
+        # Redis 연결 실패 시 로깅하고 에러 응답 (또는 DB 롤백)
+        print(f"Redis Error: {e}")
+        return Response({"ok": False, "error": "Failed to queue task"}, status=500)
+
     return Response({"ok": True, "compliance_id": compliance.id})
+
 
 @swagger_auto_schema(
     method='post',
@@ -130,7 +161,7 @@ def target_photo(request):
         return Response({"ok": False, "detail": "status (BEFORE or AFTER) is required"}, status=400)
     if not image_path:
         return Response({"ok": False, "detail": "image_path is required"}, status=400)
-    
+
     photo = Photo.objects.create(
         employee=user,
         worksession_id=request.data.get("worksession_id"),
@@ -139,6 +170,7 @@ def target_photo(request):
     )
 
     return Response({"ok": True})
+
 
 @swagger_auto_schema(
     method="post",
@@ -150,7 +182,7 @@ def target_photo(request):
 )
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-def request_check(request):   
+def request_check(request):
     """
     "/api/check/request": 근로자 -> 관리자 수동 점검 요청
     request body: { "worksession_id": int, "compliance_id": int }
@@ -168,7 +200,7 @@ def request_check(request):
             {"ok": False, "detail": "compliance_id required"},
             status=400
         )
-    
+
     log = VideoLog.objects.create(
         worksession_id=worksession_id,
         compliance_id=compliance_id,
@@ -177,6 +209,7 @@ def request_check(request):
     )
 
     return Response({"ok": True}, status=200)
+
 
 @swagger_auto_schema(
     method="patch",
@@ -234,6 +267,7 @@ def approve_check(request):
             "status": log.status
         }
     }, status=200)
+
 
 @swagger_auto_schema(
     method="get",

@@ -30,7 +30,7 @@ export default function SignUpScreen() {
         bounces={false}
         keyboardShouldPersistTaps="handled">
         {/* Login Options */}
-        <View style={styles.loginOptions}>
+        <View style={[styles.loginOptions, {paddingBottom: insets.bottom + 24}]}>
           {/* Header Text */}
           <View style={styles.headerSection}>
             <Text style={styles.title}>Sign up</Text>
@@ -178,7 +178,6 @@ const styles = StyleSheet.create({
   loginOptions: {
     paddingHorizontal: 24,
     paddingTop: 24,
-    paddingBottom: 24,
     gap: 24,
   },
   headerSection: {
