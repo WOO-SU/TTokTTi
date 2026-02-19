@@ -67,7 +67,7 @@ class RiskReport(models.Model):
     generated_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
-        db_table = "risk_report"
+        db_table = "risk_reports"
         ordering = ["-generated_at"]
 
     def __str__(self) -> str:
