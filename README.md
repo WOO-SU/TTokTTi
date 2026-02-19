@@ -1,6 +1,6 @@
 # RiskPulse
 
-## Now working (`2/19` 16:20) 
+## Now working (`2/19` 17:30) 
 ```bash
 cd RiskPulse # at project root, 
 docker compose up
@@ -17,6 +17,18 @@ docker compose down -v
 docker compose up --build
 ```
 
+## Start Web
+```
+docker compose up -d
+docker compose exec backend python manage.py migrate
+docker compose exec backend python manage.py createsuperuser
+# then, enter your information for temporal login
+
+cd frontend/web
+npm install # just for the first time
+npm run dev
+```
+- Then, you can check on `http://localhost:3000/` 
 
 ---
 
