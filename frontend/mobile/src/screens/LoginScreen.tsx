@@ -70,7 +70,7 @@ export default function LoginScreen({ navigation }: Props) {
         />
 
         {/* Login Options */}
-        <View style={styles.loginOptions}>
+        <View style={[styles.loginOptions, {paddingBottom: insets.bottom + 40}]}>
           {/* Welcome Title */}
           <Text style={styles.welcomeTitle}>Welcome!</Text>
 
@@ -250,7 +250,6 @@ const styles = StyleSheet.create({
   loginOptions: {
     paddingHorizontal: 24,
     paddingTop: 40,
-    paddingBottom: 40,
     gap: 24,
   },
   welcomeTitle: {

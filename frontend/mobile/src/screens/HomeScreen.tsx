@@ -19,29 +19,11 @@ const riskAssessmentImage = require('../assets/tripod-character.png');
 
 /* ──────────────── Icon Components ──────────────── */
 
-function SearchIcon() {
+function BackArrowIcon() {
   return (
-    <View style={iconStyles.searchContainer}>
-      <View style={iconStyles.searchCircle} />
-      <View style={iconStyles.searchHandle} />
-    </View>
-  );
-}
-
-function HeartIcon() {
-  return (
-    <View style={iconStyles.heartContainer}>
-      <Text style={iconStyles.heartText}>♡</Text>
-    </View>
-  );
-}
-
-function MenuIcon() {
-  return (
-    <View style={iconStyles.menuContainer}>
-      <View style={iconStyles.menuLine} />
-      <View style={[iconStyles.menuLine, { width: 16 }]} />
-      <View style={iconStyles.menuLine} />
+    <View style={iconStyles.backContainer}>
+      <View style={iconStyles.arrowTop} />
+      <View style={iconStyles.arrowBottom} />
     </View>
   );
 }
@@ -51,50 +33,6 @@ function ImagePlaceholderIcon() {
     <View style={iconStyles.placeholderContainer}>
       <View style={iconStyles.placeholderMountain} />
       <View style={iconStyles.placeholderSun} />
-    </View>
-  );
-}
-
-function HomeIcon({ active }: { active: boolean }) {
-  return (
-    <View style={iconStyles.tabIconContainer}>
-      <View
-        style={[
-          iconStyles.homeBase,
-          { borderColor: active ? '#1F2024' : '#71727A' },
-        ]}
-      />
-      <View
-        style={[
-          iconStyles.homeRoof,
-          { borderBottomColor: active ? '#1F2024' : '#71727A' },
-        ]}
-      />
-    </View>
-  );
-}
-
-function PersonIcon() {
-  return (
-    <View style={iconStyles.tabIconContainer}>
-      <View style={iconStyles.personHead} />
-      <View style={iconStyles.personBody} />
-    </View>
-  );
-}
-
-function StarIcon() {
-  return (
-    <View style={iconStyles.tabIconContainer}>
-      <Text style={iconStyles.starText}>☆</Text>
-    </View>
-  );
-}
-
-function SettingIcon() {
-  return (
-    <View style={iconStyles.tabIconContainer}>
-      <Text style={iconStyles.settingText}>⚙</Text>
     </View>
   );
 }
@@ -112,28 +50,17 @@ export default function HomeScreen() {
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, {paddingBottom: insets.bottom + 24}]}
         bounces={false}
         showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + 24 }]}>
-          <TouchableOpacity style={styles.headerIcon}>
-            <SearchIcon />
+        <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}>
+            <BackArrowIcon />
           </TouchableOpacity>
-          <View style={styles.rightOptions}>
-            <TouchableOpacity style={styles.headerIcon}>
-              <HeartIcon />
-            </TouchableOpacity>
-            <TouchableOpacity>
-              <View style={styles.menuIconWrapper}>
-                <MenuIcon />
-                {/* Badge */}
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>9</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.headerTitle}>작업 메뉴</Text>
         </View>
 
         {/* Banner 1: 안전 장비 점검 */}
@@ -187,6 +114,23 @@ export default function HomeScreen() {
           </View>
         </TouchableOpacity>
 
+        {/* Banner 4: 근무 마무리 */}
+        <TouchableOpacity
+          style={styles.bannerSection}
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate('EndWork')}>
+          <View style={styles.bannerCard}>
+            <Image
+              source={characterImage}
+              style={styles.bannerImage4}
+              resizeMode="contain"
+            />
+            <Text style={styles.bannerText}>
+              {'근무 마무리'}
+            </Text>
+          </View>
+        </TouchableOpacity>
+
         {/* 근무 도우미 Section */}
         <View style={styles.productsSection}>
           {/* Section Header */}
@@ -222,54 +166,27 @@ export default function HomeScreen() {
 /* ──────────────── Icon Styles ──────────────── */
 
 const iconStyles = StyleSheet.create({
-  searchContainer: {
-    width: 20,
-    height: 20,
+  backContainer: {
+    width: 28,
+    height: 28,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  searchCircle: {
+  arrowTop: {
     width: 14,
-    height: 14,
-    borderRadius: 7,
-    borderWidth: 2,
-    borderColor: '#1F2024',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-  },
-  searchHandle: {
-    width: 2,
-    height: 6,
-    backgroundColor: '#1F2024',
-    position: 'absolute',
-    bottom: 0,
-    right: 1,
-    transform: [{ rotate: '-45deg' }],
-    borderRadius: 1,
-  },
-  heartContainer: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  heartText: {
-    fontSize: 22,
-    color: '#1F2024',
-    lineHeight: 24,
-  },
-  menuContainer: {
-    width: 24,
-    height: 18,
-    justifyContent: 'space-between',
-  },
-  menuLine: {
-    width: 20,
     height: 2,
-    backgroundColor: '#1F2024',
+    backgroundColor: '#006FFD',
     borderRadius: 1,
-    alignSelf: 'flex-end',
+    position: 'absolute',
+    transform: [{ rotate: '-45deg' }, { translateY: -5.5 }],
+  },
+  arrowBottom: {
+    width: 14,
+    height: 2,
+    backgroundColor: '#006FFD',
+    borderRadius: 1,
+    position: 'absolute',
+    transform: [{ rotate: '45deg' }, { translateY: 5.5 }],
   },
   placeholderContainer: {
     width: 40,
@@ -295,63 +212,6 @@ const iconStyles = StyleSheet.create({
     top: 8,
     right: 10,
   },
-  tabIconContainer: {
-    width: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  homeBase: {
-    width: 14,
-    height: 10,
-    borderWidth: 2,
-    borderTopWidth: 0,
-    borderBottomLeftRadius: 2,
-    borderBottomRightRadius: 2,
-    position: 'absolute',
-    bottom: 0,
-  },
-  homeRoof: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 10,
-    borderRightWidth: 10,
-    borderBottomWidth: 8,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    position: 'absolute',
-    top: 0,
-  },
-  personHead: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    borderWidth: 1.5,
-    borderColor: '#71727A',
-    position: 'absolute',
-    top: 0,
-  },
-  personBody: {
-    width: 14,
-    height: 8,
-    borderTopLeftRadius: 7,
-    borderTopRightRadius: 7,
-    borderWidth: 1.5,
-    borderBottomWidth: 0,
-    borderColor: '#71727A',
-    position: 'absolute',
-    bottom: 0,
-  },
-  starText: {
-    fontSize: 20,
-    color: '#71727A',
-    lineHeight: 22,
-  },
-  settingText: {
-    fontSize: 18,
-    color: '#71727A',
-    lineHeight: 20,
-  },
 });
 
 /* ──────────────── Main Styles ──────────────── */
@@ -369,46 +229,24 @@ const styles = StyleSheet.create({
 
   /* Header */
   header: {
+    height: 64,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingBottom: 24,
     backgroundColor: '#FFFFFF',
+    gap: 8,
   },
-  headerIcon: {
-    width: 24,
-    height: 24,
+  backButton: {
+    width: 28,
+    height: 28,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  rightOptions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  menuIconWrapper: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  badge: {
-    position: 'absolute',
-    top: -6,
-    right: -6,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#006FFD',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  badgeText: {
+  headerTitle: {
     fontFamily: 'Inter',
-    fontWeight: '600',
-    fontSize: 10,
-    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 18,
+    color: '#1F2024',
   },
 
   /* Banner */
@@ -445,6 +283,10 @@ const styles = StyleSheet.create({
     height: 207,
   },
   bannerImage3: {
+    width: 206,
+    height: 206,
+  },
+  bannerImage4: {
     width: 206,
     height: 206,
   },

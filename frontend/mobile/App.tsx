@@ -1,12 +1,13 @@
 import React from 'react';
-import {View, Text, StyleSheet} from 'react-native';
-import {NavigationContainer} from '@react-navigation/native';
-import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import {SafeAreaProvider} from 'react-native-safe-area-context';
+import { View, Text, StyleSheet } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LoginScreen from './src/screens/LoginScreen';
 import SignUpScreen from './src/screens/SignUpScreen';
 import HomeScreen from './src/screens/HomeScreen';
+import MainHomeScreen from './src/screens/MainHomeScreen';
 import SelectModeScreen from './src/screens/SelectModeScreen';
 import CameraScreen from './src/screens/CameraScreen';
 import SafetyEquipmentCheckScreen from './src/screens/SafetyEquipmentCheckScreen';
@@ -17,21 +18,24 @@ import RiskResultScreen from './src/screens/RiskResultScreen';
 import RiskCameraScreen from './src/screens/RiskCameraScreen';
 import PersonalScreen from './src/screens/PersonalScreen';
 import SettingScreen from './src/screens/SettingScreen';
-import {AuthProvider} from './src/context/AuthContext';
-import {RiskPhotoProvider} from './src/context/RiskPhotoContext';
+import EndWorkScreen from './src/screens/EndWorkScreen';
+import { AuthProvider } from './src/context/AuthContext';
+import { RiskPhotoProvider } from './src/context/RiskPhotoContext';
 
 export type RootStackParamList = {
   Login: undefined;
   SignUp: undefined;
   Main: undefined;
   SelectMode: undefined;
-  Camera: {mode: 'all' | 'worker'};
+  Camera: { mode: 'all' | 'worker' };
   SafetyEquipmentCheck: { completedTitle?: string } | undefined;
-  EquipmentCamera: {title: string};
+  EquipmentCamera: { title: string };
   RiskAssessment: undefined;
   RiskCheck: undefined;
   RiskResult: undefined;
-  RiskCamera: {title: string};
+  RiskCamera: { title: string };
+  EndWork: undefined;
+  WorkMenu: undefined;
 };
 
 export type TabParamList = {
@@ -46,7 +50,7 @@ const Tab = createBottomTabNavigator<TabParamList>();
 
 /* ──────── Placeholder Screens ──────── */
 
-function PlaceholderScreen({title}: {title: string}) {
+function PlaceholderScreen({ title }: { title: string }) {
   return (
     <View style={placeholderStyles.container}>
       <Text style={placeholderStyles.text}>{title}</Text>
@@ -58,6 +62,7 @@ function PlaceholderScreen({title}: {title: string}) {
 function FavoriteScreen() {
   return <PlaceholderScreen title="Favorite" />;
 }
+
 
 const placeholderStyles = StyleSheet.create({
   container: {
@@ -76,40 +81,40 @@ const placeholderStyles = StyleSheet.create({
 
 /* ──────── Tab Icon Components ──────── */
 
-function HomeTabIcon({focused}: {focused: boolean}) {
+function HomeTabIcon({ focused }: { focused: boolean }) {
   const color = focused ? '#1F2024' : '#71727A';
   return (
     <View style={tabIconStyles.container}>
-      <View style={[tabIconStyles.homeRoof, {borderBottomColor: color}]} />
-      <View style={[tabIconStyles.homeBase, {borderColor: color}]} />
+      <View style={[tabIconStyles.homeRoof, { borderBottomColor: color }]} />
+      <View style={[tabIconStyles.homeBase, { borderColor: color }]} />
     </View>
   );
 }
 
-function PersonTabIcon({focused}: {focused: boolean}) {
+function PersonTabIcon({ focused }: { focused: boolean }) {
   const color = focused ? '#1F2024' : '#71727A';
   return (
     <View style={tabIconStyles.container}>
-      <View style={[tabIconStyles.personHead, {borderColor: color}]} />
-      <View style={[tabIconStyles.personBody, {borderColor: color}]} />
+      <View style={[tabIconStyles.personHead, { borderColor: color }]} />
+      <View style={[tabIconStyles.personBody, { borderColor: color }]} />
     </View>
   );
 }
 
-function StarTabIcon({focused}: {focused: boolean}) {
+function StarTabIcon({ focused }: { focused: boolean }) {
   const color = focused ? '#1F2024' : '#71727A';
   return (
     <View style={tabIconStyles.container}>
-      <Text style={[tabIconStyles.starText, {color}]}>☆</Text>
+      <Text style={[tabIconStyles.starText, { color }]}>☆</Text>
     </View>
   );
 }
 
-function SettingTabIcon({focused}: {focused: boolean}) {
+function SettingTabIcon({ focused }: { focused: boolean }) {
   const color = focused ? '#1F2024' : '#71727A';
   return (
     <View style={tabIconStyles.container}>
-      <Text style={[tabIconStyles.gearText, {color}]}>⚙</Text>
+      <Text style={[tabIconStyles.gearText, { color }]}>⚙</Text>
     </View>
   );
 }
@@ -173,14 +178,15 @@ const tabIconStyles = StyleSheet.create({
 /* ──────── Bottom Tab Navigator ──────── */
 
 function MainTabs() {
+  const insets = useSafeAreaInsets();
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          height: 88,
-          paddingTop: 16,
-          paddingBottom: 32,
+          height: 60 + insets.bottom,
+          paddingTop: 8,
+          paddingBottom: insets.bottom,
           paddingHorizontal: 16,
           backgroundColor: '#FFFFFF',
           borderTopWidth: 0,
@@ -197,9 +203,9 @@ function MainTabs() {
       }}>
       <Tab.Screen
         name="Home"
-        component={HomeScreen}
+        component={MainHomeScreen}
         options={{
-          tabBarIcon: ({focused}) => <HomeTabIcon focused={focused} />,
+          tabBarIcon: ({ focused }) => <HomeTabIcon focused={focused} />,
           tabBarLabelStyle: {
             fontFamily: 'Inter',
             fontWeight: '600',
@@ -212,7 +218,7 @@ function MainTabs() {
         name="Personal"
         component={PersonalScreen}
         options={{
-          tabBarIcon: ({focused}) => <PersonTabIcon focused={focused} />,
+          tabBarIcon: ({ focused }) => <PersonTabIcon focused={focused} />,
         }}
       />
       <Tab.Screen
@@ -220,14 +226,14 @@ function MainTabs() {
         component={FavoriteScreen}
         options={{
           tabBarLabel: 'favorite',
-          tabBarIcon: ({focused}) => <StarTabIcon focused={focused} />,
+          tabBarIcon: ({ focused }) => <StarTabIcon focused={focused} />,
         }}
       />
       <Tab.Screen
         name="Setting"
         component={SettingScreen}
         options={{
-          tabBarIcon: ({focused}) => <SettingTabIcon focused={focused} />,
+          tabBarIcon: ({ focused }) => <SettingTabIcon focused={focused} />,
         }}
       />
     </Tab.Navigator>
@@ -240,25 +246,27 @@ function App() {
   return (
     <AuthProvider>
       <RiskPhotoProvider>
-      <SafeAreaProvider>
-        <NavigationContainer>
-          <Stack.Navigator
-            initialRouteName="Login"
-            screenOptions={{headerShown: false}}>
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="SignUp" component={SignUpScreen} />
-            <Stack.Screen name="Main" component={MainTabs} />
-            <Stack.Screen name="SelectMode" component={SelectModeScreen} />
-            <Stack.Screen name="Camera" component={CameraScreen} />
-            <Stack.Screen name="SafetyEquipmentCheck" component={SafetyEquipmentCheckScreen} />
-            <Stack.Screen name="EquipmentCamera" component={EquipmentCameraScreen} />
-            <Stack.Screen name="RiskAssessment" component={RiskAssessmentScreen} />
-            <Stack.Screen name="RiskCheck" component={RiskCheckScreen} />
-            <Stack.Screen name="RiskResult" component={RiskResultScreen} />
-            <Stack.Screen name="RiskCamera" component={RiskCameraScreen} />
-          </Stack.Navigator>
-        </NavigationContainer>
-      </SafeAreaProvider>
+        <SafeAreaProvider>
+          <NavigationContainer>
+            <Stack.Navigator
+              initialRouteName="Login"
+              screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen name="SignUp" component={SignUpScreen} />
+              <Stack.Screen name="Main" component={MainTabs} />
+              <Stack.Screen name="SelectMode" component={SelectModeScreen} />
+              <Stack.Screen name="Camera" component={CameraScreen} />
+              <Stack.Screen name="SafetyEquipmentCheck" component={SafetyEquipmentCheckScreen} />
+              <Stack.Screen name="EquipmentCamera" component={EquipmentCameraScreen} />
+              <Stack.Screen name="RiskAssessment" component={RiskAssessmentScreen} />
+              <Stack.Screen name="RiskCheck" component={RiskCheckScreen} />
+              <Stack.Screen name="RiskResult" component={RiskResultScreen} />
+              <Stack.Screen name="RiskCamera" component={RiskCameraScreen} />
+              <Stack.Screen name="EndWork" component={EndWorkScreen} />
+              <Stack.Screen name="WorkMenu" component={HomeScreen} />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </SafeAreaProvider>
       </RiskPhotoProvider>
     </AuthProvider>
   );

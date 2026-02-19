@@ -106,7 +106,7 @@ export default function RiskCheckScreen({ navigation }: Props) {
       {/* Content */}
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, {paddingBottom: insets.bottom + 24}]}
         showsVerticalScrollIndicator={false}>
         <View style={styles.gridContainer}>
           {rows.map((row, rowIndex) => (
@@ -151,26 +151,26 @@ export default function RiskCheckScreen({ navigation }: Props) {
 
 const iconStyles = StyleSheet.create({
   backContainer: {
-    width: 20,
-    height: 20,
+    width: 28,
+    height: 28,
     justifyContent: 'center',
     alignItems: 'center',
   },
   backArrowTop: {
-    width: 12,
+    width: 14,
     height: 2,
     backgroundColor: '#006FFD',
     borderRadius: 1,
     position: 'absolute',
-    transform: [{ rotate: '-45deg' }, { translateY: -4.5 }],
+    transform: [{ rotate: '-45deg' }, { translateY: -5.5 }],
   },
   backArrowBottom: {
-    width: 12,
+    width: 14,
     height: 2,
     backgroundColor: '#006FFD',
     borderRadius: 1,
     position: 'absolute',
-    transform: [{ rotate: '45deg' }, { translateY: 4.5 }],
+    transform: [{ rotate: '45deg' }, { translateY: 5.5 }],
   },
   checkContainer: {
     width: 10,
@@ -210,25 +210,23 @@ const styles = StyleSheet.create({
 
   /* Nav Bar */
   navBar: {
-    height: 56,
+    height: 64,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 24,
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#D4D6DD',
     gap: 8,
   },
   backButton: {
-    width: 20,
-    height: 20,
+    width: 28,
+    height: 28,
     justifyContent: 'center',
     alignItems: 'center',
   },
   pageTitle: {
     fontFamily: 'Inter',
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: 18,
     color: '#1F2024',
   },
 

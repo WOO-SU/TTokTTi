@@ -257,7 +257,7 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
       </View>
 
       {/* Continue Button */}
-      <View style={styles.continueSection}>
+      <View style={[styles.continueSection, {paddingBottom: insets.bottom + 16}]}>
         <TouchableOpacity
           style={[
             styles.continueButton,
@@ -282,24 +282,21 @@ const iconStyles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   arrowTop: {
-    width: 12,
+    width: 14,
     height: 2,
     backgroundColor: '#006FFD',
     borderRadius: 1,
     position: 'absolute',
-    left: 0,
-    transform: [{ rotate: '-45deg' }, { translateX: -2 }, { translateY: -7 }],
+    transform: [{ rotate: '-45deg' }, { translateY: -5.5 }],
   },
   arrowBottom: {
-    width: 12,
+    width: 14,
     height: 2,
     backgroundColor: '#006FFD',
     borderRadius: 1,
     position: 'absolute',
-    left: 0,
-    transform: [{ rotate: '45deg' }, { translateX: -2 }, { translateY: 7 }],
+    transform: [{ rotate: '45deg' }, { translateY: 5.5 }],
   },
   cameraContainer: {
     width: 28,
@@ -386,10 +383,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   header: {
+    height: 64,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingBottom: 12,
     backgroundColor: '#FFFFFF',
     gap: 8,
   },
@@ -400,10 +397,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontFamily: 'Roboto',
-    fontWeight: '400',
-    fontSize: 24,
-    color: '#363636',
+    fontFamily: 'Inter',
+    fontWeight: '700',
+    fontSize: 18,
+    color: '#1F2024',
   },
   cameraPreview: {
     flex: 1,
