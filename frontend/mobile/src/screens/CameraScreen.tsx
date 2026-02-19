@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   StatusBar,
+  Modal,
+  Alert,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {
@@ -13,10 +15,14 @@ import {
   useCameraDevice,
   useCameraPermission,
   useMicrophonePermission,
+  PhotoFile,
 } from 'react-native-vision-camera';
+import RNFS from 'react-native-fs';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {RouteProp} from '@react-navigation/native';
 import type {RootStackParamList} from '../../App';
+
+import SafetyStream, { StreamResponse } from '../api/stream'
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Camera'>;
@@ -58,24 +64,67 @@ function StopIcon() {
 export default function CameraScreen({navigation, route}: Props) {
   const insets = useSafeAreaInsets();
   const {mode} = route.params;
+  
+  // State
   const [isRecording, setIsRecording] = useState(false);
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertMessage, setAlergMessage] = useState('');
 
+  // Refs
   const cameraRef = useRef<Camera>(null);
+  const streamRef = useRef<SafetyStream | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Permissions
   const device = useCameraDevice('back');
   const {hasPermission, requestPermission} = useCameraPermission();
-  const {
-    hasPermission: hasMicPermission,
-    requestPermission: requestMicPermission,
-  } = useMicrophonePermission();
+  const {hasPermission: hasMicPermission, requestPermission: requestMicPermission} = useMicrophonePermission();
+
+  // WebSocket & Stream Setup
+  useEffect(() => {
+    if (!hasPermission) requestPermission();
+    if (!hasMicPermission) requestMicPermission();
+    
+  }, [hasPermission, requestPermission, hasMicPermission, requestMicPermission]);
 
   useEffect(() => {
-    if (!hasPermission) {
-      requestPermission();
-    }
-    if (!hasMicPermission) {
-      requestMicPermission();
-    }
-  }, [hasPermission, requestPermission, hasMicPermission, requestMicPermission]);
+    const userId = "AuthContext_user_id"
+
+    streamRef.current = new SafetyStream(userId, (data: StreamResponse) => {
+      if (data.type === 'DANGER') {
+        setAlertMessage(data.message || '위험이 감지되었습니다!');
+        setAlertVisible(true);
+      } else if (data.type === 'ANSWER') {
+        Alert.alert('AI Assistant', data.message);
+      }
+    });
+
+    streamRef.current.connect();
+
+    intervalRef.current = setInterval(async () => {
+      if (cameraRef.current && streamRef.current) {
+        try {
+          const photo = await cameraRef.current.takePhoto({
+            qualityPrioritization: 'speed',
+            flash: 'off',
+            enableShutterSound: false,
+          });
+
+          const base64 = await RNFS.readFile(photo.path, 'base64')
+
+          streamRef.current.sendFrame(base64)
+        } catch (err) {
+          console.log('Frame capture error (expected if camera')
+        }
+      }
+    }, 250);
+
+    return () => {
+
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      streamRef.current?.disconnect();
+    };
+  }, []);
 
   const headerTitle = mode === 'all' ? '전체 촬영' : '작업자 환경 촬영';
 
@@ -153,7 +202,32 @@ export default function CameraScreen({navigation, route}: Props) {
           <Text style={styles.continueText}>Continue</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Alert Modal */}
+      <Modal
+        visible={alertVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAlertVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.dialog}>
+            <View style={styles.dialogContent}>
+              <Text style={styles.dialogTitle}>⚠️ 위험 감지!</Text>
+              <Text style={styles.dialogDescription}>{alertMessage}</Text>
+            </View>
+            <View style={styles.dialogActions}>
+              <TouchableOpacity
+                style={styles.dialogButtonFilled}
+                onPress={() => setAlertVisible(false)}>
+                <Text style={styles.dialogButtonFilledText}>확인</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
+
+      
   );
 }
 
@@ -305,4 +379,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#F6F6F6',
   },
+
+  // Modal Styles
+  modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)' },
+  dialog: { width: 300, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, gap: 20 },
+  dialogContent: { gap: 10, alignItems: 'center' },
+  dialogTitle: { fontSize: 18, fontWeight: '800', color: '#FF3B30' },
+  dialogDescription: { fontSize: 14, color: '#1F2024', textAlign: 'center' },
+  dialogActions: { flexDirection: 'row', justifyContent: 'center' },
+  dialogButtonFilled: { width: '100%', height: 44, borderRadius: 12, backgroundColor: '#006FFD', justifyContent: 'center', alignItems: 'center' },
+  dialogButtonFilledText: { color: '#FFFFFF', fontWeight: '600' },
 });
