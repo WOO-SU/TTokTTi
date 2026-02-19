@@ -2,7 +2,7 @@
 
 import io
 import uuid
-from azure.storage.blob import BlobServiceClient
+from azure.storage.blob import BlobServiceClient, ContentSettings
 
 from config import Config
 
@@ -27,6 +27,6 @@ class BlobClient:
         blob.upload_blob(
             io.BytesIO(image_bytes),
             overwrite=True,
-            content_settings={"content_type": "image/jpeg"},
+            content_settings=ContentSettings(content_type="image/jpeg"),
         )
         return blob_name

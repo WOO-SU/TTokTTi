@@ -17,7 +17,7 @@ class APIClient:
         """서비스 계정으로 로그인하여 JWT 토큰 획득"""
         res = requests.post(
             f"{self.base_url}{Config.API_LOGIN}",
-            json={"user_name": self.user, "password": self.password},
+            json={"username": self.user, "password": self.password},
         )
         res.raise_for_status()
         data = res.json()

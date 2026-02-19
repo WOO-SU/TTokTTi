@@ -1,3 +1,4 @@
+from __future__ import annotations
 """YOLO 기반 장비 탐지 + 결과 이미지 생성"""
 
 import cv2
@@ -31,7 +32,7 @@ class ComplianceDetector:
         frame = cv2.imdecode(arr, cv2.IMREAD_COLOR)
 
         # YOLO 추론
-        results = self.model(frame, conf=self.conf, verbose=False)[0]
+        results = self.model(frame, conf=self.conf, imgsz=512, verbose=False)[0]
 
         is_complied = False
 

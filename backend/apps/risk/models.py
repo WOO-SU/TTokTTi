@@ -10,7 +10,7 @@ class RiskAssessment(models.Model):
     - overall_*는 리스트/필터/정렬을 빠르게 하기 위한 핵심 요약 필드
     """
     blob_path = models.CharField(max_length=255, db_index=True)
-
+    blob_paths = models.JSONField(default=list)  # ✅ 추가: 여러 장 원본 저장
     site_label = models.CharField(max_length=255) # 평가 컨텍스트 고정값
     work_type_fixed = models.CharField(max_length=255) # 작업 내용 
 
@@ -33,6 +33,18 @@ class RiskAssessment(models.Model):
     def __str__(self) -> str:
         return f"RiskAssessment(id={self.id}, grade={self.overall_grade}, R={self.overall_max_R})"
 
+class RiskAssessmentImage(models.Model):
+    assessment = models.ForeignKey(RiskAssessment, on_delete=models.CASCADE, related_name="images")
+    blob_name = models.CharField(max_length=255, db_index=True)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:        
+        db_table = "risk_assessment_images"  # ✅ 추천
+        ordering = ["order", "id"]
+        indexes = [models.Index(fields=["blob_name"])]
+        
+    def __str__(self):
+        return f"RiskAssessmentImage(assessment_id={self.assessment_id}, order={self.order})"
 
 class RiskReport(models.Model):
     """
