@@ -22,7 +22,7 @@ from .models import PostWorkReport   # ✅ 추가
     method="post",
     request_body=ReportGenerateRequestSerializer,
     responses={200: ReportGenerateResponseSerializer},
-    tags=["Reports"],
+    tags=["Report"],
 )
 @api_view(["POST"])
 def generate_postwork_report(request):
@@ -84,7 +84,7 @@ def generate_postwork_report(request):
 @swagger_auto_schema(
     method="get",
     responses={200: ReportLatestResponseSerializer, 404: ReportLatestResponseSerializer},
-    tags=["Reports"],
+    tags=["Report"],
 )
 @api_view(["GET"])
 def get_latest_postwork_report(request, worksession_id: int):
@@ -117,7 +117,7 @@ def get_latest_postwork_report(request, worksession_id: int):
 @swagger_auto_schema(
     method="get",
     responses={200: ReportVersionsResponseSerializer},
-    tags=["Reports"],
+    tags=["Report"],
 )
 @api_view(["GET"])
 def list_postwork_report_versions(request, worksession_id: int):

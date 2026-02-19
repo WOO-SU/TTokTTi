@@ -11,7 +11,7 @@ class PostWorkReport(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
-        db_table = "postwork_reports"
+        db_table = "postwork_report"
         ordering = ["-created_at"]
         indexes = [
             models.Index(fields=["worksession_id", "-report_version"]),

@@ -6,6 +6,6 @@ urlpatterns = [
     path("risk/", include("apps.risk.urls")), 
     path("check/", include("apps.check.urls")),
     path("detect/", include("apps.detect.urls")),
-    path("reports/", include("apps.reports.urls")),
+    path("report/", include("apps.report.urls")),
 
 ]
