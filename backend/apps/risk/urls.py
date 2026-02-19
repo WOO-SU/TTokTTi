@@ -4,7 +4,7 @@ from apps.risk import views
 
 urlpatterns = [
     path("media/sas", views.issue_read_sas, name="risk-issue-sas"),
-    path("assess", views.risk_assess, name="risk-assess"),
+    path("assess/<int:assessment_id>", views.risk_assess, name="risk-assess"),
     path(
         "admin/<int:assessment_id>",
         views.admin_report_detail,
