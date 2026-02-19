@@ -352,3 +352,52 @@ def start_assessment_for_session(request, worksession_id):
         },
         status=status.HTTP_200_OK
     )
+
+@swagger_auto_schema(
+    method="post",
+    request_body=UploadImageRequestSerializer,
+    responses={200: UploadImageResponseSerializer, # 수정
+               400: ErrorResponseSerializer,
+               404: ErrorResponseSerializer,}
+)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def upload_image(request, assessment_id):
+    """
+    "/api/risk/upload/{assessment_id}/"
+
+    생성된 RiskAssessment 레코드에 대응되는 AssessmentImage 레코드 생성
+    """
+
+    blob_name = request.data.get("blob_name")
+
+    if not blob_name:
+        return Response(
+            {"error": "blob_name is required"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        assessment = RiskAssessment.objects.get(
+            id=assessment_id,
+            status=RiskAssessment.StatusChoices.PENDING
+        )
+    except RiskAssessment.DoesNotExist:
+        return Response(
+            {"error": "PENDING assessment not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    image = RiskAssessmentImage.objects.create(
+        assessment=assessment,
+        blob_name=blob_name,
+    )
+
+    return Response(
+        {
+            "assessment_id": assessment.id,
+            "image_id": image.id,
+            "blob_name": image.blob_name,
+        },
+        status=status.HTTP_201_CREATED
+    )

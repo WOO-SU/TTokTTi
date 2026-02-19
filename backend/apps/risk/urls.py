@@ -24,5 +24,10 @@ urlpatterns = [
         "start/<int:worksession_id>",
         views.start_assessment_for_session,
         name="risk-start-assessment-session",
-    )
+    ),
+    path(
+        "upload/<int:assessment_id>",
+        views.upload_image,
+        name="risk-upload-image",
+    ),
 ]

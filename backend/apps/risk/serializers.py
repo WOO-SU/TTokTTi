@@ -106,6 +106,17 @@ class AssessmentCreationResponseSerializer(serializers.Serializer):
 class ErrorAssessmentCreationResponseSerializer(serializers.Serializer):
     detail = serializers.CharField()
 
+# =========================
+# Image Upload
+# =========================
+
+class UploadImageRequestSerializer(serializers.Serializer):
+    blob_name = serializers.CharField()
+
+class UploadImageResponseSerializer(serializers.Serializer):
+    assessment_id = serializers.IntegerField()
+    image_id = serializers.IntegerField()
+    blob_name = serializers.CharField()
 
 # =========================
 # Error
