@@ -15,6 +15,7 @@ from apps.risk.models import (
     RiskAssessment,
     RiskReport,
     WorkerRecommendation,
+    RiskAssessmentImage,
 )
 import tempfile
 import os
@@ -27,6 +28,7 @@ from apps.risk.serializers import (
     SasIssueResponseSerializer,
     RiskAssessRequestSerializer, RiskAssessResponseSerializer,
     RiskAssessUrlRequestSerializer,
+    RiskAssessMultiRequestSerializer,   # ✅ 추가
     AdminReportResponseSerializer,
     WorkerResponseSerializer,
     ErrorResponseSerializer,
@@ -116,6 +118,7 @@ def risk_assess_by_url(request):
     with transaction.atomic():
         assessment = RiskAssessment.objects.create(
             blob_path=image_url,
+            blob_paths=[image_url],   # ✅ 추가
             site_label=llm_result.get("site_label", site_label),
             work_type_fixed=llm_result.get("work_type_fixed", SITE_LABEL_FIXED),
             llm_result=llm_result,
@@ -131,11 +134,19 @@ def risk_assess_by_url(request):
             overall=llm_result["overall"],
         )
 
+        worker_view = generate_worker_recommendation(llm_result)
+
         WorkerRecommendation.objects.create(
             assessment=assessment,
-            top_risks=generate_worker_recommendation(llm_result)["top_risks"],
-            immediate_actions=generate_worker_recommendation(llm_result)["immediate_actions"],
-            short_message=generate_worker_recommendation(llm_result)["short_message"],
+            top_risks=worker_view["top_risks"],
+            immediate_actions=worker_view["immediate_actions"],
+            short_message=worker_view["short_message"],
+        )
+
+        RiskAssessmentImage.objects.create(
+            assessment=assessment,
+            blob_name=image_url,  # URL이 들어가도 일단 동작은 함
+            order=0,
         )
 
     return Response(
@@ -188,27 +199,35 @@ def risk_assess_local(request):
     try:
         with transaction.atomic():
             assessment = RiskAssessment.objects.create(
-                blob_path="LOCAL_UPLOAD",  # 로컬 테스트 표시
-                site_label=llm_result.get("site_label", site_label),
-                work_type_fixed=llm_result.get("work_type_fixed") or SITE_LABEL_FIXED,
-                llm_result=llm_result,
-                overall_grade=llm_result["overall"]["overall_grade"],
-                overall_max_R=llm_result["overall"]["overall_max_R"],
-                work_permission=llm_result["overall"]["work_permission"],
+            blob_path="LOCAL_UPLOAD",
+            blob_paths=["LOCAL_UPLOAD"],   # ✅ 추가 (일관성)
+            site_label=llm_result.get("site_label", site_label),
+            work_type_fixed=llm_result.get("work_type_fixed") or SITE_LABEL_FIXED,
+            llm_result=llm_result,
+            overall_grade=llm_result["overall"]["overall_grade"],
+            overall_max_R=llm_result["overall"]["overall_max_R"],
+            work_permission=llm_result["overall"]["work_permission"],
+        )
+
+        RiskAssessmentImage.objects.create(
+            assessment=assessment,
+            blob_name="LOCAL_UPLOAD",  # ✅ 통일(또는 tmp_path 기록하고 싶으면 그걸 넣어도 됨)
+            order=0,
+        )
+
+
+        RiskReport.objects.create(
+            assessment=assessment,
+            scene_summary=admin_view["scene_summary"],
+            hazards=admin_view["hazards"],
+            overall=admin_view["overall"],
             )
 
-            RiskReport.objects.create(
-                assessment=assessment,
-                scene_summary=admin_view["scene_summary"],
-                hazards=admin_view["hazards"],
-                overall=admin_view["overall"],
-            )
-
-            WorkerRecommendation.objects.create(
-                assessment=assessment,
-                top_risks=worker_view["top_risks"],
-                immediate_actions=worker_view["immediate_actions"],
-                short_message=worker_view["short_message"],
+        WorkerRecommendation.objects.create(
+            assessment=assessment,
+            top_risks=worker_view["top_risks"],
+            immediate_actions=worker_view["immediate_actions"],
+            short_message=worker_view["short_message"],
             )
     except Exception as e:
         return Response({"error": f"DB save failed: {e}"},
@@ -221,91 +240,71 @@ def risk_assess_local(request):
 # 2) 위험성 평가 실행 (LLM)
 # =========================
 @swagger_auto_schema(
-    method='get',
-    responses={200: "사용법 안내 (JSON 형식)"},
-    operation_description="API 사용법 안내"
-)
-@swagger_auto_schema(
     method='post',
-    request_body=RiskAssessRequestSerializer,
-    responses={
-        201: RiskAssessResponseSerializer, # 이미지처럼 박스가 뜨게 됨
-        400: ErrorResponseSerializer
-    },
-    operation_description="Blob 이미지를 기반으로 위험성 평가 수행"
+    request_body=RiskAssessMultiRequestSerializer,  # ✅ 멀티로 교체 or oneOf로 확장
+    responses={201: RiskAssessResponseSerializer, 400: ErrorResponseSerializer},
 )
-@api_view(["GET", "POST"])
+@api_view(["POST"])
 def risk_assess(request):
-    """
-    POST /api/risk/assess
-    body:
-    {
-        "blob_name": "<blob_name>"
-    }
+    blob_names = request.data.get("blob_names")
+    site_label = request.data.get("site_label") or SITE_LABEL_FIXED
 
-    처리:
-    - LLM 평가
-    - 관리자/근로자 파생 결과 생성
-    - DB 저장
-    """
-    if request.method == "GET":
-        return Response(
-            {
-                "ok": True,
-                "usage": "POST JSON: {\"blob_name\": \"<blob_name>\"}",
-                "example": {
-                    "blob_name": "f66b81a873be4d75b7bf58120364519b"
-                },
-            }
-        )
+    # ✅ 하위호환: blob_name 하나만 온 경우도 처리
+    if not blob_names:
+        one = request.data.get("blob_name") or request.data.get("image_blob_name") or request.data.get("blob_path")
+        if one:
+            blob_names = [one]
 
-    blob_name = (
-        request.data.get("blob_name")
-        or request.data.get("image_blob_name")
-        or request.data.get("blob_path")
-    )
+    if not blob_names or not isinstance(blob_names, list):
+        return Response({"error": "blob_names(list) is required"}, status=status.HTTP_400_BAD_REQUEST)
+    # ✅ 입력 정리: strip + 빈값 제거 + 중복 제거(순서 유지) + 개수 제한
+    cleaned = []
+    seen = set()
+    for x in blob_names:
+        if not isinstance(x, str):
+            continue
+        x = x.strip()
+        if not x or x in seen:
+            continue
+        seen.add(x)
+        cleaned.append(x)
 
-    if not blob_name:
-        return Response(
-            {"error": "blob_name is required"},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+    MAX_IMAGES = 10
+    if len(cleaned) == 0:
+        return Response({"error": "blob_names has no valid items"}, status=status.HTTP_400_BAD_REQUEST)
+    if len(cleaned) > MAX_IMAGES:
+        return Response({"error": f"too many images (max {MAX_IMAGES})"}, status=status.HTTP_400_BAD_REQUEST)
 
-    # 1) LLM 평가
+    blob_names = cleaned
+
     try:
         assessor = RiskAssessor()
-        llm_result = assessor.assess(
-            AssessInput(
-                image_blob_name=blob_name,
-                site_label=SITE_LABEL_FIXED,
-            )
+        llm_result = assessor.assess_multi(
+            image_blob_names=blob_names,
+            site_label=site_label,
         )
     except Exception as e:
-        return Response(
-            {"error": str(e), "type": e.__class__.__name__},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        )
+        return Response({"error": str(e), "type": e.__class__.__name__}, status=500)
 
-    # 2) 파생 결과
     admin_view = generate_admin_report(llm_result)
     worker_view = generate_worker_recommendation(llm_result)
 
-    # 3) DB 저장
     try:
         with transaction.atomic():
             assessment = RiskAssessment.objects.create(
-                blob_path=blob_name,
-                site_label=llm_result.get(
-                    "site_label", SITE_LABEL_FIXED
-                ),
-                work_type_fixed=llm_result.get(
-                    "work_type_fixed", SITE_LABEL_FIXED
-                ),
+                blob_path=blob_names[0],     # 대표 1장
+                blob_paths=blob_names,       # ✅ 전체 저장
+                site_label=llm_result.get("site_label", site_label),
+                work_type_fixed=llm_result.get("work_type_fixed", SITE_LABEL_FIXED),
                 llm_result=llm_result,
                 overall_grade=llm_result["overall"]["overall_grade"],
                 overall_max_R=llm_result["overall"]["overall_max_R"],
                 work_permission=llm_result["overall"]["work_permission"],
             )
+            RiskAssessmentImage.objects.bulk_create([
+                RiskAssessmentImage(assessment=assessment, blob_name=bn, order=i)
+                for i, bn in enumerate(blob_names)
+            ])
 
             RiskReport.objects.create(
                 assessment=assessment,
@@ -321,18 +320,20 @@ def risk_assess(request):
                 short_message=worker_view["short_message"],
             )
     except Exception as e:
-        return Response(
-            {"error": f"DB save failed: {e}"},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        )
+        return Response({"error": f"DB save failed: {e}"}, status=500)
 
     return Response(
         {
             "ok": True,
             "assessment_id": assessment.id,
+            "result_urls": {
+                "admin": f"/api/risk/admin/{assessment.id}",
+                "worker": f"/api/risk/worker/{assessment.id}",
+            },
         },
-        status=status.HTTP_201_CREATED,
+        status=201
     )
+
 
 
 # =========================
@@ -352,9 +353,15 @@ def admin_report_detail(request, assessment_id: int):
     GET /api/risk/admin/<assessment_id>
     """
     try:
-        rep = RiskReport.objects.select_related("assessment").get(assessment_id=assessment_id)
+        rep = (
+            RiskReport.objects
+            .select_related("assessment")
+            .prefetch_related("assessment__images")
+            .get(assessment_id=assessment_id)
+        )
     except RiskReport.DoesNotExist:
         return Response({"error": "not found"}, status=status.HTTP_404_NOT_FOUND)
+
 
     # ✅ llm_result로부터 '보고서용' 포맷 생성
     formatted = generate_admin_report(rep.assessment.llm_result)
@@ -366,6 +373,8 @@ def admin_report_detail(request, assessment_id: int):
             "blob_path": rep.assessment.blob_path,
             "site_label": rep.assessment.site_label,
             "work_type_fixed": rep.assessment.work_type_fixed,
+            "blob_paths": rep.assessment.blob_paths,
+            "images": list(rep.assessment.images.order_by("order", "id").values("order", "blob_name")),
 
             # ⭐ 프론트는 이거만 쓰면 됨
             "report": report,
@@ -397,9 +406,15 @@ def worker_recommendation_detail(request, assessment_id: int):
     GET /api/risk/worker/<assessment_id>
     """
     try:
-        rec = WorkerRecommendation.objects.select_related("assessment").get(assessment_id=assessment_id)
+        rec = (
+            WorkerRecommendation.objects
+            .select_related("assessment")
+            .prefetch_related("assessment__images")
+            .get(assessment_id=assessment_id)
+        )
     except WorkerRecommendation.DoesNotExist:
         return Response({"error": "not found"}, status=status.HTTP_404_NOT_FOUND)
+
 
     # ✅ llm_result로부터 '근로자 메시지용' 포맷 생성
     formatted = generate_worker_recommendation(rec.assessment.llm_result)
@@ -412,6 +427,10 @@ def worker_recommendation_detail(request, assessment_id: int):
 
             # ⭐ 프론트는 이거만 쓰면 됨
             "message": message,
+            "blob_paths": rec.assessment.blob_paths,
+            "images": list(rec.assessment.images.order_by("order", "id").values("order", "blob_name")),
+
+
 
             # (선택) 기존 필드 유지(하위호환/디버깅용)
             "overall_grade": rec.assessment.overall_grade,

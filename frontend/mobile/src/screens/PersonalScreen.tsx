@@ -41,7 +41,7 @@ export default function PersonalScreen() {
       {/* Content */}
       <ScrollView
         style={{flex: 1}}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, {paddingBottom: insets.bottom + 24}]}
         bounces={false}
         showsVerticalScrollIndicator={false}>
         <View style={styles.card}>

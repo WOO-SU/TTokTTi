@@ -20,6 +20,14 @@ class SasIssueResponseSerializer(serializers.Serializer):
 class RiskAssessRequestSerializer(serializers.Serializer):
     blob_name = serializers.CharField(help_text="예: test.png")
 
+class RiskAssessMultiRequestSerializer(serializers.Serializer):
+    blob_names = serializers.ListField(
+        child=serializers.CharField(),
+        min_length=1,
+        help_text="예: ['a.jpg','b.jpg','c.jpg']"
+    )
+    site_label = serializers.CharField(required=False)
+
 
 class RiskAssessResponseSerializer(serializers.Serializer):
     ok = serializers.BooleanField()

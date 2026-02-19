@@ -170,14 +170,18 @@ class RiskAssessor:
         api_key = api_key.encode("ascii", "ignore").decode()
 
         self.client = OpenAI(api_key=api_key)
-    
+    @staticmethod
     def _file_to_data_url(file_path: str) -> str:
         path = Path(file_path)
         if not path.exists():
             raise FileNotFoundError(f"{file_path} not found")
-        mime_type = "image/png" 
+
+        mime_type, _ = mimetypes.guess_type(str(path))
+        mime_type = mime_type or "image/jpeg"  # fallback
+
         encoded = base64.b64encode(path.read_bytes()).decode("utf-8")
         return f"data:{mime_type};base64,{encoded}"
+
 
     def assess_from_url(
         self,
@@ -245,9 +249,6 @@ class RiskAssessor:
             }],
         )
 
-    # ... 이하 동일
-
-
         # ✅ 응답 텍스트 추출(버전 차이 대비)
         text = ""
         for item in getattr(resp, "output", []):
@@ -264,6 +265,47 @@ class RiskAssessor:
         data = self._normalize_and_fix(data, fallback_site_label=inp.site_label)
         return data
 
+    def assess_multi(
+        self,
+        image_blob_names: List[str],
+        site_label: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        if not image_blob_names:
+            raise ValueError("image_blob_names is required")
+
+        # SAS 여러 개 발급 → image_url 리스트
+        image_urls = []
+        for bn in image_blob_names:
+            pack = make_read_sas(bn)
+            image_urls.append(pack["download_url"])
+
+        # ✅ 프롬프트에 “여러 장을 종합”하라고 명시 (중요)
+        multi_hint = (
+            "\n\n[중요] 입력 이미지는 같은 작업현장을 다양한 각도/거리에서 찍은 여러 장이다. "
+            "모든 이미지를 종합해서 관찰 사실/위험요인을 판단하라. "
+            "어떤 위험도 근거가 되는 이미지 특징을 evidence_from_image에 구체적으로 남겨라."
+        )
+
+        content = [{"type": "input_text", "text": PROMPT + multi_hint + f"\n\nsite_label: {site_label or '미지정'}"}]
+        content += [{"type": "input_image", "image_url": u} for u in image_urls]
+
+        resp = self.client.responses.create(
+            model=MODEL,
+            temperature=0.2,
+            input=[{"role": "user", "content": content}],
+        )
+
+        text = ""
+        for item in getattr(resp, "output", []):
+            for c in getattr(item, "content", []):
+                if getattr(c, "type", None) in ("output_text", "text"):
+                    text += getattr(c, "text", "")
+
+        if not text.strip():
+            raise ValueError("LLM returned empty text output")
+
+        data = _extract_json(text)
+        return self._normalize_and_fix(data, fallback_site_label=site_label)
     # -------------------------------
     # 서버측 스키마 보정 + 점수 재계산
     # -------------------------------
