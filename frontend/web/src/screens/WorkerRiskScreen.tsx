@@ -3,6 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../api/client';
 import logoImg from '../assets/logo.png';
+import ladderImg from '../assets/ladder.png';
+import envImg from '../assets/env.png';
+import boxImg from '../assets/box.png';
 import useUnreadAlertCount from '../hooks/useUnreadAlertCount';
 
 // ── Types ──
@@ -81,10 +84,10 @@ const sidebarItems = [
   { label: '보고서 작성', icon: '✏️', path: '/report' },
 ];
 
-const riskCategories: { key: RiskCategory; label: string; sublabel: string; icon: string; description: string }[] = [
-  { key: 'ladder', label: '사다리', sublabel: 'Ladder', icon: '🪜', description: '사다리 설치 상태 및 안전성 평가' },
-  { key: 'environment', label: '주변환경', sublabel: 'Environment', icon: '🏗️', description: '작업 현장 주변 환경 상태 평가' },
-  { key: 'commbox', label: '통신함 상태', sublabel: 'Comm. Box', icon: '📡', description: '통신함 설비 상태 및 안전 평가' },
+const riskCategories: { key: RiskCategory; label: string; sublabel: string; img: string; description: string }[] = [
+  { key: 'ladder', label: '사다리', sublabel: 'Ladder', img: ladderImg, description: '사다리 설치 상태 및 안전성 평가' },
+  { key: 'environment', label: '주변환경', sublabel: 'Environment', img: envImg, description: '작업 현장 주변 환경 상태 평가' },
+  { key: 'commbox', label: '통신함 상태', sublabel: 'Comm. Box', img: boxImg, description: '통신함 설비 상태 및 안전 평가' },
 ];
 
 const GRADE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
@@ -341,7 +344,7 @@ export default function WorkerRiskScreen() {
                 onClick={() => handleCategorySelect(cat.key)}
               >
                 <div style={styles.categoryIconWrap}>
-                  <span style={{ fontSize: 36 }}>{cat.icon}</span>
+                  <img src={cat.img} alt={cat.sublabel} style={{ width: 48, height: 48, objectFit: 'contain' }} />
                 </div>
                 <div style={styles.categoryTextArea}>
                   <span style={{ ...styles.categoryLabel, ...(isActive ? { color: '#006FFD' } : {}) }}>{cat.label}</span>
