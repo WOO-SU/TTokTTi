@@ -172,6 +172,7 @@ function WorkSiteCardComponent({
   onMemberClick,
   onCardClick,
   onReportClick,
+  onActivateClick,
 }: {
   card: WorkSessionCard;
   isHovered: boolean;
@@ -179,6 +180,7 @@ function WorkSiteCardComponent({
   onMemberClick: (id: number, siteName: string) => void;
   onCardClick: (card: WorkSessionCard) => void;
   onReportClick: (card: WorkSessionCard, e: React.MouseEvent) => void;
+  onActivateClick: (card: WorkSessionCard, e: React.MouseEvent) => void;
 }) {
   const sc = workStatusColors[card.status] ?? workStatusColors['READY'];
   const statusText = statusTextMap[card.status] ?? '작업 전';
@@ -231,6 +233,14 @@ function WorkSiteCardComponent({
           onClick={e => { e.stopPropagation(); onCardClick(card); }}>
           상세 보기
         </button>
+        {card.status === 'READY' && (
+          <button
+            type="button"
+            style={styles.activateBtn}
+            onClick={e => { e.stopPropagation(); onActivateClick(card, e); }}>
+            작업 시작
+          </button>
+        )}
       </div>
 
       {/* Expandable section — grows card vertically on hover */}
@@ -423,6 +433,20 @@ export default function HomeScreen() {
     navigate(`/worksession/${card.id}`, { state: { card } });
   };
 
+  const handleActivateClick = async (card: WorkSessionCard, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const res = await apiFetch('/worksession/activate/', {
+        method: 'PATCH',
+        body: JSON.stringify({ worksession_id: card.id }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        fetchWorkSessions();
+      }
+    } catch { /* ignore */ }
+  };
+
   const handleReportClick = (card: WorkSessionCard, e: React.MouseEvent) => {
     e.stopPropagation();
     if (card.report) {
@@ -511,6 +535,7 @@ export default function HomeScreen() {
                 onMemberClick={(id, siteName) => navigate(`/employee/${id}`, { state: { siteName } })}
                 onCardClick={handleCardClick}
                 onReportClick={handleReportClick}
+                onActivateClick={handleActivateClick}
               />
             ))}
           </div>
@@ -864,6 +889,19 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '7px 0',
     cursor: 'pointer',
     marginTop: 4,
+    width: '100%',
+    textAlign: 'center',
+  },
+  activateBtn: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 700,
+    fontSize: 13,
+    color: '#FFFFFF',
+    backgroundColor: '#298A3E',
+    border: 'none',
+    borderRadius: 8,
+    padding: '7px 0',
+    cursor: 'pointer',
     width: '100%',
     textAlign: 'center',
   },
