@@ -24,10 +24,6 @@ COPY entrypoint.sh /usr/local/bin/
 RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh \
     && chmod +x /usr/local/bin/entrypoint.sh
 
-COPY seed_db.sh /usr/local/bin/
-RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh \
-    && chmod +x /usr/local/bin/entrypoint.sh
-
 EXPOSE 8000
 
 ENTRYPOINT ["entrypoint.sh"]

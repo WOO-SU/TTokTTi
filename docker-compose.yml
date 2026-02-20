@@ -75,7 +75,7 @@ services:
       - ./backend/.env
   
     # Dev
-    command: python manage.py runserver 0.0.0.0:8000
+    command: dev
 
   # azurite:
   #   image: mcr.microsoft.com/azure-storage/azurite:3.29.0
