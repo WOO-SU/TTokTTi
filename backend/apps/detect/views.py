@@ -1,14 +1,16 @@
 from django.shortcuts import render
 from django.utils.dateparse import parse_datetime
+from django.db.models import OuterRef, Subquery, Value, BooleanField
+from django.db.models.functions import Coalesce
 
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import VideoLog, RiskType
+from .models import *
 from ..worksession.models import WorkSession
-from .serializers import VideoSerializer, SaveVideoResponseSerializer, VideoSearchResponseSerializer
+from .serializers import VideoSerializer, SaveVideoResponseSerializer, VideoSearchResponseSerializer, CheckLogsResponseSerializer
 
 @swagger_auto_schema(
     method='post',
@@ -144,3 +146,65 @@ def search_video(request):
         "data": serializer.data
     })
 
+@swagger_auto_schema(
+    method="get",
+    responses={200: CheckLogsResponseSerializer(many=True)}
+)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def check_logs(request):
+    """
+    GET "/api/detect/admin/logs/"
+    관리자용 로그 확인
+    """
+
+    manager = request.user
+
+    read_status_sq = VideoLogRead.objects.filter(
+        videolog=OuterRef("pk"),
+        manager=manager
+    ).values("is_read")[:1]
+
+    logs = (
+        VideoLog.objects
+        .select_related(
+            "worksession",
+            "compliance",
+            "risk_type"
+        )
+        .annotate(
+            is_read=Coalesce(
+                Subquery(read_status_sq),
+                Value(False),
+                output_field=BooleanField()
+            )
+        )
+        .order_by("-created_at")[:50]
+    )
+
+    result = []
+
+    for log in logs:
+        base = {
+            "id": log.id,
+            "status": log.status,
+            "worksession_name": log.worksession.name,
+            "source": log.source,
+            "created_at": log.created_at,
+            "is_read": log.is_read,
+        }
+
+        if log.source == VideoLog.SourceChoices.MANUAL:
+            base.update({
+                "compliance_id": log.compliance.id if log.compliance else None,
+                "compliance_category": log.compliance.category if log.compliance else None,
+            })
+
+        elif log.source == VideoLog.SourceChoices.AUTO:
+            base.update({
+                "risk_type_name": log.risk_type.name if log.risk_type else None
+            })
+
+        result.append(base)
+
+    return Response(result)
