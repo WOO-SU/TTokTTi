@@ -130,6 +130,7 @@ const sidebarItems = [
   { label: '안전 장비 점검', icon: '🛡️', path: '/safety' },
   { label: '위험성 평가', icon: '👷', path: '/risk' },
   { label: '보고서 작성', icon: '✏️', path: '/report' },
+  { label: '알림 로그 확인', icon: '🔔', path: '/alert-logs' },
 ];
 
 const POLL_INTERVAL = 15_000;
