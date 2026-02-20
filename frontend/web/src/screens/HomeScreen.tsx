@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../api/client';
@@ -7,17 +7,21 @@ import ladderCharImg from '../assets/ladder-character.png';
 
 // ── Types ──
 
-type WorkSiteCard = {
+type WorkerStatus = {
+  employee_id: number;
+  name: string;
+  equipment_check: boolean;
+};
+
+type WorkSessionCard = {
   id: number;
-  siteName: string;
-  startTime: string;
-  location: string;
-  members: { id: number; name: string }[];
-  workStatus: '작업 전' | '작업 중' | '작업 끝';
-  equipmentCheck: { memberId: number; name: string; complied: boolean }[];
-  riskAssessmentDone: boolean;
-  reportDone: boolean;
-  reportId?: number;
+  name: string;
+  starts_at: string;
+  ends_at: string | null;
+  status: 'READY' | 'IN_PROGRESS' | 'DONE';
+  workers_detail: WorkerStatus[];
+  risk_assessment: string;
+  report: boolean;
 };
 
 type VideoAlert = {
@@ -29,79 +33,7 @@ type VideoAlert = {
   created_at: string;
 };
 
-// ── Mock Data ──
-
-const workSiteCards: WorkSiteCard[] = [
-  {
-    id: 1,
-    siteName: '봉천동 작업공간',
-    startTime: '08:30',
-    location: '봉천동',
-    members: [{ id: 1, name: '송영민' }, { id: 2, name: '임정원' }],
-    workStatus: '작업 전',
-    equipmentCheck: [
-      { memberId: 1, name: '송영민', complied: true },
-      { memberId: 2, name: '임정원', complied: false },
-    ],
-    riskAssessmentDone: true,
-    reportDone: false,
-  },
-  {
-    id: 2,
-    siteName: '신대방동 작업공간',
-    startTime: '08:30',
-    location: '신대방동',
-    members: [{ id: 3, name: '김태호' }, { id: 4, name: '박지수' }],
-    workStatus: '작업 중',
-    equipmentCheck: [
-      { memberId: 3, name: '김태호', complied: true },
-      { memberId: 4, name: '박지수', complied: true },
-    ],
-    riskAssessmentDone: false,
-    reportDone: false,
-  },
-  {
-    id: 3,
-    siteName: '신림동 작업공간',
-    startTime: '08:50',
-    location: '신림동',
-    members: [{ id: 5, name: '이준혁' }, { id: 6, name: '최서연' }],
-    workStatus: '작업 중',
-    equipmentCheck: [
-      { memberId: 5, name: '이준혁', complied: false },
-      { memberId: 6, name: '최서연', complied: false },
-    ],
-    riskAssessmentDone: false,
-    reportDone: false,
-  },
-  {
-    id: 4,
-    siteName: '보라매동 작업공간',
-    startTime: '09:10',
-    location: '보라매동',
-    members: [{ id: 7, name: '우수연' }, { id: 8, name: '원인영' }],
-    workStatus: '작업 끝',
-    equipmentCheck: [
-      { memberId: 7, name: '우수연', complied: true },
-      { memberId: 8, name: '원인영', complied: true },
-    ],
-    riskAssessmentDone: true,
-    reportDone: true,
-    reportId: 1,
-  },
-];
-
-const employeeNameMap: Record<number, string> = {};
-workSiteCards.forEach(site => {
-  site.members.forEach(m => { employeeNameMap[m.id] = m.name; });
-});
-
-function getSiteForEmployee(empId: number): string | null {
-  for (const site of workSiteCards) {
-    if (site.members.some(m => m.id === empId)) return site.siteName;
-  }
-  return null;
-}
+// ── Utils ──
 
 function getRiskType(alert: VideoAlert): string {
   return alert.camera_type === 'BODY' ? '개인 안전 위험' : '작업 구역 위험';
@@ -131,9 +63,15 @@ function persistReadAlertIds(ids: Set<number>) {
 }
 
 const workStatusColors: Record<string, { bg: string; text: string }> = {
-  '작업 전': { bg: '#F0F1F3', text: '#71727A' },
-  '작업 중': { bg: '#E7F4E8', text: '#298A3E' },
-  '작업 끝': { bg: '#EAF2FF', text: '#006FFD' },
+  'READY': { bg: '#F0F1F3', text: '#71727A' },
+  'IN_PROGRESS': { bg: '#E7F4E8', text: '#298A3E' },
+  'DONE': { bg: '#EAF2FF', text: '#006FFD' },
+};
+
+const statusTextMap: Record<string, string> = {
+  'READY': '작업 전',
+  'IN_PROGRESS': '작업 중',
+  'DONE': '작업 끝',
 };
 
 function formatAlertTime(isoStr: string): string {
@@ -144,19 +82,28 @@ function formatAlertTime(isoStr: string): string {
   return `${h}:${m}:${s}`;
 }
 
+function formatSessionTime(isoStr: string): string {
+  const d = new Date(isoStr);
+  const h = String(d.getHours()).padStart(2, '0');
+  const m = String(d.getMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
+}
+
 // ── Alert Detail Modal ──
 
 function AlertDetailModal({
   alert,
   onClose,
   onMarkRead,
+  empName,
+  siteName,
 }: {
   alert: VideoAlert;
   onClose: () => void;
   onMarkRead: (id: number) => void;
+  empName: string;
+  siteName: string;
 }) {
-  const empName = employeeNameMap[alert.employee] ?? `직원 #${alert.employee}`;
-  const siteName = getSiteForEmployee(alert.employee) ?? '알 수 없는 현장';
   const riskType = getRiskType(alert);
 
   useEffect(() => {
@@ -226,14 +173,16 @@ function WorkSiteCardComponent({
   onCardClick,
   onReportClick,
 }: {
-  card: WorkSiteCard;
+  card: WorkSessionCard;
   isHovered: boolean;
   onHoverChange: (hov: boolean) => void;
   onMemberClick: (id: number, siteName: string) => void;
-  onCardClick: (card: WorkSiteCard) => void;
-  onReportClick: (card: WorkSiteCard, e: React.MouseEvent) => void;
+  onCardClick: (card: WorkSessionCard) => void;
+  onReportClick: (card: WorkSessionCard, e: React.MouseEvent) => void;
 }) {
-  const sc = workStatusColors[card.workStatus] ?? workStatusColors['작업 전'];
+  const sc = workStatusColors[card.status] ?? workStatusColors['READY'];
+  const statusText = statusTextMap[card.status] ?? '작업 전';
+  const riskAssessmentDone = card.risk_assessment !== 'PENDING';
 
   return (
     <div
@@ -254,23 +203,23 @@ function WorkSiteCardComponent({
       {/* Always-visible info */}
       <div style={styles.cardInfoArea}>
         <div style={styles.cardInfoTop}>
-          <span style={styles.cardSiteName}>{card.siteName}</span>
+          <span style={styles.cardSiteName}>{card.name}</span>
           <span style={{ ...styles.workStatusBadge, backgroundColor: sc.bg, color: sc.text }}>
-            {card.workStatus}
+            {statusText}
           </span>
         </div>
         <div style={styles.cardMeta}>
           <span style={{ fontSize: 13 }}>⏰</span>
-          <span style={styles.cardMetaText}>작업 시작 {card.startTime}</span>
+          <span style={styles.cardMetaText}>작업 시작 {formatSessionTime(card.starts_at)}</span>
         </div>
         <div style={styles.cardMembers}>
-          {card.members.map((m, i) => (
-            <React.Fragment key={m.id}>
+          {card.workers_detail.map((m, i) => (
+            <React.Fragment key={m.employee_id}>
               {i > 0 && <span style={styles.memberSep}>, </span>}
               <button
                 type="button"
                 style={styles.memberBtn}
-                onClick={e => { e.stopPropagation(); onMemberClick(m.id, card.siteName); }}>
+                onClick={e => { e.stopPropagation(); onMemberClick(m.employee_id, card.name); }}>
                 {m.name}
               </button>
             </React.Fragment>
@@ -297,11 +246,11 @@ function WorkSiteCardComponent({
           <div style={styles.expandRow}>
             <span style={styles.expandLabel}>🦺 장비 점검</span>
             <div style={styles.expandEquipRow}>
-              {card.equipmentCheck.map(ec => (
-                <span key={ec.memberId} style={styles.expandEquipItem}>
+              {card.workers_detail.map(ec => (
+                <span key={ec.employee_id} style={styles.expandEquipItem}>
                   {ec.name}:&nbsp;
-                  <span style={{ color: ec.complied ? '#22A06B' : '#D32F2F', fontWeight: 700 }}>
-                    {ec.complied ? 'O' : 'X'}
+                  <span style={{ color: ec.equipment_check ? '#22A06B' : '#D32F2F', fontWeight: 700 }}>
+                    {ec.equipment_check ? 'O' : 'X'}
                   </span>
                 </span>
               ))}
@@ -315,9 +264,9 @@ function WorkSiteCardComponent({
               fontFamily: 'Inter, sans-serif',
               fontWeight: 600,
               fontSize: 12,
-              color: card.riskAssessmentDone ? '#22A06B' : '#8F9098',
+              color: riskAssessmentDone ? '#22A06B' : '#8F9098',
             }}>
-              {card.riskAssessmentDone ? '완료' : '미완료'}
+              {riskAssessmentDone ? '완료' : '미완료'}
             </span>
           </div>
 
@@ -328,11 +277,11 @@ function WorkSiteCardComponent({
               type="button"
               style={{
                 ...styles.expandReportBtn,
-                color: card.reportDone ? '#006FFD' : '#8F9098',
-                borderColor: card.reportDone ? '#006FFD' : '#C5C6CC',
+                color: card.report ? '#006FFD' : '#8F9098',
+                borderColor: card.report ? '#006FFD' : '#C5C6CC',
               }}
               onClick={e => { e.stopPropagation(); onReportClick(card, e); }}>
-              {card.reportDone ? '완료 · 보기' : '미완료 · 작성'}
+              {card.report ? '완료 · 보기' : '미완료 · 작성'}
             </button>
           </div>
         </div>
@@ -347,13 +296,15 @@ function AlertRowComponent({
   alert,
   isRead,
   onClick,
+  empName,
+  siteName,
 }: {
   alert: VideoAlert;
   isRead: boolean;
   onClick: () => void;
+  empName: string;
+  siteName: string;
 }) {
-  const empName = employeeNameMap[alert.employee] ?? `직원 #${alert.employee}`;
-  const siteName = getSiteForEmployee(alert.employee) ?? '알 수 없음';
   const riskType = getRiskType(alert);
 
   return (
@@ -388,8 +339,25 @@ export default function HomeScreen() {
   const [selectedAlert, setSelectedAlert] = useState<VideoAlert | null>(null);
 
   const [alerts, setAlerts] = useState<VideoAlert[]>([]);
+  const [workSessions, setWorkSessions] = useState<WorkSessionCard[]>([]);
   const [readIds, setReadIds] = useState<Set<number>>(getReadAlertIds);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Dynamically compute employee names based on backend worksession detail
+  const employeeNameMap = useMemo(() => {
+    const map: Record<number, string> = {};
+    workSessions.forEach(session => {
+      session.workers_detail.forEach(w => { map[w.employee_id] = w.name; });
+    });
+    return map;
+  }, [workSessions]);
+
+  const getSiteForEmployee = useCallback((empId: number) => {
+    for (const session of workSessions) {
+      if (session.workers_detail.some(w => w.employee_id === empId)) return session.name;
+    }
+    return null;
+  }, [workSessions]);
 
   const fetchAlerts = useCallback(async () => {
     try {
@@ -407,11 +375,28 @@ export default function HomeScreen() {
     } catch { /* ignore */ }
   }, []);
 
+  const fetchWorkSessions = useCallback(async () => {
+    try {
+      // Endpoint aligned to urls.py and views.py logic
+      const res = await apiFetch('/worksession/admin/today/');
+      if (res.ok) {
+        const json = await res.json();
+        if (Array.isArray(json)) {
+          setWorkSessions(json);
+        }
+      }
+    } catch { /* ignore */ }
+  }, []);
+
   useEffect(() => {
     fetchAlerts();
-    pollingRef.current = setInterval(fetchAlerts, POLL_INTERVAL);
+    fetchWorkSessions();
+    pollingRef.current = setInterval(() => {
+      fetchAlerts();
+      fetchWorkSessions();
+    }, POLL_INTERVAL);
     return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
-  }, [fetchAlerts]);
+  }, [fetchAlerts, fetchWorkSessions]);
 
   const unreadCount = alerts.filter(a => !readIds.has(a.id)).length;
 
@@ -434,14 +419,14 @@ export default function HomeScreen() {
     navigate('/login');
   };
 
-  const handleCardClick = (card: WorkSiteCard) => {
+  const handleCardClick = (card: WorkSessionCard) => {
     navigate(`/worksession/${card.id}`, { state: { card } });
   };
 
-  const handleReportClick = (card: WorkSiteCard, e: React.MouseEvent) => {
+  const handleReportClick = (card: WorkSessionCard, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (card.reportDone && card.reportId) {
-      navigate(`/report/${card.reportId}`);
+    if (card.report) {
+      navigate(`/report/${card.id}`);
     } else {
       navigate('/report');
     }
@@ -513,11 +498,11 @@ export default function HomeScreen() {
 
           <div style={styles.sectionHeader}>
             <span style={styles.sectionTitle}>오늘의 작업 현장</span>
-            <span style={styles.sectionBadge}>{workSiteCards.length}</span>
+            <span style={styles.sectionBadge}>{workSessions.length}</span>
           </div>
 
           <div style={styles.siteGrid}>
-            {workSiteCards.map(card => (
+            {workSessions.map(card => (
               <WorkSiteCardComponent
                 key={card.id}
                 card={card}
@@ -552,6 +537,8 @@ export default function HomeScreen() {
                   alert={alert}
                   isRead={readIds.has(alert.id)}
                   onClick={() => handleAlertClick(alert)}
+                  empName={employeeNameMap[alert.employee] ?? `직원 #${alert.employee}`}
+                  siteName={getSiteForEmployee(alert.employee) ?? '알 수 없음'}
                 />
               ))
             )}
@@ -565,6 +552,8 @@ export default function HomeScreen() {
           alert={selectedAlert}
           onClose={() => setSelectedAlert(null)}
           onMarkRead={markAsRead}
+          empName={employeeNameMap[selectedAlert.employee] ?? `직원 #${selectedAlert.employee}`}
+          siteName={getSiteForEmployee(selectedAlert.employee) ?? '알 수 없는 현장'}
         />
       )}
     </div>
