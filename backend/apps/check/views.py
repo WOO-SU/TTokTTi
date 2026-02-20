@@ -311,19 +311,38 @@ def check_pass(request, worksession_id):
 
         compliances = compliances.filter(target=category)
 
-    if not compliances.exists():
-        return Response(
-            {
-                "ok": True,
-                "passed": False,
-                "detail": "No compliance records found"
-            },
-            status=200
-        )
+        if not compliances.exists():
+            return Response(
+                {
+                    "ok": True,
+                    "passed": False,
+                    "detail": "No compliance records found"
+                },
+                status=200
+            )
 
-    all_passed = not compliances.filter(is_complied=False).exists() # 명시적으로 세개 카테고리 패스 확인해야 함
+        passed = not compliances.filter(is_complied=False).exists()
+
+        return Response({
+            "ok": True,
+            "passed": passed
+        })
+
+    required_categories = Compliance.CategoryChoices.values 
+
+    passed = True
+    for cat in required_categories:
+        cat_compliances = compliances.filter(target=cat)
+
+        if not cat_compliances.exists():
+            passed = False
+            break
+
+        if cat_compliances.filter(is_complied=False).exists():
+            passed = False
+            break
 
     return Response({
         "ok": True,
-        "passed": all_passed
+        "passed": passed
     })

@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.utils import timezone
 from django.db import models
-from django.db.models import Prefetch, OuterRef, Exists, Value, Case, When, Subquery, IntegerField
+from django.db.models import Prefetch, OuterRef, Exists, Value, Case, When, Subquery, IntegerField, Count
 from django.db.models.functions import Coalesce
 
 from rest_framework.decorators import api_view, permission_classes
