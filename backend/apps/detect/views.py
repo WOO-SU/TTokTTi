@@ -179,7 +179,7 @@ def check_logs(request):
                 output_field=BooleanField()
             )
         )
-        .order_by("-created_at")
+        .order_by("-created_at")[:50]
     )
 
     result = []
