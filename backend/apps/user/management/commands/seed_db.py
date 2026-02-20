@@ -11,7 +11,7 @@ from apps.user.models import User
 from apps.worksession.models import Worksite, WorkSession, WorkSessionMember
 from apps.detect.models import RiskType, VideoLog
 from apps.check.models import Compliance
-from apps.risk.models import RiskAssessment, RiskAssessmentImage, Risk Report, WorkerRecommendation
+from apps.risk.models import RiskAssessment, RiskAssessmentImage, RiskReport, WorkerRecommendation
 
 class Command(BaseCommand):
     help = 'Idempotently seeds the database with a large volume of mock data for testing.'

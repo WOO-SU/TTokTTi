@@ -33,6 +33,7 @@ frontend/mobile/node_modules/
 .expo/
 *.log
 .metro/
+**/.vite
 
 # Security (절대 올라가면 안 되는 파일)
 .env
