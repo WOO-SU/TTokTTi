@@ -53,7 +53,7 @@ export default function HomeScreen() {
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={[styles.scrollContent, {paddingBottom: insets.bottom + 24}]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 24 }]}
         bounces={false}
         showsVerticalScrollIndicator={false}>
         {/* Header */}
@@ -87,7 +87,7 @@ export default function HomeScreen() {
         <TouchableOpacity
           style={styles.bannerSection}
           activeOpacity={0.8}
-          onPress={() => navigation.navigate('RiskAssessment')}>
+          onPress={() => navigation.navigate('RiskAssessment', { worksession_id })}>
           <View style={styles.bannerCard}>
             <Image
               source={riskAssessmentImage}

@@ -1,23 +1,22 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  Image,
   StatusBar,
-  ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
 import type { RootStackParamList } from '../../App';
+import { checkLatestRisk } from '../api/risk';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'RiskAssessment'>;
+  route: RouteProp<RootStackParamList, 'RiskAssessment'>;
 };
-
-const cameraImage = require('../assets/camera.png');
-const resultImage = require('../assets/result.png');
 
 /* ──────── Icon Components ──────── */
 
@@ -32,8 +31,31 @@ function BackArrowIcon() {
 
 /* ──────── Main Component ──────── */
 
-export default function RiskAssessmentScreen({ navigation }: Props) {
+export default function RiskAssessmentScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
+  const { worksession_id } = route.params;
+
+  useEffect(() => {
+    async function checkAndNavigate() {
+      try {
+        const result = await checkLatestRisk(worksession_id);
+        if (result.exists && result.assessment_id) {
+          navigation.replace('RiskResult', {
+            assessment_id: result.assessment_id,
+            worksession_id,
+          });
+        } else {
+          navigation.replace('RiskCheck', { worksession_id });
+        }
+      } catch (err) {
+        console.error('[RiskAssessment] checkLatestRisk 실패:', err);
+        // 에러 시 촬영 화면으로 이동
+        navigation.replace('RiskCheck', { worksession_id });
+      }
+    }
+
+    checkAndNavigate();
+  }, [worksession_id, navigation]);
 
   return (
     <View style={styles.container}>
@@ -49,42 +71,11 @@ export default function RiskAssessmentScreen({ navigation }: Props) {
         <Text style={styles.pageTitle}>위험성 평가</Text>
       </View>
 
-      {/* Content */}
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={[styles.scrollContent, {paddingBottom: insets.bottom + 24}]}
-        bounces={false}
-        showsVerticalScrollIndicator={false}>
-        {/* Banner 1: 촬영하기 */}
-        <TouchableOpacity
-          style={styles.bannerSection}
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate('RiskCheck')}>
-          <View style={styles.bannerCard}>
-            <Image
-              source={cameraImage}
-              style={styles.bannerImage1}
-              resizeMode="contain"
-            />
-            <Text style={styles.bannerText}>촬영하기</Text>
-          </View>
-        </TouchableOpacity>
-
-        {/* Banner 2: 결과 */}
-        <TouchableOpacity
-          style={styles.bannerSection}
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate('RiskResult')}>
-          <View style={styles.bannerCard}>
-            <Image
-              source={resultImage}
-              style={styles.bannerImage2}
-              resizeMode="contain"
-            />
-            <Text style={styles.bannerText}>결과</Text>
-          </View>
-        </TouchableOpacity>
-      </ScrollView>
+      {/* 로딩 */}
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#006FFD" />
+        <Text style={styles.loadingText}>보고서를 확인 중입니다...</Text>
+      </View>
     </View>
   );
 }
@@ -123,8 +114,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
-
-  /* Nav Bar */
   navBar: {
     height: 64,
     flexDirection: 'row',
@@ -145,53 +134,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#1F2024',
   },
-
-  /* Content */
-  scrollContent: {
-    flexGrow: 1,
-    gap: 15,
-    paddingHorizontal: 12,
-    paddingTop: 24,
-    paddingBottom: 24,
-  },
-
-  /* Banner */
-  bannerSection: {},
-  bannerCard: {
-    width: '100%',
-    height: 214,
-    borderRadius: 50,
-    borderWidth: 5,
-    borderColor: '#EAF2FF',
-    flexDirection: 'row',
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    overflow: 'hidden',
-    boxShadow: [
-      {
-        offsetX: 0,
-        offsetY: 4,
-        blurRadius: 4,
-        spreadDistance: 0,
-        color: 'rgba(0, 0, 0, 0.25)',
-        outset: true,
-      },
-    ],
+    gap: 16,
   },
-  bannerImage1: {
-    width: 206,
-    height: 206,
-  },
-  bannerImage2: {
-    width: 207,
-    height: 207,
-  },
-  bannerText: {
+  loadingText: {
     fontFamily: 'Inter',
-    fontWeight: '400',
-    fontSize: 20,
-    color: '#000000',
-    lineHeight: 24,
-    flexShrink: 1,
+    fontSize: 14,
+    color: '#71727A',
   },
 });

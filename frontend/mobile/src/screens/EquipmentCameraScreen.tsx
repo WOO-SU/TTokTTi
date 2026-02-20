@@ -18,12 +18,15 @@ import {
 } from 'react-native-vision-camera';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
+import { useIsFocused } from '@react-navigation/native';
 import type { RootStackParamList } from '../../App';
+import { useWorkSession } from '../context/WorkSessionContext';
 import {
   getSasToken,
   uploadToBlob,
   requestDetection,
   fetchCheckUpdate,
+  requestManualCheck,
 } from '../api/equipment';
 
 type Props = {
@@ -84,6 +87,7 @@ function LargeXIcon() {
 export default function EquipmentCameraScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { title, worksession_id } = route.params;
+  const { markItemAsCompleted } = useWorkSession();
   const [photoPath, setPhotoPath] = useState<string | null>(null);
   const [screenState, setScreenState] = useState<ScreenState>('idle');
 
@@ -91,6 +95,9 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const device = useCameraDevice('back');
   const { hasPermission, requestPermission } = useCameraPermission();
+  const isFocused = useIsFocused();
+  const isCameraReadyRef = useRef(false);
+  const complianceIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!hasPermission) {
@@ -141,6 +148,10 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
 
   const handleCapture = useCallback(async () => {
     if (!cameraRef.current) { return; }
+    if (!isCameraReadyRef.current) {
+      console.warn('Camera not ready yet');
+      return;
+    }
 
     try {
       // 1. 사진 촬영
@@ -156,6 +167,7 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
       // 3. 탐지 요청 (DB에 Compliance 레코드 생성)
       setScreenState('analyzing');
       const complianceId = await requestDetection(blob_name, title, worksession_id);
+      complianceIdRef.current = complianceId;
 
       // 4. 폴링 시작
       startPolling(complianceId);
@@ -176,8 +188,24 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
   }, []);
 
   const handleContinue = () => {
-    navigation.navigate('SafetyEquipmentCheck', { worksession_id, completedTitle: title });
+    markItemAsCompleted(title);
+    navigation.goBack();
   };
+
+  const handleManualRequest = useCallback(async () => {
+    const complianceId = complianceIdRef.current;
+    if (!complianceId) {
+      console.warn('No compliance ID available for manual request');
+      return;
+    }
+    try {
+      await requestManualCheck(worksession_id, complianceId);
+      console.log('[ManualRequest] 수동 점검 요청 완료');
+      navigation.goBack();
+    } catch (err) {
+      console.error('[ManualRequest] 요청 실패:', err);
+    }
+  }, [worksession_id, navigation]);
 
   const isProcessing = screenState === 'uploading' || screenState === 'analyzing';
 
@@ -215,7 +243,16 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
             {screenState === 'success' && (
               <View style={styles.resultCard}>
                 <LargeCheckIcon />
-                <Text style={styles.resultText}>다음 단계로 이동</Text>
+                <Text style={styles.failedText}>다음 단계로 이동</Text>
+
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={[styles.retakeButton, { width: 250 }]} // Full width button
+                    activeOpacity={0.8}
+                    onPress={handleContinue}>
+                    <Text style={styles.retakeButtonText}>확인</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
 
@@ -223,13 +260,23 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
             {screenState === 'failed' && (
               <View style={styles.resultCard}>
                 <LargeXIcon />
-                <Text style={styles.failedText}>재촬영 하세요</Text>
-                <TouchableOpacity
-                  style={styles.retakeButton}
-                  activeOpacity={0.8}
-                  onPress={handleRetake}>
-                  <Text style={styles.retakeButtonText}>다시 촬영</Text>
-                </TouchableOpacity>
+                <Text style={styles.failedText}>다시 촬영해 주세요.</Text>
+
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={styles.errorButton}
+                    activeOpacity={0.8}
+                    onPress={handleManualRequest}>
+                    <Text style={styles.errorButtonText}>오류 전송</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.retakeButton}
+                    activeOpacity={0.8}
+                    onPress={handleRetake}>
+                    <Text style={styles.retakeButtonText}>재촬영</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
           </>
@@ -238,8 +285,9 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
             ref={cameraRef}
             style={StyleSheet.absoluteFill}
             device={device}
-            isActive={screenState === 'idle' && !photoPath}
+            isActive={isFocused && screenState === 'idle' && !photoPath}
             photo={true}
+            onInitialized={() => { isCameraReadyRef.current = true; }}
           />
         ) : (
           <Text style={styles.noCameraText}>
@@ -256,20 +304,6 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
             <CameraIcon />
           </TouchableOpacity>
         )}
-      </View>
-
-      {/* Continue Button */}
-      <View style={[styles.continueSection, { paddingBottom: insets.bottom + 16 }]}>
-        <TouchableOpacity
-          style={[
-            styles.continueButton,
-            screenState !== 'success' && { opacity: 0.4 },
-          ]}
-          activeOpacity={0.8}
-          disabled={screenState !== 'success'}
-          onPress={handleContinue}>
-          <Text style={styles.continueText}>Continue</Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -362,7 +396,7 @@ const iconStyles = StyleSheet.create({
   xLine1: {
     width: 80,
     height: 8,
-    backgroundColor: '#FF3B30',
+    backgroundColor: '#006FFD', // Changed to Blue
     borderRadius: 4,
     position: 'absolute',
     transform: [{ rotate: '45deg' }],
@@ -370,7 +404,7 @@ const iconStyles = StyleSheet.create({
   xLine2: {
     width: 80,
     height: 8,
-    backgroundColor: '#FF3B30',
+    backgroundColor: '#006FFD', // Changed to Blue
     borderRadius: 4,
     position: 'absolute',
     transform: [{ rotate: '-45deg' }],
@@ -422,38 +456,61 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   resultCard: {
-    width: 229,
-    height: 169,
+    width: 300,            // Increased width for button row
+    paddingVertical: 32,   // Added vertical padding
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
+    gap: 24,               // Increased gap
     zIndex: 1,
   },
   resultText: {
     fontFamily: 'Roboto',
-    fontWeight: '400',
+    fontWeight: '700',
     fontSize: 20,
-    color: '#000000',
+    color: '#1F2024',
   },
   failedText: {
     fontFamily: 'Roboto',
-    fontWeight: '400',
+    fontWeight: '700',     // Bold
     fontSize: 20,
-    color: '#FF3B30',
+    color: '#1F2024',      // Black text
+    textAlign: 'center',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  errorButton: {
+    width: 120,
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#006FFD',
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorButtonText: {
+    fontFamily: 'Roboto',
+    fontWeight: '600',
+    fontSize: 16,
+    color: '#006FFD',
   },
   retakeButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    backgroundColor: '#FF3B30',
-    borderRadius: 10,
-    marginTop: 4,
+    width: 120,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#006FFD',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   retakeButtonText: {
     fontFamily: 'Roboto',
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: 16,
     color: '#FFFFFF',
   },
   captureButton: {

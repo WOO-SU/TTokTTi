@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,15 +6,29 @@ import {
   StyleSheet,
   StatusBar,
   ScrollView,
-  Image,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
 import type { RootStackParamList } from '../../App';
-import { useRiskPhotos } from '../context/RiskPhotoContext';
+import { fetchWorkerReport, type WorkerReport } from '../api/risk';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'RiskResult'>;
+  route: RouteProp<RootStackParamList, 'RiskResult'>;
+};
+
+const LEVEL_COLOR: Record<string, string> = {
+  HIGH: '#E53E3E',
+  MEDIUM: '#DD6B20',
+  LOW: '#38A169',
+};
+
+const LEVEL_LABEL: Record<string, string> = {
+  HIGH: '높음',
+  MEDIUM: '보통',
+  LOW: '낮음',
 };
 
 /* ──────── Icon Components ──────── */
@@ -28,36 +42,33 @@ function BackArrowIcon() {
   );
 }
 
-function CameraIcon() {
-  return (
-    <View style={iconStyles.cameraContainer}>
-      <View style={iconStyles.cameraBody}>
-        <View style={iconStyles.cameraLens} />
-      </View>
-      <View style={iconStyles.cameraFlash} />
-    </View>
-  );
-}
-
-function WarningIcon() {
-  return (
-    <View style={iconStyles.warningContainer}>
-      <View style={iconStyles.warningTriangle} />
-      <View style={iconStyles.warningExclamation}>
-        <View style={iconStyles.warningLine} />
-        <View style={iconStyles.warningDot} />
-      </View>
-    </View>
-  );
-}
-
 /* ──────── Main Component ──────── */
 
-export default function RiskResultScreen({ navigation }: Props) {
+export default function RiskResultScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
-  const { photos } = useRiskPhotos();
+  const { assessment_id, worksession_id } = route.params;
+  const [report, setReport] = useState<WorkerReport | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const hasPhotos = photos.length > 0;
+  useEffect(() => {
+    async function loadReport() {
+      try {
+        const data = await fetchWorkerReport(assessment_id);
+        setReport(data);
+      } catch (err) {
+        console.error('[RiskResult] 보고서 조회 실패:', err);
+        setError('보고서를 불러오지 못했습니다.');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadReport();
+  }, [assessment_id]);
+
+  const handleRegenerate = () => {
+    navigation.replace('RiskCheck', { worksession_id });
+  };
 
   return (
     <View style={styles.container}>
@@ -70,63 +81,82 @@ export default function RiskResultScreen({ navigation }: Props) {
           onPress={() => navigation.goBack()}>
           <BackArrowIcon />
         </TouchableOpacity>
-        <Text style={styles.pageTitle}>위험성 평가</Text>
+        <Text style={styles.pageTitle}>위험성 평가 결과</Text>
       </View>
 
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: insets.bottom + 24 },
-        ]}
-        showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <Text style={styles.headerTitle}>공사현장 안전 분석</Text>
-        <Text style={styles.headerSubtitle}>
-          공사 현장 사진을 업로드하면 AI가 위험 요소를 분석합니다
-        </Text>
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#006FFD" />
+          <Text style={styles.loadingText}>보고서를 불러오는 중...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={handleRegenerate}>
+            <Text style={styles.retryButtonText}>다시 시도</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: insets.bottom + 24 },
+          ]}
+          showsVerticalScrollIndicator={false}>
 
-        {/* 현장 사진 Section */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>현장 사진</Text>
-          {hasPhotos ? (
-            <View style={styles.photoGrid}>
-              {photos.map(photo => (
-                <View key={photo.title} style={styles.photoItem}>
-                  <Image
-                    source={{ uri: photo.uri }}
-                    style={styles.photoImage}
-                    resizeMode="cover"
-                  />
-                  <Text style={styles.photoLabel}>{photo.title}</Text>
+          {/* 요약 메시지 */}
+          {report?.short_message && (
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>요약</Text>
+              <Text style={styles.summaryText}>{report.short_message}</Text>
+            </View>
+          )}
+
+          {/* 위험 요소 */}
+          {report?.top_risks && report.top_risks.length > 0 && (
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>주요 위험 요소</Text>
+              {report.top_risks.map((risk, idx) => {
+                const gradeUpper = (risk.risk_grade ?? '').toUpperCase();
+                const color = LEVEL_COLOR[gradeUpper] ?? '#8F9098';
+                const label = LEVEL_LABEL[gradeUpper] ?? risk.risk_grade;
+                return (
+                  <View key={idx} style={styles.hazardRow}>
+                    <View style={[styles.levelBadge, { backgroundColor: color }]}>
+                      <Text style={styles.levelBadgeText}>{label}</Text>
+                    </View>
+                    <Text style={styles.hazardText}>
+                      {risk.title}{risk.expected_accident ? ` — ${risk.expected_accident}` : ''}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
+          {/* 즉시 조치사항 */}
+          {report?.immediate_actions && report.immediate_actions.length > 0 && (
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>즉시 조치사항</Text>
+              {report.immediate_actions.map((action: string, idx: number) => (
+                <View key={idx} style={styles.recRow}>
+                  <Text style={styles.recBullet}>•</Text>
+                  <Text style={styles.recText}>{action}</Text>
                 </View>
               ))}
             </View>
-          ) : (
-            <View style={styles.uploadArea}>
-              <CameraIcon />
-              <Text style={styles.uploadText}>등록된 사진이 없습니다.</Text>
-              <Text style={styles.uploadHint}>사진을 촬영해 주세요.</Text>
-            </View>
           )}
-        </View>
 
-        {/* 요청하기 Button */}
-        <TouchableOpacity style={styles.requestButton} activeOpacity={0.8}>
-          <Text style={styles.requestButtonText}>요청하기</Text>
-        </TouchableOpacity>
-
-        {/* 분석 결과 Section */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>분석 결과</Text>
-          <View style={styles.resultPlaceholder}>
-            <WarningIcon />
-            <Text style={styles.resultPlaceholderText}>
-              사진을 업로드하고 분석을 시작하세요
-            </Text>
-          </View>
-        </View>
-      </ScrollView>
+          {/* 재생성하기 */}
+          <TouchableOpacity
+            style={styles.regenerateButton}
+            activeOpacity={0.8}
+            onPress={handleRegenerate}>
+            <Text style={styles.regenerateButtonText}>재생성하기</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -156,74 +186,6 @@ const iconStyles = StyleSheet.create({
     position: 'absolute',
     transform: [{ rotate: '45deg' }, { translateY: 5.5 }],
   },
-  cameraContainer: {
-    width: 48,
-    height: 40,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-  },
-  cameraBody: {
-    width: 40,
-    height: 28,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: '#C5C6CC',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cameraLens: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    borderWidth: 2,
-    borderColor: '#C5C6CC',
-  },
-  cameraFlash: {
-    width: 14,
-    height: 8,
-    borderTopLeftRadius: 4,
-    borderTopRightRadius: 4,
-    borderWidth: 2,
-    borderBottomWidth: 0,
-    borderColor: '#C5C6CC',
-    position: 'absolute',
-    top: 0,
-  },
-  warningContainer: {
-    width: 48,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  warningTriangle: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 24,
-    borderRightWidth: 24,
-    borderBottomWidth: 40,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: '#E8E9F1',
-    borderRadius: 4,
-  },
-  warningExclamation: {
-    position: 'absolute',
-    alignItems: 'center',
-    bottom: 8,
-  },
-  warningLine: {
-    width: 3,
-    height: 14,
-    backgroundColor: '#8F9098',
-    borderRadius: 1.5,
-  },
-  warningDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#8F9098',
-    marginTop: 3,
-  },
 });
 
 /* ──────── Main Styles ──────── */
@@ -233,8 +195,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8F9FE',
   },
-
-  /* Nav Bar */
   navBar: {
     height: 64,
     flexDirection: 'row',
@@ -255,36 +215,45 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#1F2024',
   },
-
-  /* Content */
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+  },
+  loadingText: {
+    fontFamily: 'Inter',
+    fontSize: 14,
+    color: '#71727A',
+  },
+  errorText: {
+    fontFamily: 'Inter',
+    fontSize: 14,
+    color: '#E53E3E',
+    textAlign: 'center',
+  },
+  retryButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: '#006FFD',
+  },
+  retryButtonText: {
+    fontFamily: 'Roboto',
+    fontWeight: '500',
+    fontSize: 14,
+    color: '#FFFFFF',
+  },
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 24,
     gap: 20,
   },
-
-  /* Header */
-  headerTitle: {
-    fontFamily: 'Inter',
-    fontWeight: '700',
-    fontSize: 24,
-    color: '#1F2024',
-  },
-  headerSubtitle: {
-    fontFamily: 'Inter',
-    fontWeight: '400',
-    fontSize: 14,
-    color: '#71727A',
-    lineHeight: 20,
-    marginTop: -8,
-  },
-
-  /* Section Card */
   sectionCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 20,
-    gap: 16,
+    gap: 12,
     borderWidth: 1,
     borderColor: '#E8E9F1',
   },
@@ -294,80 +263,71 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1F2024',
   },
-
-  /* Photo Grid */
-  photoGrid: {
-    gap: 12,
-  },
-  photoItem: {
-    gap: 8,
-  },
-  photoImage: {
-    width: '100%',
-    height: 180,
-    borderRadius: 12,
-    backgroundColor: '#E8E9F1',
-  },
-  photoLabel: {
-    fontFamily: 'Inter',
-    fontWeight: '600',
-    fontSize: 14,
-    color: '#1F2024',
-  },
-
-  /* Upload Area */
-  uploadArea: {
-    borderWidth: 2,
-    borderColor: '#D4D6DD',
-    borderStyle: 'dashed',
-    borderRadius: 12,
-    paddingVertical: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  uploadText: {
-    fontFamily: 'Inter',
-    fontWeight: '500',
-    fontSize: 14,
-    color: '#71727A',
-    marginTop: 8,
-  },
-  uploadHint: {
+  summaryText: {
     fontFamily: 'Inter',
     fontWeight: '400',
-    fontSize: 12,
-    color: '#8F9098',
+    fontSize: 14,
+    color: '#3D3D3D',
+    lineHeight: 22,
   },
-
-  /* Request Button */
-  requestButton: {
+  hazardRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  levelBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    minWidth: 44,
+    alignItems: 'center',
+  },
+  levelBadgeText: {
+    fontFamily: 'Inter',
+    fontWeight: '600',
+    fontSize: 11,
+    color: '#FFFFFF',
+  },
+  hazardText: {
+    flex: 1,
+    fontFamily: 'Inter',
+    fontWeight: '400',
+    fontSize: 14,
+    color: '#3D3D3D',
+    lineHeight: 20,
+  },
+  recRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  recBullet: {
+    fontSize: 14,
+    color: '#006FFD',
+    lineHeight: 20,
+  },
+  recText: {
+    flex: 1,
+    fontFamily: 'Inter',
+    fontWeight: '400',
+    fontSize: 14,
+    color: '#3D3D3D',
+    lineHeight: 20,
+  },
+  regenerateButton: {
     width: '100%',
     height: 48,
     borderRadius: 10,
-    backgroundColor: '#0F62FE',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#006FFD',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  requestButtonText: {
+  regenerateButtonText: {
     fontFamily: 'Roboto',
     fontWeight: '500',
     fontSize: 16,
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
-  },
-
-  /* Result Placeholder */
-  resultPlaceholder: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-    gap: 16,
-  },
-  resultPlaceholderText: {
-    fontFamily: 'Inter',
-    fontWeight: '400',
-    fontSize: 14,
-    color: '#8F9098',
+    color: '#006FFD',
   },
 });

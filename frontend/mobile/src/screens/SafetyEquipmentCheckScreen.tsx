@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import type { RootStackParamList } from '../../App';
+import { useWorkSession } from '../context/WorkSessionContext';
 
 type Props = {
   navigation: NativeStackNavigationProp<
@@ -77,22 +78,15 @@ export default function SafetyEquipmentCheckScreen({
 }: Props) {
   const insets = useSafeAreaInsets();
   const { worksession_id } = route.params;
-  const [items, setItems] = useState<EquipmentItem[]>(INITIAL_ITEMS);
+  const { completedItems } = useWorkSession();
 
-  useEffect(() => {
-    const completedTitle = route.params?.completedTitle;
-    if (completedTitle) {
-      setItems(prev =>
-        prev.map(item =>
-          item.title === completedTitle ? { ...item, checked: true } : item,
-        ),
-      );
-    }
-  }, [route.params?.completedTitle]);
-
-  const rows = [];
-  for (let i = 0; i < items.length; i += 2) {
-    rows.push(items.slice(i, i + 2));
+  const rows: EquipmentItem[][] = [];
+  const displayItems = INITIAL_ITEMS.map(item => ({
+    ...item,
+    checked: completedItems.includes(item.title),
+  }));
+  for (let i = 0; i < displayItems.length; i += 2) {
+    rows.push(displayItems.slice(i, i + 2));
   }
 
   return (
@@ -122,12 +116,13 @@ export default function SafetyEquipmentCheckScreen({
                   key={item.id}
                   style={styles.equipmentCard}
                   activeOpacity={0.8}
-                  onPress={() =>
+                  onPress={() => {
+                    if (item.checked) return;
                     navigation.navigate('EquipmentCamera', {
                       title: item.title,
                       worksession_id,
-                    })
-                  }>
+                    });
+                  }}>
                   <View style={styles.cardBorder} />
                   <Image
                     source={item.image}
@@ -154,11 +149,7 @@ export default function SafetyEquipmentCheckScreen({
       </ScrollView>
 
       {/* 요청하기 Button */}
-      <View style={[styles.buttonSection, { paddingBottom: insets.bottom + 16 }]}>
-        <TouchableOpacity style={styles.requestButton} activeOpacity={0.8}>
-          <Text style={styles.requestButtonText}>요청하기</Text>
-        </TouchableOpacity>
-      </View>
+
     </View>
   );
 }
@@ -327,26 +318,4 @@ const styles = StyleSheet.create({
   },
 
   /* Button */
-  buttonSection: {
-    alignItems: 'flex-end',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-  },
-  requestButton: {
-    paddingHorizontal: 28,
-    height: 48,
-    borderRadius: 10,
-    backgroundColor: '#0F62FE',
-    borderWidth: 2,
-    borderColor: '#0F62FE',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  requestButtonText: {
-    fontFamily: 'Roboto',
-    fontWeight: '500',
-    fontSize: 16,
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
-  },
 });

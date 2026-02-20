@@ -21,6 +21,7 @@ import SettingScreen from './src/screens/SettingScreen';
 import EndWorkScreen from './src/screens/EndWorkScreen';
 import { AuthProvider } from './src/context/AuthContext';
 import { RiskPhotoProvider } from './src/context/RiskPhotoContext';
+import { WorkSessionProvider } from './src/context/WorkSessionContext';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -30,10 +31,10 @@ export type RootStackParamList = {
   Camera: { mode: 'all' | 'worker' };
   SafetyEquipmentCheck: { worksession_id: number; completedTitle?: string };
   EquipmentCamera: { title: string; worksession_id: number };
-  RiskAssessment: undefined;
-  RiskCheck: undefined;
-  RiskResult: undefined;
-  RiskCamera: { title: string };
+  RiskAssessment: { worksession_id: number };
+  RiskCheck: { worksession_id: number; assessmentId?: number; completedTitle?: string };
+  RiskResult: { assessment_id: number; worksession_id: number };
+  RiskCamera: { title: string; worksession_id: number; assessmentId?: number };
   EndWork: undefined;
   WorkMenu: { worksession_id: number };
 };
@@ -245,29 +246,31 @@ function MainTabs() {
 function App() {
   return (
     <AuthProvider>
-      <RiskPhotoProvider>
-        <SafeAreaProvider>
-          <NavigationContainer>
-            <Stack.Navigator
-              initialRouteName="Login"
-              screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="Login" component={LoginScreen} />
-              <Stack.Screen name="SignUp" component={SignUpScreen} />
-              <Stack.Screen name="Main" component={MainTabs} />
-              <Stack.Screen name="SelectMode" component={SelectModeScreen} />
-              <Stack.Screen name="Camera" component={CameraScreen} />
-              <Stack.Screen name="SafetyEquipmentCheck" component={SafetyEquipmentCheckScreen} />
-              <Stack.Screen name="EquipmentCamera" component={EquipmentCameraScreen} />
-              <Stack.Screen name="RiskAssessment" component={RiskAssessmentScreen} />
-              <Stack.Screen name="RiskCheck" component={RiskCheckScreen} />
-              <Stack.Screen name="RiskResult" component={RiskResultScreen} />
-              <Stack.Screen name="RiskCamera" component={RiskCameraScreen} />
-              <Stack.Screen name="EndWork" component={EndWorkScreen} />
-              <Stack.Screen name="WorkMenu" component={HomeScreen} />
-            </Stack.Navigator>
-          </NavigationContainer>
-        </SafeAreaProvider>
-      </RiskPhotoProvider>
+      <WorkSessionProvider>
+        <RiskPhotoProvider>
+          <SafeAreaProvider>
+            <NavigationContainer>
+              <Stack.Navigator
+                initialRouteName="Login"
+                screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="Login" component={LoginScreen} />
+                <Stack.Screen name="SignUp" component={SignUpScreen} />
+                <Stack.Screen name="Main" component={MainTabs} />
+                <Stack.Screen name="SelectMode" component={SelectModeScreen} />
+                <Stack.Screen name="Camera" component={CameraScreen} />
+                <Stack.Screen name="SafetyEquipmentCheck" component={SafetyEquipmentCheckScreen} />
+                <Stack.Screen name="EquipmentCamera" component={EquipmentCameraScreen} />
+                <Stack.Screen name="RiskAssessment" component={RiskAssessmentScreen} />
+                <Stack.Screen name="RiskCheck" component={RiskCheckScreen} />
+                <Stack.Screen name="RiskResult" component={RiskResultScreen} />
+                <Stack.Screen name="RiskCamera" component={RiskCameraScreen} />
+                <Stack.Screen name="EndWork" component={EndWorkScreen} />
+                <Stack.Screen name="WorkMenu" component={HomeScreen} />
+              </Stack.Navigator>
+            </NavigationContainer>
+          </SafeAreaProvider>
+        </RiskPhotoProvider>
+      </WorkSessionProvider>
     </AuthProvider>
   );
 }

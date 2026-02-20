@@ -89,3 +89,14 @@ export async function fetchCheckUpdate(
     isComplied: data.is_complied,
   };
 }
+
+/** 4단계: 수동 점검 요청 (근로자 → 관리자) */
+export async function requestManualCheck(
+  worksessionId: number,
+  complianceId: number,
+): Promise<void> {
+  await client.post('/check/request/', {
+    worksession_id: worksessionId,
+    compliance_id: complianceId,
+  });
+}

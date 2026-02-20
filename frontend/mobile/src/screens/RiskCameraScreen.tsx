@@ -6,6 +6,7 @@ import {
   StyleSheet,
   StatusBar,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -13,10 +14,12 @@ import {
   useCameraDevice,
   useCameraPermission,
 } from 'react-native-vision-camera';
+import { useIsFocused } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import type { RootStackParamList } from '../../App';
-import { useRiskPhotos } from '../context/RiskPhotoContext';
+import { getSasToken, uploadToBlob } from '../api/equipment';
+import { startRiskAssessment, uploadRiskPhoto } from '../api/risk';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'RiskCamera'>;
@@ -49,13 +52,15 @@ function CameraIcon() {
 
 export default function RiskCameraScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
-  const { title } = route.params;
-  const { addPhoto } = useRiskPhotos();
+  const { title, worksession_id, assessmentId } = route.params;
   const [photoPath, setPhotoPath] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const cameraRef = useRef<Camera>(null);
+  const isCameraReadyRef = useRef(false);
   const device = useCameraDevice('back');
   const { hasPermission, requestPermission } = useCameraPermission();
+  const isFocused = useIsFocused();
 
   useEffect(() => {
     if (!hasPermission) {
@@ -65,21 +70,52 @@ export default function RiskCameraScreen({ navigation, route }: Props) {
 
   const handleCapture = useCallback(async () => {
     if (!cameraRef.current) { return; }
-    const photo = await cameraRef.current.takePhoto();
-    const fileUri = `file://${photo.path}`;
-    setPhotoPath(fileUri);
+    if (!isCameraReadyRef.current) {
+      console.warn('Camera not ready yet');
+      return;
+    }
+    try {
+      const photo = await cameraRef.current.takePhoto();
+      setPhotoPath(`file://${photo.path}`);
+    } catch (err) {
+      console.error('[RiskCamera] 촬영 실패:', err);
+    }
   }, []);
 
   const handleRetake = useCallback(() => {
     setPhotoPath(null);
   }, []);
 
-  const handleConfirm = useCallback(() => {
-    if (photoPath) {
-      addPhoto(title, photoPath);
-      navigation.goBack();
+  const handleConfirm = useCallback(async () => {
+    if (!photoPath) { return; }
+    setIsUploading(true);
+    try {
+      // 1. blob 업로드
+      const { upload_url, blob_name } = await getSasToken();
+      await uploadToBlob(upload_url, photoPath);
+
+      // 2. 첫 사진이면 assessment 생성, 아니면 기존 ID 사용
+      let finalAssessmentId = assessmentId;
+      if (!finalAssessmentId) {
+        const res = await startRiskAssessment(worksession_id);
+        finalAssessmentId = res.assessment_id;
+      }
+
+      // 3. blob path DB 저장
+      await uploadRiskPhoto(finalAssessmentId, blob_name);
+
+      // 4. RiskCheck로 돌아감 — assessmentId 및 completedTitle 전달
+      navigation.navigate('RiskCheck', {
+        worksession_id,
+        assessmentId: finalAssessmentId,
+        completedTitle: title,
+      });
+    } catch (err) {
+      console.error('[RiskCamera] 업로드 실패:', err);
+    } finally {
+      setIsUploading(false);
     }
-  }, [photoPath, title, addPhoto, navigation]);
+  }, [photoPath, assessmentId, worksession_id, title, navigation]);
 
   return (
     <View style={styles.container}>
@@ -104,8 +140,9 @@ export default function RiskCameraScreen({ navigation, route }: Props) {
             ref={cameraRef}
             style={StyleSheet.absoluteFill}
             device={device}
-            isActive={true}
+            isActive={isFocused && !photoPath}
             photo={true}
+            onInitialized={() => { isCameraReadyRef.current = true; }}
           />
         ) : (
           <Text style={styles.noCameraText}>
@@ -131,14 +168,20 @@ export default function RiskCameraScreen({ navigation, route }: Props) {
             <TouchableOpacity
               style={styles.retakeButton}
               activeOpacity={0.8}
+              disabled={isUploading}
               onPress={handleRetake}>
               <Text style={styles.retakeButtonText}>다시 촬영</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.confirmButton}
               activeOpacity={0.8}
+              disabled={isUploading}
               onPress={handleConfirm}>
-              <Text style={styles.confirmButtonText}>사용하기</Text>
+              {isUploading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.confirmButtonText}>사용하기</Text>
+              )}
             </TouchableOpacity>
           </View>
         ) : (
@@ -271,6 +314,7 @@ const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: 'row',
     gap: 12,
+    width: '100%',
   },
   retakeButton: {
     flex: 1,
