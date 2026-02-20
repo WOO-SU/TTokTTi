@@ -1,78 +1,65 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../api/client';
 import logoImg from '../assets/logo.png';
-import ladderImg from '../assets/ladder.png';
-import envImg from '../assets/env.png';
-import boxImg from '../assets/box.png';
 import useUnreadAlertCount from '../hooks/useUnreadAlertCount';
 
 // ── Types ──
 
-type RiskCategory = 'ladder' | 'environment' | 'commbox';
+type RiskGrade = 'Low' | 'Medium' | 'High' | 'Critical';
 
-type UploadedImage = {
-  file: File;
-  preview: string;
-  blobName: string | null;
-  uploading: boolean;
-};
-
-type WorkerMessage = {
-  status: {
-    overall_grade: string;
-    work_permission: string;
-  };
-  alert_message: string;
-  main_risks: { type: string; what_can_happen: string }[];
-  action_checklist: string[];
-  guide_message: string;
+type Hazard = {
+  id: string;
+  title: string;
+  evidence_from_image: string;
+  expected_accident: string;
+  likelihood_L_1_5: number;
+  severity_S_1_5: number;
+  risk_R_1_25: number;
+  risk_grade: RiskGrade;
+  mitigations_before_work: string[];
+  residual_likelihood_L_1_5: number;
+  residual_severity_S_1_5: number;
+  residual_risk_R_1_25: number;
+  residual_risk_grade: RiskGrade;
 };
 
 type AdminReport = {
-  header: {
-    overall_grade: string;
-    overall_risk_score: number;
+  scene_summary: {
+    work_environment: string;
+    work_height_or_location: string;
+    observed_safety_facilities: string[];
+    needs_verification: string[];
+  };
+  hazards: Hazard[];
+  overall: {
+    overall_max_R: number;
+    overall_grade: RiskGrade;
     work_permission: string;
+    urgent_fix_before_work: string[];
   };
-  executive_summary: {
-    summary_text: string;
-    key_risks: { type: string; risk_grade: string; risk_score: number }[];
-  };
-  work_environment: {
-    environment: string;
-    height_or_location: string;
-    existing_safety_measures: string[];
-    items_requiring_verification: string[];
-  };
-  risk_details: {
-    risk_type: string;
-    risk_id: string;
-    evidence: string;
-    expected_accident: string;
-    risk_level: string;
-    risk_score: number;
-    required_actions_before_work: string[];
-    residual_risk_level: string;
-    residual_risk_score: number;
-  }[];
-  mandatory_actions_before_work: string[];
 };
 
-type AssessmentResult = {
-  assessmentId: number;
-  worker: {
-    message: WorkerMessage;
-    images: { order: number; blob_name: string }[];
-  } | null;
-  admin: {
-    report: AdminReport;
-    images: { order: number; blob_name: string }[];
-  } | null;
+type PhotoCategory = 'workspace' | 'ladder' | 'commbox';
+
+type WorkspacePhotos = {
+  workspace: string | null; // 작업 공간
+  ladder: string | null;    // 사다리
+  commbox: string | null;   // 통신함
 };
 
-type AssessPhase = 'idle' | 'uploading' | 'assessing' | 'result';
+type WorkspaceRisk = {
+  id: number;
+  siteName: string;
+  startTime: string;
+  workStatus: '작업 전' | '작업 중' | '작업 끝';
+  members: { id: number; name: string }[];
+  assessmentId: number | null;
+  photos: WorkspacePhotos;       // blob names
+  photoUrls: WorkspacePhotos;    // resolved SAS URLs
+  adminReport: AdminReport | null;
+};
 
 // ── Data ──
 
@@ -84,11 +71,17 @@ const sidebarItems = [
   { label: '보고서 작성', icon: '✏️', path: '/report' },
 ];
 
-const riskCategories: { key: RiskCategory; label: string; sublabel: string; img: string; description: string }[] = [
-  { key: 'ladder', label: '사다리', sublabel: 'Ladder', img: ladderImg, description: '사다리 설치 상태 및 안전성 평가' },
-  { key: 'environment', label: '주변환경', sublabel: 'Environment', img: envImg, description: '작업 현장 주변 환경 상태 평가' },
-  { key: 'commbox', label: '통신함 상태', sublabel: 'Comm. Box', img: boxImg, description: '통신함 설비 상태 및 안전 평가' },
-];
+const PHOTO_LABELS: Record<PhotoCategory, string> = {
+  workspace: '작업 공간',
+  ladder: '사다리',
+  commbox: '통신함',
+};
+
+const PHOTO_ICONS: Record<PhotoCategory, string> = {
+  workspace: '🏗️',
+  ladder: '🪜',
+  commbox: '📦',
+};
 
 const GRADE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   Low: { bg: '#ECFDF5', text: '#059669', border: '#A7F3D0' },
@@ -103,6 +96,348 @@ const PERMISSION_COLORS: Record<string, { bg: string; text: string }> = {
   '조치 전 작업 금지': { bg: '#FEF2F2', text: '#DC2626' },
 };
 
+const workStatusColors: Record<string, { bg: string; text: string }> = {
+  '작업 전': { bg: '#F0F1F3', text: '#71727A' },
+  '작업 중': { bg: '#E7F4E8', text: '#298A3E' },
+  '작업 끝': { bg: '#EAF2FF', text: '#006FFD' },
+};
+
+// ── Mock Data ──
+
+const emptyPhotos: WorkspacePhotos = { workspace: null, ladder: null, commbox: null };
+
+const mockExampleReport1: AdminReport = {
+  scene_summary: {
+    work_environment: '주택가 골목 내 전신주 인근 사다리 설비함 작업. 도로 폭 약 4m, 차량 통행 있음.',
+    work_height_or_location: '지상 약 3.5m 높이 전신주 설비함',
+    observed_safety_facilities: ['안전모 착용 확인', '안전대 부착 설비 설치됨', '사다리 하단 미끄럼 방지 패드 장착'],
+    needs_verification: ['안전대 체결 상태 확인 필요', '작업 반경 내 차량 통제 여부 확인'],
+  },
+  hazards: [
+    {
+      id: 'FALL',
+      title: '추락 위험',
+      evidence_from_image: '작업자가 약 3.5m 높이 사다리 위에서 설비함 작업 중이며, 안전대 체결 상태가 이미지상 불명확함.',
+      expected_accident: '사다리에서 추락 시 골절, 두부 외상 등 중상 가능',
+      likelihood_L_1_5: 3,
+      severity_S_1_5: 5,
+      risk_R_1_25: 15,
+      risk_grade: 'High',
+      mitigations_before_work: ['안전대 체결 상태 재확인', '사다리 상단 고정 보강', '하부 보조 작업자 배치'],
+      residual_likelihood_L_1_5: 1,
+      residual_severity_S_1_5: 5,
+      residual_risk_R_1_25: 5,
+      residual_risk_grade: 'Medium',
+    },
+    {
+      id: 'DROPPING',
+      title: '낙하물 위험',
+      evidence_from_image: '설비함 개방 상태에서 공구 및 부품이 사다리 위에 놓여 있음. 하부 통행인 보호 조치 미흡.',
+      expected_accident: '공구 낙하 시 하부 통행인 또는 작업자 두부 타격 위험',
+      likelihood_L_1_5: 3,
+      severity_S_1_5: 4,
+      risk_R_1_25: 12,
+      risk_grade: 'High',
+      mitigations_before_work: ['공구 낙하 방지 줄 사용', '하부 출입 통제 구역 설정', '안전모 착용 재확인'],
+      residual_likelihood_L_1_5: 1,
+      residual_severity_S_1_5: 4,
+      residual_risk_R_1_25: 4,
+      residual_risk_grade: 'Low',
+    },
+    {
+      id: 'ELECTRIC',
+      title: '감전 위험',
+      evidence_from_image: '설비함 내부 배선 노출 상태이며, 절연 장갑 착용 여부 이미지상 불명확.',
+      expected_accident: '활선 접촉 시 감전 사고, 심정지 가능',
+      likelihood_L_1_5: 2,
+      severity_S_1_5: 5,
+      risk_R_1_25: 10,
+      risk_grade: 'High',
+      mitigations_before_work: ['절연 장갑 및 절연 공구 사용 확인', '활선 여부 검전기로 확인', '접지 상태 점검'],
+      residual_likelihood_L_1_5: 1,
+      residual_severity_S_1_5: 5,
+      residual_risk_R_1_25: 5,
+      residual_risk_grade: 'Medium',
+    },
+    {
+      id: 'PINCH',
+      title: '협착/끼임 위험',
+      evidence_from_image: '설비함 도어 개폐 시 손가락 끼임 가능 구간이 보이며, 보호 장갑 미착용 상태.',
+      expected_accident: '설비함 도어에 의한 손가락 협착, 절단 위험',
+      likelihood_L_1_5: 2,
+      severity_S_1_5: 3,
+      risk_R_1_25: 6,
+      risk_grade: 'Medium',
+      mitigations_before_work: ['작업용 보호 장갑 착용', '도어 고정 장치 사용'],
+      residual_likelihood_L_1_5: 1,
+      residual_severity_S_1_5: 3,
+      residual_risk_R_1_25: 3,
+      residual_risk_grade: 'Low',
+    },
+    {
+      id: 'ERGO',
+      title: '근골격계 위험',
+      evidence_from_image: '작업자가 사다리 위에서 팔을 위로 뻗은 상태로 장시간 작업 중. 부자연스러운 자세 유지.',
+      expected_accident: '어깨/허리 근골격계 질환, 피로 누적에 의한 추락 위험 증가',
+      likelihood_L_1_5: 3,
+      severity_S_1_5: 2,
+      risk_R_1_25: 6,
+      risk_grade: 'Medium',
+      mitigations_before_work: ['30분 간격 휴식 시행', '작업 높이에 맞는 발판 조정'],
+      residual_likelihood_L_1_5: 2,
+      residual_severity_S_1_5: 2,
+      residual_risk_R_1_25: 4,
+      residual_risk_grade: 'Low',
+    },
+  ],
+  overall: {
+    overall_max_R: 15,
+    overall_grade: 'High',
+    work_permission: '개선조치 후 작업',
+    urgent_fix_before_work: [
+      '안전대 체결 상태 재확인 후 작업 시작',
+      '공구 낙하 방지 줄 부착 및 하부 통제 구역 설정',
+      '절연 장갑 착용 및 활선 여부 검전기 확인',
+    ],
+  },
+};
+
+const mockExampleReport2: AdminReport = {
+  scene_summary: {
+    work_environment: '도로변 전신주 인근. 도로 공사로 인한 진동 및 분진 발생. 안전 울타리 일부 훼손 상태.',
+    work_height_or_location: '지상 약 4m 높이 전신주 설비함',
+    observed_safety_facilities: ['안전모 착용', '작업 표지판 설치'],
+    needs_verification: ['안전 울타리 보수 필요', '분진 마스크 착용 여부 확인', '사다리 설치 각도 재확인'],
+  },
+  hazards: [
+    {
+      id: 'FALL',
+      title: '추락 위험',
+      evidence_from_image: '사다리 설치 각도가 약 80도로 기준(75도)보다 급함. 상단 고정부 볼트 이완 확인됨.',
+      expected_accident: '사다리 미끄러짐에 의한 추락, 중상 또는 사망 가능',
+      likelihood_L_1_5: 4,
+      severity_S_1_5: 5,
+      risk_R_1_25: 20,
+      risk_grade: 'Critical',
+      mitigations_before_work: ['사다리 설치 각도 75도로 재조정', '상단 고정 볼트 체결', '안전대 부착 설비 확인 후 체결'],
+      residual_likelihood_L_1_5: 2,
+      residual_severity_S_1_5: 5,
+      residual_risk_R_1_25: 10,
+      residual_risk_grade: 'High',
+    },
+    {
+      id: 'DROPPING',
+      title: '낙하물 위험',
+      evidence_from_image: '설비함 상부에 고정되지 않은 자재가 놓여 있으며, 하부 통행 통제 미실시.',
+      expected_accident: '자재 낙하에 의한 보행자 또는 작업자 부상',
+      likelihood_L_1_5: 3,
+      severity_S_1_5: 4,
+      risk_R_1_25: 12,
+      risk_grade: 'High',
+      mitigations_before_work: ['자재 고정 또는 제거', '하부 출입 금지 구역 설정', '낙하물 방지망 설치'],
+      residual_likelihood_L_1_5: 1,
+      residual_severity_S_1_5: 4,
+      residual_risk_R_1_25: 4,
+      residual_risk_grade: 'Low',
+    },
+    {
+      id: 'ELECTRIC',
+      title: '감전 위험',
+      evidence_from_image: '설비함 내 배선 피복 벗겨진 부분 확인. 우천 시 누전 위험 높음.',
+      expected_accident: '피복 손상 배선 접촉 시 감전, 심정지 가능',
+      likelihood_L_1_5: 3,
+      severity_S_1_5: 5,
+      risk_R_1_25: 15,
+      risk_grade: 'High',
+      mitigations_before_work: ['손상 배선 절연 테이프 보수', '절연 장갑 필수 착용', '검전기로 활선 확인'],
+      residual_likelihood_L_1_5: 1,
+      residual_severity_S_1_5: 5,
+      residual_risk_R_1_25: 5,
+      residual_risk_grade: 'Medium',
+    },
+    {
+      id: 'PINCH',
+      title: '협착/끼임 위험',
+      evidence_from_image: '통신함 도어 경첩 부식 진행 중. 예기치 않은 도어 닫힘 가능.',
+      expected_accident: '부식 경첩에 의한 도어 급닫힘, 손가락 협착',
+      likelihood_L_1_5: 3,
+      severity_S_1_5: 3,
+      risk_R_1_25: 9,
+      risk_grade: 'Medium',
+      mitigations_before_work: ['경첩 윤활제 도포', '도어 고정 스토퍼 사용', '보호 장갑 착용'],
+      residual_likelihood_L_1_5: 1,
+      residual_severity_S_1_5: 3,
+      residual_risk_R_1_25: 3,
+      residual_risk_grade: 'Low',
+    },
+    {
+      id: 'ERGO',
+      title: '근골격계 위험',
+      evidence_from_image: '작업자가 좁은 공간에서 상체를 비튼 채 작업 중. 분진 환경으로 호흡기 부담 가중.',
+      expected_accident: '허리/목 근골격계 질환, 호흡기 관련 건강 악화',
+      likelihood_L_1_5: 3,
+      severity_S_1_5: 2,
+      risk_R_1_25: 6,
+      risk_grade: 'Medium',
+      mitigations_before_work: ['분진 마스크 착용', '20분 간격 자세 변경 및 휴식'],
+      residual_likelihood_L_1_5: 2,
+      residual_severity_S_1_5: 2,
+      residual_risk_R_1_25: 4,
+      residual_risk_grade: 'Low',
+    },
+  ],
+  overall: {
+    overall_max_R: 20,
+    overall_grade: 'Critical',
+    work_permission: '조치 전 작업 금지',
+    urgent_fix_before_work: [
+      '사다리 설치 각도 75도로 재조정 및 상단 볼트 체결',
+      '손상 배선 절연 보수 및 활선 여부 검전기 확인',
+      '하부 출입 통제 구역 설정 및 낙하물 방지망 설치',
+      '안전 울타리 보수 완료 후 작업 개시',
+    ],
+  },
+};
+
+const mockExampleReport3: AdminReport = {
+  scene_summary: {
+    work_environment: '아파트 단지 내 통신 설비함 작업. 주변 정리 양호, 충분한 작업 공간 확보.',
+    work_height_or_location: '지상 약 2m 높이 벽면 설비함',
+    observed_safety_facilities: ['안전모 착용', '안전대 체결 확인', '사다리 미끄럼 방지 패드 정상', '작업 표지판 설치'],
+    needs_verification: [],
+  },
+  hazards: [
+    {
+      id: 'FALL',
+      title: '추락 위험',
+      evidence_from_image: '작업 높이 약 2m로 비교적 낮음. 사다리 상태 양호하고 안전대 체결 확인됨.',
+      expected_accident: '사다리 미끄러짐에 의한 경미한 부상 가능',
+      likelihood_L_1_5: 1,
+      severity_S_1_5: 3,
+      risk_R_1_25: 3,
+      risk_grade: 'Low',
+      mitigations_before_work: [],
+      residual_likelihood_L_1_5: 1,
+      residual_severity_S_1_5: 3,
+      residual_risk_R_1_25: 3,
+      residual_risk_grade: 'Low',
+    },
+    {
+      id: 'DROPPING',
+      title: '낙하물 위험',
+      evidence_from_image: '공구함 정리 상태 양호. 공구 벨트 착용 확인.',
+      expected_accident: '소형 공구 낙하에 의한 경미한 부상',
+      likelihood_L_1_5: 1,
+      severity_S_1_5: 2,
+      risk_R_1_25: 2,
+      risk_grade: 'Low',
+      mitigations_before_work: [],
+      residual_likelihood_L_1_5: 1,
+      residual_severity_S_1_5: 2,
+      residual_risk_R_1_25: 2,
+      residual_risk_grade: 'Low',
+    },
+    {
+      id: 'ELECTRIC',
+      title: '감전 위험',
+      evidence_from_image: '배선 피복 상태 양호. 절연 장갑 착용 확인됨.',
+      expected_accident: '예기치 않은 통전 시 감전 가능',
+      likelihood_L_1_5: 1,
+      severity_S_1_5: 4,
+      risk_R_1_25: 4,
+      risk_grade: 'Low',
+      mitigations_before_work: [],
+      residual_likelihood_L_1_5: 1,
+      residual_severity_S_1_5: 4,
+      residual_risk_R_1_25: 4,
+      residual_risk_grade: 'Low',
+    },
+    {
+      id: 'PINCH',
+      title: '협착/끼임 위험',
+      evidence_from_image: '설비함 도어 상태 양호. 경첩 및 잠금 장치 정상 작동.',
+      expected_accident: '도어 개폐 시 손가락 경미한 끼임',
+      likelihood_L_1_5: 1,
+      severity_S_1_5: 2,
+      risk_R_1_25: 2,
+      risk_grade: 'Low',
+      mitigations_before_work: [],
+      residual_likelihood_L_1_5: 1,
+      residual_severity_S_1_5: 2,
+      residual_risk_R_1_25: 2,
+      residual_risk_grade: 'Low',
+    },
+    {
+      id: 'ERGO',
+      title: '근골격계 위험',
+      evidence_from_image: '작업 높이가 적절하여 자연스러운 자세 유지 가능.',
+      expected_accident: '장시간 작업 시 경미한 피로',
+      likelihood_L_1_5: 1,
+      severity_S_1_5: 1,
+      risk_R_1_25: 1,
+      risk_grade: 'Low',
+      mitigations_before_work: [],
+      residual_likelihood_L_1_5: 1,
+      residual_severity_S_1_5: 1,
+      residual_risk_R_1_25: 1,
+      residual_risk_grade: 'Low',
+    },
+  ],
+  overall: {
+    overall_max_R: 4,
+    overall_grade: 'Low',
+    work_permission: '작업 가능',
+    urgent_fix_before_work: [],
+  },
+};
+
+const mockWorkspaces: WorkspaceRisk[] = [
+  {
+    id: 1,
+    siteName: '봉천동 작업공간',
+    startTime: '08:30',
+    workStatus: '작업 전',
+    members: [{ id: 1, name: '송영민' }, { id: 2, name: '임정원' }],
+    assessmentId: null,
+    photos: { ...emptyPhotos },
+    photoUrls: { ...emptyPhotos },
+    adminReport: null,
+  },
+  {
+    id: 2,
+    siteName: '신대방동 작업공간',
+    startTime: '08:30',
+    workStatus: '작업 중',
+    members: [{ id: 3, name: '김태호' }, { id: 4, name: '박지수' }],
+    assessmentId: 101,
+    photos: { ...emptyPhotos },
+    photoUrls: { ...emptyPhotos },
+    adminReport: mockExampleReport1,
+  },
+  {
+    id: 3,
+    siteName: '신림동 작업공간',
+    startTime: '08:50',
+    workStatus: '작업 중',
+    members: [{ id: 5, name: '이준혁' }, { id: 6, name: '최서연' }],
+    assessmentId: 102,
+    photos: { ...emptyPhotos },
+    photoUrls: { ...emptyPhotos },
+    adminReport: mockExampleReport2,
+  },
+  {
+    id: 4,
+    siteName: '보라매동 작업공간',
+    startTime: '09:10',
+    workStatus: '작업 끝',
+    members: [{ id: 7, name: '우수연' }, { id: 8, name: '원인영' }],
+    assessmentId: 103,
+    photos: { ...emptyPhotos },
+    photoUrls: { ...emptyPhotos },
+    adminReport: mockExampleReport3,
+  },
+];
+
 // ── Helpers ──
 
 function getGradeStyle(grade: string) {
@@ -111,6 +446,200 @@ function getGradeStyle(grade: string) {
 
 function getPermissionStyle(permission: string) {
   return PERMISSION_COLORS[permission] ?? PERMISSION_COLORS['개선조치 후 작업'];
+}
+
+function fetchImageUrl(blobName: string): Promise<string> {
+  return apiFetch(`/risk/media/sas/?blob_name=${encodeURIComponent(blobName)}`)
+    .then(res => res.ok ? res.json() : null)
+    .then(data => data?.url?.download_url ?? '')
+    .catch(() => '');
+}
+
+// ── Sub Components ──
+
+function PhotoCard({ label, icon, url }: { label: string; icon: string; url: string | null }) {
+  return (
+    <div style={styles.photoCard}>
+      <div style={styles.photoCardHeader}>
+        <span style={{ fontSize: 16 }}>{icon}</span>
+        <span style={styles.photoCardLabel}>{label}</span>
+      </div>
+      {url ? (
+        <img src={url} alt={label} style={styles.photoImage} />
+      ) : (
+        <div style={styles.photoPlaceholder}>
+          <span style={{ fontSize: 28, color: '#C5C6CC' }}>📷</span>
+          <span style={styles.photoPlaceholderText}>사진 미등록</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function IntegratedAssessmentView({ report }: { report: AdminReport }) {
+  const overall = report.overall;
+  const scene = report.scene_summary;
+  const hazards = report.hazards;
+  const gs = getGradeStyle(overall.overall_grade);
+  const ps = getPermissionStyle(overall.work_permission);
+
+  // Build flowing passage following generate_admin_report template
+  const topHazards = [...hazards]
+    .sort((a, b) => b.risk_R_1_25 - a.risk_R_1_25)
+    .slice(0, 2);
+
+  const significantHazards = hazards.filter(h => h.risk_R_1_25 >= 5);
+  const allActions = hazards.flatMap(h => h.mitigations_before_work);
+
+  // Executive summary sentence (matches services.py executive_summary.summary_text)
+  const summaryLine =
+    `위험성 평가 결과 '${overall.overall_grade}' 수준이며 작업 상태는 '${overall.work_permission}'입니다.`;
+
+  // Work environment paragraph
+  const envParagraph =
+    `본 작업 현장은 ${scene.work_environment} ` +
+    `작업 위치는 ${scene.work_height_or_location}입니다.` +
+    (scene.observed_safety_facilities.length > 0
+      ? ` 현장에서 ${scene.observed_safety_facilities.join(', ')} 등의 안전 시설이 확인되었습니다.`
+      : '') +
+    (scene.needs_verification.length > 0
+      ? ` 다만, ${scene.needs_verification.join(', ')} 등은 추가 확인이 필요합니다.`
+      : '');
+
+  // Risk details paragraph — top hazards woven into prose
+  const riskLines = topHazards.map(h =>
+    `${h.title}(${h.risk_grade})의 경우, ` +
+    `${h.evidence_from_image} ` +
+    `이로 인해 ${h.expected_accident}의 가능성이 있습니다.`
+  );
+  const riskParagraph = significantHazards.length > 0
+    ? `주요 위험 요소로는 ${topHazards.map(h => h.title).join('과 ')}이(가) 식별되었습니다. ` +
+      riskLines.join(' ')
+    : '현장에서 식별된 위험 요소는 모두 낮은 수준(Low)으로, 기본 안전 수칙을 준수하면 작업이 가능합니다.';
+
+  // Mitigations paragraph
+  const mitigationParagraph = allActions.length > 0
+    ? `작업 전 필요한 조치사항으로는 ${allActions.slice(0, 5).join(', ')} 등이 있습니다.` +
+      (overall.urgent_fix_before_work.length > 0
+        ? ` 특히 긴급 조치가 필요한 사항은 다음과 같습니다: ${overall.urgent_fix_before_work.join('; ')}.`
+        : '')
+    : '현재 별도의 사전 조치사항 없이 작업이 가능합니다.';
+
+  // Residual risk sentence
+  const residualHigh = hazards.filter(h => h.residual_risk_R_1_25 >= 5);
+  const residualParagraph = residualHigh.length > 0
+    ? `조치 이후에도 ${residualHigh.map(h => `${h.title}(잔여 위험: ${h.residual_risk_grade})`).join(', ')}은(는) 주의가 필요합니다.`
+    : '제시된 조치사항을 이행하면 모든 위험 요소가 낮은 수준으로 관리됩니다.';
+
+  return (
+    <div style={styles.assessmentContainer}>
+      {/* Header badge bar */}
+      <div style={styles.assessmentHeader}>
+        <span style={{ ...styles.overallGradeBadge, backgroundColor: gs.bg, color: gs.text, borderColor: gs.border }}>
+          {overall.overall_grade}
+        </span>
+        <span style={{ ...styles.permissionBadgeLarge, backgroundColor: ps.bg, color: ps.text }}>
+          {overall.work_permission}
+        </span>
+      </div>
+
+      {/* Integrated passage */}
+      <div style={styles.passageBlock}>
+        <p style={styles.passageParagraph}>
+          <strong>{summaryLine}</strong>
+        </p>
+        <p style={styles.passageParagraph}>{envParagraph}</p>
+        <p style={styles.passageParagraph}>{riskParagraph}</p>
+        <p style={styles.passageParagraph}>{mitigationParagraph}</p>
+        <p style={styles.passageParagraph}>{residualParagraph}</p>
+      </div>
+    </div>
+  );
+}
+
+function WorkspaceRiskCard({
+  workspace,
+  isExpanded,
+  onToggle,
+}: {
+  workspace: WorkspaceRisk;
+  isExpanded: boolean;
+  onToggle: () => void;
+}) {
+  const sc = workStatusColors[workspace.workStatus] ?? workStatusColors['작업 전'];
+  const report = workspace.adminReport;
+
+  return (
+    <div style={styles.workspaceCard}>
+      {/* Card Header */}
+      <button type="button" style={styles.workspaceCardHeader} onClick={onToggle}>
+        <div style={styles.workspaceCardHeaderLeft}>
+          <span style={styles.workspaceName}>{workspace.siteName}</span>
+          <span style={{ ...styles.workStatusBadge, backgroundColor: sc.bg, color: sc.text }}>
+            {workspace.workStatus}
+          </span>
+          {report && (
+            <span style={{
+              ...styles.riskBadge,
+              backgroundColor: getPermissionStyle(report.overall.work_permission).bg,
+              color: getPermissionStyle(report.overall.work_permission).text,
+            }}>
+              {report.overall.work_permission}
+            </span>
+          )}
+        </div>
+        <div style={styles.workspaceCardHeaderRight}>
+          <div style={styles.workspaceMeta}>
+            <span style={{ fontSize: 13 }}>⏰</span>
+            <span style={styles.workspaceMetaText}>작업 시작 {workspace.startTime}</span>
+          </div>
+          <div style={styles.workspaceMembers}>
+            {workspace.members.map((m, i) => (
+              <React.Fragment key={m.id}>
+                {i > 0 && <span style={{ color: '#8F9098', fontSize: 13 }}>, </span>}
+                <span style={styles.memberName}>{m.name}</span>
+              </React.Fragment>
+            ))}
+          </div>
+          <span style={styles.expandArrow}>{isExpanded ? '▲' : '▼'}</span>
+        </div>
+      </button>
+
+      {/* Expanded Content */}
+      {isExpanded && (
+        <div style={styles.workspaceCardBody}>
+          {/* Photos Section */}
+          <div style={styles.photosSection}>
+            <span style={styles.sectionLabel}>현장 사진 (직원 촬영)</span>
+            <div style={styles.photosGrid}>
+              {(['workspace', 'ladder', 'commbox'] as PhotoCategory[]).map(cat => (
+                <PhotoCard
+                  key={cat}
+                  label={PHOTO_LABELS[cat]}
+                  icon={PHOTO_ICONS[cat]}
+                  url={workspace.photoUrls[cat]}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Risk Assessment Section */}
+          <div style={styles.riskSection}>
+            <span style={styles.sectionLabel}>위험성 평가 결과</span>
+            {report ? (
+              <IntegratedAssessmentView report={report} />
+            ) : (
+              <div style={styles.noAssessment}>
+                <span style={{ fontSize: 32 }}>📋</span>
+                <span style={styles.noAssessmentText}>아직 위험성 평가가 진행되지 않았습니다.</span>
+                <span style={styles.noAssessmentHint}>직원이 현장 사진을 업로드하면 AI 기반 위험성 평가가 자동으로 수행됩니다.</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ── Main Component ──
@@ -122,175 +651,80 @@ export default function WorkerRiskScreen() {
   const isProfileActive = location.pathname === '/profile';
   const unreadCount = useUnreadAlertCount();
 
-  const [selectedCategory, setSelectedCategory] = useState<RiskCategory>('ladder');
-  const [images, setImages] = useState<UploadedImage[]>([]);
-  const [siteLabel, setSiteLabel] = useState('사다리 설비함 작업');
-  const [phase, setPhase] = useState<AssessPhase>('idle');
-  const [result, setResult] = useState<AssessmentResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [showAdminReport, setShowAdminReport] = useState(false);
-  const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [workspaces, setWorkspaces] = useState<WorkspaceRisk[]>(mockWorkspaces);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const siteLabelMap: Record<RiskCategory, string> = {
-    ladder: '사다리 설비함 작업',
-    environment: '주변환경 상태 점검',
-    commbox: '통신함 상태 점검',
-  };
-
-  const handleCategorySelect = (cat: RiskCategory) => {
-    setSelectedCategory(cat);
-    setSiteLabel(siteLabelMap[cat]);
-    if (phase === 'result') {
-      setPhase('idle');
-      setResult(null);
-      setError(null);
-    }
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-    const newImages: UploadedImage[] = Array.from(files).slice(0, 10 - images.length).map(f => ({
-      file: f,
-      preview: URL.createObjectURL(f),
-      blobName: null,
-      uploading: false,
-    }));
-    setImages(prev => [...prev, ...newImages]);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    const files = e.dataTransfer.files;
-    if (!files) return;
-    const newImages: UploadedImage[] = Array.from(files)
-      .filter(f => f.type.startsWith('image/'))
-      .slice(0, 10 - images.length)
-      .map(f => ({
-        file: f,
-        preview: URL.createObjectURL(f),
-        blobName: null,
-        uploading: false,
-      }));
-    setImages(prev => [...prev, ...newImages]);
-  }, [images.length]);
-
-  const removeImage = (idx: number) => {
-    setImages(prev => {
-      const copy = [...prev];
-      URL.revokeObjectURL(copy[idx].preview);
-      copy.splice(idx, 1);
-      return copy;
-    });
-  };
-
-  const uploadImageToBlob = async (img: UploadedImage): Promise<string> => {
-    const ext = img.file.name.split('.').pop() ?? 'jpg';
-    const res = await apiFetch('/user/storage/sas/upload/', {
-      method: 'POST',
-      body: JSON.stringify({ filename: `risk_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`, content_type: img.file.type }),
-    });
-    if (!res.ok) throw new Error('SAS URL 발급 실패');
-    const data = await res.json();
-    const uploadRes = await fetch(data.upload_url, {
-      method: 'PUT',
-      headers: { 'x-ms-blob-type': 'BlockBlob', 'Content-Type': img.file.type },
-      body: img.file,
-    });
-    if (!uploadRes.ok) throw new Error('이미지 업로드 실패');
-    return data.blob_name;
-  };
-
-  const fetchImageUrl = async (blobName: string): Promise<string> => {
-    const res = await apiFetch(`/risk/media/sas/?blob_name=${encodeURIComponent(blobName)}`);
-    if (!res.ok) return '';
-    const data = await res.json();
-    return data.url?.download_url ?? '';
-  };
-
-  const handleAssess = async () => {
-    if (images.length === 0) {
-      setError('이미지를 1개 이상 업로드해주세요.');
-      return;
-    }
-    setError(null);
-    setPhase('uploading');
-
+  // Fetch real risk assessments from API and merge with mock worksession data
+  const fetchAssessments = useCallback(async () => {
+    setLoading(true);
     try {
-      // Upload all images
-      const blobNames: string[] = [];
-      for (let i = 0; i < images.length; i++) {
-        setImages(prev => prev.map((img, j) => j === i ? { ...img, uploading: true } : img));
-        const blobName = await uploadImageToBlob(images[i]);
-        blobNames.push(blobName);
-        setImages(prev => prev.map((img, j) => j === i ? { ...img, blobName, uploading: false } : img));
-      }
+      const updated = await Promise.all(
+        mockWorkspaces.map(async (ws): Promise<WorkspaceRisk> => {
+          // If mock already has an adminReport, use it as-is (for demo/preview)
+          if (ws.adminReport) return ws;
 
-      // Submit for assessment
-      setPhase('assessing');
-      const assessRes = await apiFetch('/risk/assess/', {
-        method: 'POST',
-        body: JSON.stringify({ blob_names: blobNames, site_label: siteLabel }),
-      });
-      if (!assessRes.ok) {
-        const errData = await assessRes.json().catch(() => ({}));
-        throw new Error(errData.error ?? '위험성 평가 요청 실패');
-      }
-      const assessData = await assessRes.json();
-      const assessmentId = assessData.assessment_id;
+          try {
+            const latestRes = await apiFetch(`/risk/latest/${ws.id}`);
+            if (!latestRes.ok) return ws;
+            const latestData = await latestRes.json();
+            if (!latestData.exists) return ws;
 
-      // Fetch worker recommendation + admin report in parallel
-      const [workerRes, adminRes] = await Promise.all([
-        apiFetch(`/risk/worker/${assessmentId}`),
-        apiFetch(`/risk/admin/${assessmentId}`),
-      ]);
+            const assessmentId = latestData.assessment_id;
+            const reportRes = await apiFetch(`/risk/admin/${assessmentId}`);
+            if (!reportRes.ok) return { ...ws, assessmentId };
+            const reportData = await reportRes.json();
 
-      const workerData = workerRes.ok ? await workerRes.json() : null;
-      const adminData = adminRes.ok ? await adminRes.json() : null;
+            const images: { id: number; blob_name: string; created_at: string }[] = reportData.images ?? [];
+            const adminReport: AdminReport = {
+              scene_summary: reportData.report?.scene_summary ?? {
+                work_environment: '',
+                work_height_or_location: '',
+                observed_safety_facilities: [],
+                needs_verification: [],
+              },
+              hazards: reportData.report?.hazards ?? [],
+              overall: reportData.report?.overall ?? {
+                overall_max_R: 0,
+                overall_grade: 'Low' as RiskGrade,
+                work_permission: '작업 가능',
+                urgent_fix_before_work: [],
+              },
+            };
 
-      // Fetch SAS URLs for result images
-      const resultImages = workerData?.images ?? adminData?.images ?? [];
-      const urls: Record<string, string> = {};
-      await Promise.all(
-        resultImages.map(async (img: { blob_name: string }) => {
-          const url = await fetchImageUrl(img.blob_name);
-          if (url) urls[img.blob_name] = url;
+            // Map images to the 3 photo categories by order
+            const categories: PhotoCategory[] = ['workspace', 'ladder', 'commbox'];
+            const photos: WorkspacePhotos = { ...emptyPhotos };
+            const photoUrls: WorkspacePhotos = { ...emptyPhotos };
+            for (let i = 0; i < Math.min(images.length, categories.length); i++) {
+              photos[categories[i]] = images[i].blob_name;
+              photoUrls[categories[i]] = await fetchImageUrl(images[i].blob_name);
+            }
+
+            return { ...ws, assessmentId, photos, photoUrls, adminReport };
+          } catch {
+            return ws;
+          }
         }),
       );
-      setImageUrls(urls);
-
-      setResult({
-        assessmentId,
-        worker: workerData ? { message: workerData.message, images: workerData.images } : null,
-        admin: adminData ? { report: adminData.report, images: adminData.images } : null,
-      });
-      setPhase('result');
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
-      setError(msg);
-      setPhase('idle');
+      setWorkspaces(updated);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
 
-  const handleReset = () => {
-    images.forEach(img => URL.revokeObjectURL(img.preview));
-    setImages([]);
-    setResult(null);
-    setPhase('idle');
-    setError(null);
-    setShowAdminReport(false);
-    setImageUrls({});
+  useEffect(() => {
+    fetchAssessments();
+  }, [fetchAssessments]);
+
+  const handleToggle = (id: number) => {
+    setExpandedId(prev => (prev === id ? null : id));
   };
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
   };
-
-  const workerMsg = result?.worker?.message ?? null;
-  const adminRpt = result?.admin?.report ?? null;
 
   return (
     <div style={styles.container}>
@@ -328,317 +762,34 @@ export default function WorkerRiskScreen() {
       {/* ── Main ── */}
       <main style={styles.main}>
         <div style={styles.header}>
-          <h1 style={styles.headerTitle}>위험성 평가</h1>
+          <div>
+            <h1 style={styles.headerTitle}>위험성 평가</h1>
+            <span style={styles.headerSub}>직원이 촬영한 현장 사진 기반 AI 위험성 평가</span>
+          </div>
           <button type="button" style={styles.logoutBtn} onClick={handleLogout}>Logout</button>
         </div>
 
-        {/* Risk Category Cards */}
-        <div style={styles.categoryRow}>
-          {riskCategories.map(cat => {
-            const isActive = selectedCategory === cat.key;
-            return (
-              <button
-                key={cat.key}
-                type="button"
-                style={{ ...styles.categoryCard, ...(isActive ? styles.categoryCardActive : {}) }}
-                onClick={() => handleCategorySelect(cat.key)}
-              >
-                <div style={styles.categoryIconWrap}>
-                  <img src={cat.img} alt={cat.sublabel} style={{ width: 48, height: 48, objectFit: 'contain' }} />
-                </div>
-                <div style={styles.categoryTextArea}>
-                  <span style={{ ...styles.categoryLabel, ...(isActive ? { color: '#006FFD' } : {}) }}>{cat.label}</span>
-                  <span style={styles.categorySublabel}>{cat.sublabel}</span>
-                  <span style={styles.categoryDesc}>{cat.description}</span>
-                </div>
-              </button>
-            );
-          })}
+        {/* Section Header */}
+        <div style={styles.sectionHeader}>
+          <span style={styles.sectionHeaderTitle}>오늘의 작업 현장</span>
+          <span style={styles.sectionBadge}>{workspaces.length}</span>
         </div>
 
-        {/* Assessment Section */}
-        {phase !== 'result' ? (
-          <div style={styles.assessSection}>
-            {/* Site Label */}
-            <div style={styles.fieldRow}>
-              <label style={styles.fieldLabel}>현장 라벨</label>
-              <input
-                style={styles.fieldInput}
-                type="text"
-                value={siteLabel}
-                onChange={e => setSiteLabel(e.target.value)}
-                placeholder="작업 현장명을 입력하세요"
-              />
-            </div>
-
-            {/* Image Upload */}
-            <div style={styles.fieldRow}>
-              <label style={styles.fieldLabel}>현장 이미지 (최대 10장)</label>
-              <div
-                style={styles.dropZone}
-                onDragOver={e => e.preventDefault()}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  style={{ display: 'none' }}
-                  onChange={handleFileSelect}
-                />
-                <span style={{ fontSize: 32, marginBottom: 8 }}>📷</span>
-                <span style={styles.dropZoneText}>클릭 또는 드래그하여 이미지 업로드</span>
-                <span style={styles.dropZoneHint}>JPG, PNG 파일 지원 (최대 10장)</span>
-              </div>
-            </div>
-
-            {/* Image Previews */}
-            {images.length > 0 && (
-              <div style={styles.imageGrid}>
-                {images.map((img, idx) => (
-                  <div key={idx} style={styles.imageThumbWrap}>
-                    <img src={img.preview} alt={`upload-${idx}`} style={styles.imageThumb} />
-                    {img.uploading && (
-                      <div style={styles.imageOverlay}>
-                        <span style={styles.imageOverlayText}>업로드 중...</span>
-                      </div>
-                    )}
-                    {phase === 'idle' && (
-                      <button type="button" style={styles.imageRemoveBtn} onClick={() => removeImage(idx)}>✕</button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Error */}
-            {error && <div style={styles.errorBox}>{error}</div>}
-
-            {/* Assess Button */}
-            <button
-              type="button"
-              style={{
-                ...styles.assessBtn,
-                ...(phase !== 'idle' ? styles.assessBtnDisabled : {}),
-              }}
-              disabled={phase !== 'idle'}
-              onClick={handleAssess}
-            >
-              {phase === 'uploading' ? '이미지 업로드 중...' : phase === 'assessing' ? 'AI 위험성 분석 중...' : '위험성 평가 시작'}
-            </button>
-
-            {phase === 'assessing' && (
-              <div style={styles.assessingHint}>
-                <div style={styles.spinner} />
-                <span>AI가 현장 이미지를 분석하고 있습니다. 잠시만 기다려주세요...</span>
-              </div>
-            )}
+        {loading ? (
+          <div style={styles.loadingWrap}>
+            <div style={styles.spinner} />
+            <span style={styles.loadingText}>작업 현장 정보를 불러오는 중...</span>
           </div>
         ) : (
-          /* Result Section */
-          <div style={styles.resultSection}>
-            {/* Worker Recommendation */}
-            {workerMsg && (
-              <>
-                {/* Status Banner */}
-                <div style={{ ...styles.statusBanner, backgroundColor: getGradeStyle(workerMsg.status.overall_grade).bg, borderColor: getGradeStyle(workerMsg.status.overall_grade).border }}>
-                  <div style={styles.statusLeft}>
-                    <span style={styles.statusLabel}>위험 등급</span>
-                    <span style={{ ...styles.statusGrade, color: getGradeStyle(workerMsg.status.overall_grade).text }}>{workerMsg.status.overall_grade}</span>
-                  </div>
-                  <div style={{ ...styles.permissionBadge, ...getPermissionStyle(workerMsg.status.work_permission) }}>
-                    {workerMsg.status.work_permission}
-                  </div>
-                </div>
-
-                {/* Alert Message */}
-                <div style={styles.alertCard}>
-                  <div style={styles.alertCardHeader}>
-                    <span style={{ fontSize: 20 }}>⚠️</span>
-                    <span style={styles.alertCardTitle}>경고 메시지</span>
-                  </div>
-                  <p style={styles.alertCardText}>{workerMsg.alert_message}</p>
-                </div>
-
-                {/* Main Risks */}
-                <div style={styles.risksCard}>
-                  <div style={styles.risksCardHeader}>
-                    <span style={{ fontSize: 18 }}>🔍</span>
-                    <span style={styles.risksCardTitle}>주요 위험 요소</span>
-                  </div>
-                  <div style={styles.risksList}>
-                    {workerMsg.main_risks.map((risk, i) => (
-                      <div key={i} style={styles.riskItem}>
-                        <div style={styles.riskBullet}>{i + 1}</div>
-                        <div style={styles.riskContent}>
-                          <span style={styles.riskType}>{risk.type}</span>
-                          <span style={styles.riskDesc}>{risk.what_can_happen}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Action Checklist */}
-                <div style={styles.checklistCard}>
-                  <div style={styles.checklistHeader}>
-                    <span style={{ fontSize: 18 }}>✅</span>
-                    <span style={styles.checklistTitle}>작업 전 조치사항</span>
-                  </div>
-                  <div style={styles.checklistItems}>
-                    {workerMsg.action_checklist.map((action, i) => (
-                      <div key={i} style={styles.checklistItem}>
-                        <span style={styles.checkMark}>☐</span>
-                        <span style={styles.checkText}>{action}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Guide Message */}
-                <div style={styles.guideCard}>
-                  <span style={styles.guideTitle}>안내 메시지</span>
-                  <p style={styles.guideText}>{workerMsg.guide_message}</p>
-                </div>
-
-                {/* Uploaded Images */}
-                {Object.keys(imageUrls).length > 0 && (
-                  <div style={styles.resultImagesSection}>
-                    <span style={styles.resultImagesTitle}>평가 이미지</span>
-                    <div style={styles.resultImageGrid}>
-                      {Object.entries(imageUrls).map(([blobName, url]) => (
-                        <img key={blobName} src={url} alt={blobName} style={styles.resultImage} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Admin Report Toggle */}
-            {adminRpt && (
-              <>
-                <button
-                  type="button"
-                  style={styles.adminToggleBtn}
-                  onClick={() => setShowAdminReport(prev => !prev)}
-                >
-                  {showAdminReport ? '관리자 보고서 닫기' : '관리자 보고서 보기'}
-                  <span style={{ marginLeft: 8 }}>{showAdminReport ? '▲' : '▼'}</span>
-                </button>
-
-                {showAdminReport && (
-                  <div style={styles.adminReportWrap}>
-                    {/* Admin Header */}
-                    <div style={styles.adminHeaderRow}>
-                      <div>
-                        <span style={styles.adminSectionLabel}>종합 위험 점수</span>
-                        <span style={{ ...styles.adminScore, color: getGradeStyle(adminRpt.header.overall_grade).text }}>{adminRpt.header.overall_risk_score} / 25</span>
-                      </div>
-                      <div style={{ ...styles.adminGradeBadge, backgroundColor: getGradeStyle(adminRpt.header.overall_grade).bg, color: getGradeStyle(adminRpt.header.overall_grade).text, borderColor: getGradeStyle(adminRpt.header.overall_grade).border }}>
-                        {adminRpt.header.overall_grade}
-                      </div>
-                    </div>
-
-                    {/* Executive Summary */}
-                    <div style={styles.adminCard}>
-                      <span style={styles.adminCardTitle}>종합 평가</span>
-                      <p style={styles.adminCardText}>{adminRpt.executive_summary.summary_text}</p>
-                      <div style={styles.keyRisksRow}>
-                        {adminRpt.executive_summary.key_risks.map((kr, i) => (
-                          <div key={i} style={{ ...styles.keyRiskChip, backgroundColor: getGradeStyle(kr.risk_grade).bg, color: getGradeStyle(kr.risk_grade).text }}>
-                            {kr.type} (R={kr.risk_score})
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Work Environment */}
-                    <div style={styles.adminCard}>
-                      <span style={styles.adminCardTitle}>작업 환경</span>
-                      <div style={styles.envRow}>
-                        <span style={styles.envLabel}>환경:</span>
-                        <span style={styles.envValue}>{adminRpt.work_environment.environment}</span>
-                      </div>
-                      <div style={styles.envRow}>
-                        <span style={styles.envLabel}>높이/위치:</span>
-                        <span style={styles.envValue}>{adminRpt.work_environment.height_or_location}</span>
-                      </div>
-                      {adminRpt.work_environment.existing_safety_measures.length > 0 && (
-                        <div style={{ marginTop: 8 }}>
-                          <span style={styles.envSubLabel}>기존 안전 조치</span>
-                          {adminRpt.work_environment.existing_safety_measures.map((m, i) => (
-                            <span key={i} style={styles.envTag}>{m}</span>
-                          ))}
-                        </div>
-                      )}
-                      {adminRpt.work_environment.items_requiring_verification.length > 0 && (
-                        <div style={{ marginTop: 8 }}>
-                          <span style={styles.envSubLabel}>확인 필요 항목</span>
-                          {adminRpt.work_environment.items_requiring_verification.map((v, i) => (
-                            <span key={i} style={{ ...styles.envTag, backgroundColor: '#FFF7ED', color: '#D97706' }}>{v}</span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Risk Details */}
-                    <div style={styles.adminCard}>
-                      <span style={styles.adminCardTitle}>위험 상세 분석</span>
-                      {adminRpt.risk_details.map((rd, i) => (
-                        <div key={i} style={styles.riskDetailItem}>
-                          <div style={styles.riskDetailHeader}>
-                            <span style={styles.riskDetailType}>{rd.risk_type}</span>
-                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                              <span style={{ ...styles.riskDetailScore, color: getGradeStyle(rd.risk_level).text }}>R={rd.risk_score}</span>
-                              <span style={{ ...styles.riskDetailGrade, backgroundColor: getGradeStyle(rd.risk_level).bg, color: getGradeStyle(rd.risk_level).text }}>{rd.risk_level}</span>
-                            </div>
-                          </div>
-                          <p style={styles.riskDetailEvidence}>{rd.evidence}</p>
-                          <p style={styles.riskDetailAccident}>예상 사고: {rd.expected_accident}</p>
-                          {rd.required_actions_before_work.length > 0 && (
-                            <div style={styles.riskDetailActions}>
-                              <span style={styles.riskDetailActionsLabel}>작업 전 필수 조치:</span>
-                              {rd.required_actions_before_work.map((a, j) => (
-                                <span key={j} style={styles.riskDetailAction}>• {a}</span>
-                              ))}
-                            </div>
-                          )}
-                          <div style={styles.residualRow}>
-                            <span style={styles.residualLabel}>잔존 위험:</span>
-                            <span style={{ ...styles.residualValue, color: getGradeStyle(rd.residual_risk_level).text }}>
-                              {rd.residual_risk_level} (R={rd.residual_risk_score})
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Mandatory Actions */}
-                    {adminRpt.mandatory_actions_before_work.length > 0 && (
-                      <div style={{ ...styles.adminCard, backgroundColor: '#FEF2F2', borderColor: '#FECACA' }}>
-                        <span style={{ ...styles.adminCardTitle, color: '#DC2626' }}>작업 전 필수 조치사항</span>
-                        {adminRpt.mandatory_actions_before_work.map((a, i) => (
-                          <div key={i} style={styles.mandatoryAction}>
-                            <span style={styles.mandatoryBullet}>{i + 1}</span>
-                            <span style={styles.mandatoryText}>{a}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Actions */}
-            <div style={styles.resultActions}>
-              <button type="button" style={styles.resetBtn} onClick={handleReset}>
-                새 평가 시작
-              </button>
-            </div>
+          <div style={styles.workspaceList}>
+            {workspaces.map(ws => (
+              <WorkspaceRiskCard
+                key={ws.id}
+                workspace={ws}
+                isExpanded={expandedId === ws.id}
+                onToggle={() => handleToggle(ws.id)}
+              />
+            ))}
           </div>
         )}
       </main>
@@ -713,351 +864,162 @@ const styles: Record<string, React.CSSProperties> = {
   headerTitle: {
     fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 28, color: '#1F2024', margin: 0,
   },
-
-  // Category Cards
-  categoryRow: {
-    display: 'flex', flexDirection: 'row', gap: 16, marginBottom: 28,
-  },
-  categoryCard: {
-    flex: 1, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 16,
-    backgroundColor: '#FFFFFF', borderRadius: 16, padding: '20px 24px',
-    border: '2px solid #E8E9EB', cursor: 'pointer', textAlign: 'left',
-    transition: 'border-color 0.2s',
-  },
-  categoryCardActive: {
-    borderColor: '#006FFD', boxShadow: '0 4px 20px rgba(0,111,253,0.12)',
-    background: 'linear-gradient(135deg, #FFFFFF 0%, #F0F6FF 100%)',
-  },
-  categoryIconWrap: {
-    width: 72, height: 72, borderRadius: 16, backgroundColor: '#F5F7FA',
-    display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0,
-  },
-  categoryTextArea: { display: 'flex', flexDirection: 'column', gap: 2 },
-  categoryLabel: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 800, fontSize: 18, color: '#1F2024',
-  },
-  categorySublabel: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: 12, color: '#8F9098',
-  },
-  categoryDesc: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 400, fontSize: 12, color: '#A0A1A7', marginTop: 4,
+  headerSub: {
+    fontFamily: 'Inter, sans-serif', fontWeight: 400, fontSize: 14, color: '#71727A', marginTop: 4, display: 'block',
   },
 
-  // Assessment Section
-  assessSection: {
-    backgroundColor: '#FFFFFF', borderRadius: 16, border: '1px solid #E8E9EB',
-    padding: 28, display: 'flex', flexDirection: 'column', gap: 20,
+  // Section Header
+  sectionHeader: {
+    display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20,
   },
-  fieldRow: { display: 'flex', flexDirection: 'column', gap: 8 },
-  fieldLabel: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 14, color: '#1F2024',
+  sectionHeaderTitle: {
+    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 18, color: '#1F2024',
   },
-  fieldInput: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 400, fontSize: 14, color: '#1F2024',
-    padding: '10px 14px', borderRadius: 8, border: '1px solid #E8E9EB',
-    outline: 'none', backgroundColor: '#F8F9FA',
+  sectionBadge: {
+    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 12, color: '#FFFFFF',
+    backgroundColor: '#006FFD', borderRadius: 12, padding: '2px 10px',
   },
-  dropZone: {
+
+  // Loading
+  loadingWrap: {
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-    padding: '40px 20px', borderRadius: 12, border: '2px dashed #C5C6CC',
-    backgroundColor: '#FAFBFC', cursor: 'pointer', transition: 'border-color 0.2s',
-  },
-  dropZoneText: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 14, color: '#1F2024',
-  },
-  dropZoneHint: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 400, fontSize: 12, color: '#8F9098', marginTop: 4,
-  },
-  imageGrid: {
-    display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 12,
-  },
-  imageThumbWrap: {
-    position: 'relative', width: 100, height: 100, borderRadius: 10, overflow: 'hidden',
-    border: '1px solid #E8E9EB',
-  },
-  imageThumb: { width: '100%', height: '100%', objectFit: 'cover' },
-  imageOverlay: {
-    position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)',
-    display: 'flex', justifyContent: 'center', alignItems: 'center',
-  },
-  imageOverlayText: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 11, color: '#FFFFFF',
-  },
-  imageRemoveBtn: {
-    position: 'absolute', top: 4, right: 4, width: 22, height: 22, borderRadius: '50%',
-    backgroundColor: 'rgba(0,0,0,0.6)', color: '#FFFFFF', border: 'none',
-    cursor: 'pointer', fontSize: 11, display: 'flex', justifyContent: 'center', alignItems: 'center',
-    padding: 0,
-  },
-  errorBox: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: 13, color: '#DC2626',
-    backgroundColor: '#FEF2F2', padding: '10px 16px', borderRadius: 8,
-  },
-  assessBtn: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 15, color: '#FFFFFF',
-    backgroundColor: '#006FFD', padding: '14px 28px', borderRadius: 10,
-    border: 'none', cursor: 'pointer', alignSelf: 'flex-start',
-    transition: 'background-color 0.2s',
-  },
-  assessBtnDisabled: {
-    backgroundColor: '#A0C4FF', cursor: 'not-allowed',
-  },
-  assessingHint: {
-    display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 12,
-    fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: 13, color: '#71727A',
+    gap: 12, padding: '60px 0',
   },
   spinner: {
-    width: 20, height: 20, border: '3px solid #E8E9EB', borderTopColor: '#006FFD',
+    width: 28, height: 28, border: '3px solid #E8E9EB', borderTopColor: '#006FFD',
     borderRadius: '50%', animation: 'spin 0.8s linear infinite',
   },
-
-  // Result Section
-  resultSection: {
-    display: 'flex', flexDirection: 'column', gap: 20,
-  },
-  statusBanner: {
-    display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    padding: '24px 28px', borderRadius: 16, border: '2px solid',
-  },
-  statusLeft: { display: 'flex', flexDirection: 'column', gap: 4 },
-  statusLabel: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: 13, color: '#71727A',
-  },
-  statusGrade: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 800, fontSize: 36,
-  },
-  permissionBadge: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 14,
-    padding: '10px 20px', borderRadius: 10,
+  loadingText: {
+    fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: 14, color: '#71727A',
   },
 
-  // Alert Card
-  alertCard: {
-    backgroundColor: '#FFFFFF', borderRadius: 14, border: '1px solid #E8E9EB',
-    padding: 24,
-  },
-  alertCardHeader: {
-    display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12,
-  },
-  alertCardTitle: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 16, color: '#1F2024',
-  },
-  alertCardText: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 400, fontSize: 14, color: '#3A3B40',
-    lineHeight: '1.6', margin: 0,
-  },
-
-  // Risks Card
-  risksCard: {
-    backgroundColor: '#FFFFFF', borderRadius: 14, border: '1px solid #E8E9EB',
-    padding: 24,
-  },
-  risksCardHeader: {
-    display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16,
-  },
-  risksCardTitle: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 16, color: '#1F2024',
-  },
-  risksList: { display: 'flex', flexDirection: 'column', gap: 14 },
-  riskItem: {
-    display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: 14,
-  },
-  riskBullet: {
-    width: 28, height: 28, borderRadius: '50%', backgroundColor: '#006FFD',
-    color: '#FFFFFF', display: 'flex', justifyContent: 'center', alignItems: 'center',
-    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 13, flexShrink: 0,
-  },
-  riskContent: { display: 'flex', flexDirection: 'column', gap: 4 },
-  riskType: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 14, color: '#1F2024',
-  },
-  riskDesc: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 400, fontSize: 13, color: '#71727A', lineHeight: '1.5',
-  },
-
-  // Checklist Card
-  checklistCard: {
-    backgroundColor: '#FFFFFF', borderRadius: 14, border: '1px solid #E8E9EB',
-    padding: 24,
-  },
-  checklistHeader: {
-    display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16,
-  },
-  checklistTitle: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 16, color: '#1F2024',
-  },
-  checklistItems: { display: 'flex', flexDirection: 'column', gap: 10 },
-  checklistItem: {
-    display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: 10,
-    padding: '10px 14px', backgroundColor: '#F8F9FA', borderRadius: 8,
-  },
-  checkMark: {
-    fontFamily: 'Inter, sans-serif', fontSize: 16, color: '#006FFD', flexShrink: 0,
-  },
-  checkText: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: 13, color: '#1F2024', lineHeight: '1.5',
-  },
-
-  // Guide Card
-  guideCard: {
-    backgroundColor: '#F0F6FF', borderRadius: 14, border: '1px solid #C5DEFF',
-    padding: 24,
-  },
-  guideTitle: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 14, color: '#006FFD',
-  },
-  guideText: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 400, fontSize: 13, color: '#3A3B40',
-    lineHeight: '1.6', margin: '8px 0 0 0',
-  },
-
-  // Result Images
-  resultImagesSection: {
-    backgroundColor: '#FFFFFF', borderRadius: 14, border: '1px solid #E8E9EB',
-    padding: 24,
-  },
-  resultImagesTitle: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 14, color: '#1F2024',
-    marginBottom: 12, display: 'block',
-  },
-  resultImageGrid: {
-    display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 12,
-  },
-  resultImage: {
-    width: 160, height: 120, objectFit: 'cover', borderRadius: 10, border: '1px solid #E8E9EB',
-  },
-
-  // Admin Report Toggle
-  adminToggleBtn: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 14, color: '#006FFD',
-    backgroundColor: '#FFFFFF', padding: '12px 20px', borderRadius: 10,
-    border: '1px solid #006FFD', cursor: 'pointer', alignSelf: 'flex-start',
-    display: 'flex', alignItems: 'center',
-  },
-
-  // Admin Report
-  adminReportWrap: {
+  // Workspace List
+  workspaceList: {
     display: 'flex', flexDirection: 'column', gap: 16,
   },
-  adminHeaderRow: {
-    display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: '#FFFFFF', borderRadius: 14, border: '1px solid #E8E9EB', padding: 24,
-  },
-  adminSectionLabel: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: 13, color: '#71727A', display: 'block',
-  },
-  adminScore: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 800, fontSize: 32, display: 'block', marginTop: 4,
-  },
-  adminGradeBadge: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 16,
-    padding: '8px 20px', borderRadius: 10, border: '1px solid',
-  },
-  adminCard: {
-    backgroundColor: '#FFFFFF', borderRadius: 14, border: '1px solid #E8E9EB', padding: 24,
-  },
-  adminCardTitle: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 15, color: '#1F2024',
-    display: 'block', marginBottom: 12,
-  },
-  adminCardText: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 400, fontSize: 13, color: '#3A3B40',
-    lineHeight: '1.6', margin: 0,
-  },
-  keyRisksRow: {
-    display: 'flex', flexDirection: 'row', gap: 8, marginTop: 12, flexWrap: 'wrap',
-  },
-  keyRiskChip: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 12,
-    padding: '6px 14px', borderRadius: 8,
-  },
 
-  // Work Environment
-  envRow: {
-    display: 'flex', flexDirection: 'row', gap: 8, marginBottom: 6,
+  // Workspace Card
+  workspaceCard: {
+    backgroundColor: '#FFFFFF', borderRadius: 16, border: '1px solid #E8E9EB',
+    overflow: 'hidden',
   },
-  envLabel: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 13, color: '#71727A', minWidth: 80,
-  },
-  envValue: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 400, fontSize: 13, color: '#1F2024',
-  },
-  envSubLabel: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 12, color: '#71727A',
-    display: 'block', marginBottom: 6,
-  },
-  envTag: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: 11, color: '#059669',
-    backgroundColor: '#ECFDF5', padding: '4px 10px', borderRadius: 6,
-    display: 'inline-block', marginRight: 6, marginBottom: 4,
-  },
-
-  // Risk Details
-  riskDetailItem: {
-    padding: '16px 0', borderBottom: '1px solid #F0F1F3',
-  },
-  riskDetailHeader: {
+  workspaceCardHeader: {
     display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: 8,
+    padding: '18px 24px', background: 'none', border: 'none', cursor: 'pointer',
+    width: '100%', textAlign: 'left',
   },
-  riskDetailType: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 14, color: '#1F2024',
+  workspaceCardHeaderLeft: {
+    display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 12,
   },
-  riskDetailScore: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 14,
+  workspaceName: {
+    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 16, color: '#1F2024',
   },
-  riskDetailGrade: {
+  workStatusBadge: {
     fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 11,
-    padding: '3px 10px', borderRadius: 6,
+    padding: '3px 10px', borderRadius: 10, flexShrink: 0,
   },
-  riskDetailEvidence: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 400, fontSize: 13, color: '#3A3B40',
-    lineHeight: '1.5', margin: '0 0 6px 0',
+  riskBadge: {
+    fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 11,
+    padding: '3px 10px', borderRadius: 10, flexShrink: 0,
   },
-  riskDetailAccident: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: 12, color: '#DC2626',
-    margin: '0 0 8px 0',
+  workspaceCardHeaderRight: {
+    display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 16,
   },
-  riskDetailActions: {
-    display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8,
+  workspaceMeta: {
+    display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 5,
   },
-  riskDetailActionsLabel: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 12, color: '#71727A',
+  workspaceMetaText: {
+    fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: 13, color: '#71727A',
   },
-  riskDetailAction: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 400, fontSize: 12, color: '#3A3B40',
-    paddingLeft: 8,
+  workspaceMembers: {
+    display: 'flex', flexDirection: 'row', alignItems: 'center',
   },
-  residualRow: {
-    display: 'flex', flexDirection: 'row', gap: 8, alignItems: 'center',
+  memberName: {
+    fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 13, color: '#006FFD',
   },
-  residualLabel: {
+  expandArrow: {
+    fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#8F9098', marginLeft: 4,
+  },
+
+  // Workspace Card Body
+  workspaceCardBody: {
+    padding: '0 24px 24px', display: 'flex', flexDirection: 'column', gap: 20,
+    borderTop: '1px solid #F0F1F3',
+  },
+
+  // Photos Section
+  photosSection: {
+    display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 16,
+  },
+  sectionLabel: {
+    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 15, color: '#1F2024',
+  },
+  photosGrid: {
+    display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16,
+  },
+  photoCard: {
+    backgroundColor: '#F8F9FA', borderRadius: 12, border: '1px solid #E8E9EB',
+    overflow: 'hidden', display: 'flex', flexDirection: 'column',
+  },
+  photoCardHeader: {
+    display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8,
+    padding: '10px 14px', borderBottom: '1px solid #E8E9EB', backgroundColor: '#FFFFFF',
+  },
+  photoCardLabel: {
+    fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 13, color: '#1F2024',
+    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+  },
+  photoImage: {
+    width: '100%', height: 180, objectFit: 'cover',
+  },
+  photoPlaceholder: {
+    width: '100%', height: 180, display: 'flex', flexDirection: 'column',
+    justifyContent: 'center', alignItems: 'center', gap: 8,
+  },
+  photoPlaceholderText: {
     fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: 12, color: '#8F9098',
   },
-  residualValue: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 12,
+  // Risk Section
+  riskSection: {
+    display: 'flex', flexDirection: 'column', gap: 12,
   },
 
-  // Mandatory Actions
-  mandatoryAction: {
-    display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 8,
+  // Integrated Assessment
+  assessmentContainer: {
+    display: 'flex', flexDirection: 'column', gap: 16,
   },
-  mandatoryBullet: {
-    width: 24, height: 24, borderRadius: '50%', backgroundColor: '#DC2626',
-    color: '#FFFFFF', display: 'flex', justifyContent: 'center', alignItems: 'center',
-    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 12, flexShrink: 0,
+  assessmentHeader: {
+    display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    padding: '16px 20px', backgroundColor: '#F8F9FA', borderRadius: 12, border: '1px solid #E8E9EB',
   },
-  mandatoryText: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: 13, color: '#1F2024', lineHeight: '1.5',
+  overallGradeBadge: {
+    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 14,
+    padding: '6px 14px', borderRadius: 8, border: '1px solid',
+  },
+  permissionBadgeLarge: {
+    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 13,
+    padding: '6px 16px', borderRadius: 8,
   },
 
-  // Result Actions
-  resultActions: {
-    display: 'flex', flexDirection: 'row', gap: 12, marginTop: 8,
+  // Passage Block
+  passageBlock: {
+    padding: '20px 24px', backgroundColor: '#FFFFFF', borderRadius: 12,
+    border: '1px solid #E8E9EB', display: 'flex', flexDirection: 'column', gap: 0,
   },
-  resetBtn: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 14, color: '#FFFFFF',
-    backgroundColor: '#006FFD', padding: '12px 28px', borderRadius: 10,
-    border: 'none', cursor: 'pointer',
+  passageParagraph: {
+    fontFamily: 'Inter, sans-serif', fontWeight: 400, fontSize: 14, color: '#3A3B40',
+    lineHeight: '1.8', margin: '0 0 12px 0', textAlign: 'justify' as const,
+  },
+
+  // No Assessment
+  noAssessment: {
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+    gap: 8, padding: '32px 0', backgroundColor: '#F8F9FA', borderRadius: 12,
+  },
+  noAssessmentText: {
+    fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 14, color: '#1F2024',
+  },
+  noAssessmentHint: {
+    fontFamily: 'Inter, sans-serif', fontWeight: 400, fontSize: 12, color: '#8F9098', textAlign: 'center',
   },
 };
