@@ -77,9 +77,9 @@ export async function requestDetection(
 /** 3단계: 결과 조회 (폴링용) */
 export async function fetchCheckUpdate(
   complianceId: number,
-): Promise<{isUpdated: boolean; isComplied: boolean | null}> {
+): Promise<{ isUpdated: boolean; isComplied: boolean | null }> {
   const res = await client.get(ENDPOINTS.CHECK_UPDATE, {
-    params: {compliance_id: complianceId},
+    params: { compliance_id: complianceId },
   });
   // 응답: { ok: true, data: { is_updated, is_complied, ... } }
   const data: ComplianceData = res.data.data;

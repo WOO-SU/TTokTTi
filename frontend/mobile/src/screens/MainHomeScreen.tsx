@@ -1,6 +1,6 @@
 /* 메인 홈 화면 - 오늘의 작업 목록 */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,49 +10,29 @@ import {
   ScrollView,
   Image,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
+import { useAuth } from '../context/AuthContext';
+import {
+  getTodayWorkSessions,
+  activateWorkSession,
+  type WorkSessionItem,
+  type WorkSessionStatus,
+} from '../api/worksession';
 
 type TaskStatus = 'completed' | 'in_progress' | 'pending';
 
-type Task = {
-  id: string;
-  title: string;
-  image: any;
-  status: TaskStatus;
-  timeStart: string;
-  timeEnd: string;
+/** 백엔드 status → 프론트 status 매핑 */
+const STATUS_MAP: Record<WorkSessionStatus, TaskStatus> = {
+  DONE: 'completed',
+  IN_PROGRESS: 'in_progress',
+  READY: 'pending',
 };
-
-const TASKS: Task[] = [
-  {
-    id: '1',
-    title: '통신함 작업',
-    image: require('../assets/box.png'),
-    status: 'completed',
-    timeStart: '11:00',
-    timeEnd: '12:00',
-  },
-  {
-    id: '2',
-    title: '사다리 작업',
-    image: require('../assets/ladder.png'),
-    status: 'in_progress',
-    timeStart: '15:00',
-    timeEnd: '16:40',
-  },
-  {
-    id: '3',
-    title: '고소차',
-    image: require('../assets/box.png'),
-    status: 'pending',
-    timeStart: '18:00',
-    timeEnd: '19:00',
-  },
-];
 
 const STATUS_CONFIG: Record<
   TaskStatus,
@@ -67,6 +47,15 @@ const STATUS_CONFIG: Record<
   },
   pending: { label: '작업 전', bg: '#0F62FE', text: '#FFFFFF', icon: '◷' },
 };
+
+/** datetime 문자열에서 HH:MM 추출 */
+function formatTime(datetime: string | null): string {
+  if (!datetime) return '--:--';
+  const date = new Date(datetime);
+  const h = date.getHours().toString().padStart(2, '0');
+  const m = date.getMinutes().toString().padStart(2, '0');
+  return `${h}:${m}`;
+}
 
 /* ──────── Icon Components ──────── */
 
@@ -113,11 +102,35 @@ export default function MainHomeScreen() {
   const insets = useSafeAreaInsets();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { userName } = useAuth();
 
+  const [sessions, setSessions] = useState<WorkSessionItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showPendingModal, setShowPendingModal] = useState(false);
   const [showCompletedModal, setShowCompletedModal] = useState(false);
 
-  const handleTaskPress = (status: TaskStatus) => {
+  // 화면 포커스 시 마다 오늘의 작업 목록 새로고침
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      setLoading(true);
+      getTodayWorkSessions()
+        .then(data => {
+          if (active) setSessions(data);
+        })
+        .catch(() => {
+          if (active) setSessions([]);
+        })
+        .finally(() => {
+          if (active) setLoading(false);
+        });
+      return () => { active = false; };
+    }, []),
+  );
+
+  const handleTaskPress = async (session: WorkSessionItem) => {
+    const status = STATUS_MAP[session.status];
+
     if (status === 'pending') {
       setShowPendingModal(true);
       return;
@@ -126,7 +139,15 @@ export default function MainHomeScreen() {
       setShowCompletedModal(true);
       return;
     }
-    navigation.navigate('WorkMenu');
+
+    // in_progress → activate 호출 후 WorkMenu 이동
+    try {
+      await activateWorkSession(session.id);
+      navigation.navigate('WorkMenu');
+    } catch {
+      // activate 실패 시에도 WorkMenu 이동 (이미 IN_PROGRESS인 경우)
+      navigation.navigate('WorkMenu');
+    }
   };
 
   return (
@@ -163,52 +184,61 @@ export default function MainHomeScreen() {
 
         {/* Title */}
         <View style={styles.titleSection}>
-          <Text style={styles.titleText}>오늘 홍길동님의 작업</Text>
+          <Text style={styles.titleText}>
+            오늘 {userName ?? '사용자'}님의 작업
+          </Text>
           <Text style={styles.subtitleText}>화이팅하세요!</Text>
         </View>
 
         {/* Task Cards */}
         <View style={styles.taskList}>
-          {TASKS.map(task => {
-            const config = STATUS_CONFIG[task.status];
-            return (
-              <TouchableOpacity
-                key={task.id}
-                style={styles.taskCard}
-                activeOpacity={0.8}
-                onPress={() => handleTaskPress(task.status)}>
-                {/* Task Image */}
-                <View style={styles.taskImageWrapper}>
-                  <Image
-                    source={task.image}
-                    style={styles.taskImage}
-                    resizeMode="contain"
-                  />
-                </View>
+          {loading ? (
+            <ActivityIndicator size="large" color="#006FFD" style={{ marginTop: 40 }} />
+          ) : sessions.length === 0 ? (
+            <Text style={styles.emptyText}>오늘 배정된 작업이 없습니다.</Text>
+          ) : (
+            sessions.map(session => {
+              const status = STATUS_MAP[session.status];
+              const config = STATUS_CONFIG[status];
+              return (
+                <TouchableOpacity
+                  key={session.id}
+                  style={styles.taskCard}
+                  activeOpacity={0.8}
+                  onPress={() => handleTaskPress(session)}>
+                  {/* Task Image */}
+                  <View style={styles.taskImageWrapper}>
+                    <Image
+                      source={require('../assets/box.png')}
+                      style={styles.taskImage}
+                      resizeMode="contain"
+                    />
+                  </View>
 
-                {/* Task Info */}
-                <View style={styles.taskInfo}>
-                  <View style={styles.taskHeader}>
-                    <Text style={styles.taskTitle}>{task.title}</Text>
-                    <View
-                      style={[styles.statusBadge, { backgroundColor: config.bg }]}>
-                      <Text style={styles.statusIcon}>{config.icon}</Text>
-                      <Text
-                        style={[styles.statusText, { color: config.text }]}>
-                        {config.label}
+                  {/* Task Info */}
+                  <View style={styles.taskInfo}>
+                    <View style={styles.taskHeader}>
+                      <Text style={styles.taskTitle}>{session.name}</Text>
+                      <View
+                        style={[styles.statusBadge, { backgroundColor: config.bg }]}>
+                        <Text style={styles.statusIcon}>{config.icon}</Text>
+                        <Text
+                          style={[styles.statusText, { color: config.text }]}>
+                          {config.label}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.taskTime}>
+                      <ClockIcon />
+                      <Text style={styles.taskTimeText}>
+                        {formatTime(session.starts_at)} - {formatTime(session.ends_at)}
                       </Text>
                     </View>
                   </View>
-                  <View style={styles.taskTime}>
-                    <ClockIcon />
-                    <Text style={styles.taskTimeText}>
-                      {task.timeStart} - {task.timeEnd}
-                    </Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
+                </TouchableOpacity>
+              );
+            })
+          )}
         </View>
       </ScrollView>
 
@@ -503,6 +533,16 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     fontSize: 14,
     color: '#71727A',
+  },
+
+  /* Empty State */
+  emptyText: {
+    fontFamily: 'Inter',
+    fontWeight: '400',
+    fontSize: 14,
+    color: '#71727A',
+    textAlign: 'center',
+    marginTop: 40,
   },
 
   /* Modal */

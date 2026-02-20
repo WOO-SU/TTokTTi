@@ -257,7 +257,7 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
       </View>
 
       {/* Continue Button */}
-      <View style={[styles.continueSection, {paddingBottom: insets.bottom + 16}]}>
+      <View style={[styles.continueSection, { paddingBottom: insets.bottom + 16 }]}>
         <TouchableOpacity
           style={[
             styles.continueButton,
