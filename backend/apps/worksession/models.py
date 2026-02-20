@@ -27,7 +27,7 @@ class WorkSession(models.Model):
         on_delete=models.CASCADE,
         related_name="sessions"
     )
-
+    name = models.CharField(max_length=200)
     starts_at = models.DateTimeField()
     ends_at = models.DateTimeField(null=True, blank=True)
 

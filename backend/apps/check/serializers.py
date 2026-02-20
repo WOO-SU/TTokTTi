@@ -63,7 +63,7 @@ class ApproveCheckResponseSerializer(serializers.Serializer):
 
 # "/api/check/pass" 요청 시리얼라이저
 class CheckPassRequestSerializer(serializers.Serializer):
-    worksession_id = serializers.IntegerField()
+    category = serializers.CharField(max_length=50, required=False)
 
 # "/api/check/pass" 응답 시리얼라이저
 class CheckPassResponseSerializer(serializers.Serializer):
