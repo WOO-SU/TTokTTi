@@ -89,14 +89,6 @@ export default function SafetyEquipmentCheckScreen({
     }
   }, [route.params?.completedTitle]);
 
-  const toggleItem = (id: string) => {
-    setItems(prev =>
-      prev.map(item =>
-        item.id === id ? { ...item, checked: !item.checked } : item,
-      ),
-    );
-  };
-
   const rows = [];
   for (let i = 0; i < items.length; i += 2) {
     rows.push(items.slice(i, i + 2));
@@ -142,17 +134,15 @@ export default function SafetyEquipmentCheckScreen({
                   />
                   <View style={styles.cardBottom}>
                     <Text style={styles.cardLabel}>{item.title}</Text>
-                    <TouchableOpacity
+                    <View
                       style={[
                         styles.checkbox,
                         item.checked
                           ? styles.checkboxChecked
                           : styles.checkboxUnchecked,
-                      ]}
-                      onPress={() => toggleItem(item.id)}
-                      activeOpacity={0.7}>
+                      ]}>
                       {item.checked && <CheckIcon />}
-                    </TouchableOpacity>
+                    </View>
                   </View>
                 </TouchableOpacity>
               ))}

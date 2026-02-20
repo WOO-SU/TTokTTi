@@ -10,9 +10,8 @@ const ENDPOINTS = {
 // 프론트 장비명 → 백엔드 target 매핑
 const TARGET_MAP: Record<string, string> = {
   안전모: 'helmet',
-  조끼: 'safety_vest',
-  안전화: 'safety_shoes',
-  장갑: 'glove',
+  안전조끼: 'safety_vest',
+  안전장갑: 'glove',
 };
 
 export type ComplianceData = {

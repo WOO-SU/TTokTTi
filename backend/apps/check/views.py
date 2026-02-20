@@ -113,7 +113,7 @@ def request_detection(request):
     compliance = Compliance.objects.create(
         worksession_id=worksession_id,
         employee=user,
-        target=target,
+        category=category,
         original_image=original_image
     )
 
