@@ -102,19 +102,306 @@ const workStatusColors: Record<string, { bg: string; text: string }> = {
   '작업 끝': { bg: '#EAF2FF', text: '#006FFD' },
 };
 
-// ── Mock Data (worksession list only) ──
+// ── Mock Data ──
 
 const emptyPhotos: WorkspacePhotos = { workspace: null, ladder: null, commbox: null };
 
-const mockWorkspaces: Omit<WorkspaceRisk, 'assessmentId' | 'adminReport'>[] = [
+const mockExampleReport1: AdminReport = {
+  scene_summary: {
+    work_environment: '주택가 골목 내 전신주 인근 사다리 설비함 작업. 도로 폭 약 4m, 차량 통행 있음.',
+    work_height_or_location: '지상 약 3.5m 높이 전신주 설비함',
+    observed_safety_facilities: ['안전모 착용 확인', '안전대 부착 설비 설치됨', '사다리 하단 미끄럼 방지 패드 장착'],
+    needs_verification: ['안전대 체결 상태 확인 필요', '작업 반경 내 차량 통제 여부 확인'],
+  },
+  hazards: [
+    {
+      id: 'FALL',
+      title: '추락 위험',
+      evidence_from_image: '작업자가 약 3.5m 높이 사다리 위에서 설비함 작업 중이며, 안전대 체결 상태가 이미지상 불명확함.',
+      expected_accident: '사다리에서 추락 시 골절, 두부 외상 등 중상 가능',
+      likelihood_L_1_5: 3,
+      severity_S_1_5: 5,
+      risk_R_1_25: 15,
+      risk_grade: 'High',
+      mitigations_before_work: ['안전대 체결 상태 재확인', '사다리 상단 고정 보강', '하부 보조 작업자 배치'],
+      residual_likelihood_L_1_5: 1,
+      residual_severity_S_1_5: 5,
+      residual_risk_R_1_25: 5,
+      residual_risk_grade: 'Medium',
+    },
+    {
+      id: 'DROPPING',
+      title: '낙하물 위험',
+      evidence_from_image: '설비함 개방 상태에서 공구 및 부품이 사다리 위에 놓여 있음. 하부 통행인 보호 조치 미흡.',
+      expected_accident: '공구 낙하 시 하부 통행인 또는 작업자 두부 타격 위험',
+      likelihood_L_1_5: 3,
+      severity_S_1_5: 4,
+      risk_R_1_25: 12,
+      risk_grade: 'High',
+      mitigations_before_work: ['공구 낙하 방지 줄 사용', '하부 출입 통제 구역 설정', '안전모 착용 재확인'],
+      residual_likelihood_L_1_5: 1,
+      residual_severity_S_1_5: 4,
+      residual_risk_R_1_25: 4,
+      residual_risk_grade: 'Low',
+    },
+    {
+      id: 'ELECTRIC',
+      title: '감전 위험',
+      evidence_from_image: '설비함 내부 배선 노출 상태이며, 절연 장갑 착용 여부 이미지상 불명확.',
+      expected_accident: '활선 접촉 시 감전 사고, 심정지 가능',
+      likelihood_L_1_5: 2,
+      severity_S_1_5: 5,
+      risk_R_1_25: 10,
+      risk_grade: 'High',
+      mitigations_before_work: ['절연 장갑 및 절연 공구 사용 확인', '활선 여부 검전기로 확인', '접지 상태 점검'],
+      residual_likelihood_L_1_5: 1,
+      residual_severity_S_1_5: 5,
+      residual_risk_R_1_25: 5,
+      residual_risk_grade: 'Medium',
+    },
+    {
+      id: 'PINCH',
+      title: '협착/끼임 위험',
+      evidence_from_image: '설비함 도어 개폐 시 손가락 끼임 가능 구간이 보이며, 보호 장갑 미착용 상태.',
+      expected_accident: '설비함 도어에 의한 손가락 협착, 절단 위험',
+      likelihood_L_1_5: 2,
+      severity_S_1_5: 3,
+      risk_R_1_25: 6,
+      risk_grade: 'Medium',
+      mitigations_before_work: ['작업용 보호 장갑 착용', '도어 고정 장치 사용'],
+      residual_likelihood_L_1_5: 1,
+      residual_severity_S_1_5: 3,
+      residual_risk_R_1_25: 3,
+      residual_risk_grade: 'Low',
+    },
+    {
+      id: 'ERGO',
+      title: '근골격계 위험',
+      evidence_from_image: '작업자가 사다리 위에서 팔을 위로 뻗은 상태로 장시간 작업 중. 부자연스러운 자세 유지.',
+      expected_accident: '어깨/허리 근골격계 질환, 피로 누적에 의한 추락 위험 증가',
+      likelihood_L_1_5: 3,
+      severity_S_1_5: 2,
+      risk_R_1_25: 6,
+      risk_grade: 'Medium',
+      mitigations_before_work: ['30분 간격 휴식 시행', '작업 높이에 맞는 발판 조정'],
+      residual_likelihood_L_1_5: 2,
+      residual_severity_S_1_5: 2,
+      residual_risk_R_1_25: 4,
+      residual_risk_grade: 'Low',
+    },
+  ],
+  overall: {
+    overall_max_R: 15,
+    overall_grade: 'High',
+    work_permission: '개선조치 후 작업',
+    urgent_fix_before_work: [
+      '안전대 체결 상태 재확인 후 작업 시작',
+      '공구 낙하 방지 줄 부착 및 하부 통제 구역 설정',
+      '절연 장갑 착용 및 활선 여부 검전기 확인',
+    ],
+  },
+};
+
+const mockExampleReport2: AdminReport = {
+  scene_summary: {
+    work_environment: '도로변 전신주 인근. 도로 공사로 인한 진동 및 분진 발생. 안전 울타리 일부 훼손 상태.',
+    work_height_or_location: '지상 약 4m 높이 전신주 설비함',
+    observed_safety_facilities: ['안전모 착용', '작업 표지판 설치'],
+    needs_verification: ['안전 울타리 보수 필요', '분진 마스크 착용 여부 확인', '사다리 설치 각도 재확인'],
+  },
+  hazards: [
+    {
+      id: 'FALL',
+      title: '추락 위험',
+      evidence_from_image: '사다리 설치 각도가 약 80도로 기준(75도)보다 급함. 상단 고정부 볼트 이완 확인됨.',
+      expected_accident: '사다리 미끄러짐에 의한 추락, 중상 또는 사망 가능',
+      likelihood_L_1_5: 4,
+      severity_S_1_5: 5,
+      risk_R_1_25: 20,
+      risk_grade: 'Critical',
+      mitigations_before_work: ['사다리 설치 각도 75도로 재조정', '상단 고정 볼트 체결', '안전대 부착 설비 확인 후 체결'],
+      residual_likelihood_L_1_5: 2,
+      residual_severity_S_1_5: 5,
+      residual_risk_R_1_25: 10,
+      residual_risk_grade: 'High',
+    },
+    {
+      id: 'DROPPING',
+      title: '낙하물 위험',
+      evidence_from_image: '설비함 상부에 고정되지 않은 자재가 놓여 있으며, 하부 통행 통제 미실시.',
+      expected_accident: '자재 낙하에 의한 보행자 또는 작업자 부상',
+      likelihood_L_1_5: 3,
+      severity_S_1_5: 4,
+      risk_R_1_25: 12,
+      risk_grade: 'High',
+      mitigations_before_work: ['자재 고정 또는 제거', '하부 출입 금지 구역 설정', '낙하물 방지망 설치'],
+      residual_likelihood_L_1_5: 1,
+      residual_severity_S_1_5: 4,
+      residual_risk_R_1_25: 4,
+      residual_risk_grade: 'Low',
+    },
+    {
+      id: 'ELECTRIC',
+      title: '감전 위험',
+      evidence_from_image: '설비함 내 배선 피복 벗겨진 부분 확인. 우천 시 누전 위험 높음.',
+      expected_accident: '피복 손상 배선 접촉 시 감전, 심정지 가능',
+      likelihood_L_1_5: 3,
+      severity_S_1_5: 5,
+      risk_R_1_25: 15,
+      risk_grade: 'High',
+      mitigations_before_work: ['손상 배선 절연 테이프 보수', '절연 장갑 필수 착용', '검전기로 활선 확인'],
+      residual_likelihood_L_1_5: 1,
+      residual_severity_S_1_5: 5,
+      residual_risk_R_1_25: 5,
+      residual_risk_grade: 'Medium',
+    },
+    {
+      id: 'PINCH',
+      title: '협착/끼임 위험',
+      evidence_from_image: '통신함 도어 경첩 부식 진행 중. 예기치 않은 도어 닫힘 가능.',
+      expected_accident: '부식 경첩에 의한 도어 급닫힘, 손가락 협착',
+      likelihood_L_1_5: 3,
+      severity_S_1_5: 3,
+      risk_R_1_25: 9,
+      risk_grade: 'Medium',
+      mitigations_before_work: ['경첩 윤활제 도포', '도어 고정 스토퍼 사용', '보호 장갑 착용'],
+      residual_likelihood_L_1_5: 1,
+      residual_severity_S_1_5: 3,
+      residual_risk_R_1_25: 3,
+      residual_risk_grade: 'Low',
+    },
+    {
+      id: 'ERGO',
+      title: '근골격계 위험',
+      evidence_from_image: '작업자가 좁은 공간에서 상체를 비튼 채 작업 중. 분진 환경으로 호흡기 부담 가중.',
+      expected_accident: '허리/목 근골격계 질환, 호흡기 관련 건강 악화',
+      likelihood_L_1_5: 3,
+      severity_S_1_5: 2,
+      risk_R_1_25: 6,
+      risk_grade: 'Medium',
+      mitigations_before_work: ['분진 마스크 착용', '20분 간격 자세 변경 및 휴식'],
+      residual_likelihood_L_1_5: 2,
+      residual_severity_S_1_5: 2,
+      residual_risk_R_1_25: 4,
+      residual_risk_grade: 'Low',
+    },
+  ],
+  overall: {
+    overall_max_R: 20,
+    overall_grade: 'Critical',
+    work_permission: '조치 전 작업 금지',
+    urgent_fix_before_work: [
+      '사다리 설치 각도 75도로 재조정 및 상단 볼트 체결',
+      '손상 배선 절연 보수 및 활선 여부 검전기 확인',
+      '하부 출입 통제 구역 설정 및 낙하물 방지망 설치',
+      '안전 울타리 보수 완료 후 작업 개시',
+    ],
+  },
+};
+
+const mockExampleReport3: AdminReport = {
+  scene_summary: {
+    work_environment: '아파트 단지 내 통신 설비함 작업. 주변 정리 양호, 충분한 작업 공간 확보.',
+    work_height_or_location: '지상 약 2m 높이 벽면 설비함',
+    observed_safety_facilities: ['안전모 착용', '안전대 체결 확인', '사다리 미끄럼 방지 패드 정상', '작업 표지판 설치'],
+    needs_verification: [],
+  },
+  hazards: [
+    {
+      id: 'FALL',
+      title: '추락 위험',
+      evidence_from_image: '작업 높이 약 2m로 비교적 낮음. 사다리 상태 양호하고 안전대 체결 확인됨.',
+      expected_accident: '사다리 미끄러짐에 의한 경미한 부상 가능',
+      likelihood_L_1_5: 1,
+      severity_S_1_5: 3,
+      risk_R_1_25: 3,
+      risk_grade: 'Low',
+      mitigations_before_work: [],
+      residual_likelihood_L_1_5: 1,
+      residual_severity_S_1_5: 3,
+      residual_risk_R_1_25: 3,
+      residual_risk_grade: 'Low',
+    },
+    {
+      id: 'DROPPING',
+      title: '낙하물 위험',
+      evidence_from_image: '공구함 정리 상태 양호. 공구 벨트 착용 확인.',
+      expected_accident: '소형 공구 낙하에 의한 경미한 부상',
+      likelihood_L_1_5: 1,
+      severity_S_1_5: 2,
+      risk_R_1_25: 2,
+      risk_grade: 'Low',
+      mitigations_before_work: [],
+      residual_likelihood_L_1_5: 1,
+      residual_severity_S_1_5: 2,
+      residual_risk_R_1_25: 2,
+      residual_risk_grade: 'Low',
+    },
+    {
+      id: 'ELECTRIC',
+      title: '감전 위험',
+      evidence_from_image: '배선 피복 상태 양호. 절연 장갑 착용 확인됨.',
+      expected_accident: '예기치 않은 통전 시 감전 가능',
+      likelihood_L_1_5: 1,
+      severity_S_1_5: 4,
+      risk_R_1_25: 4,
+      risk_grade: 'Low',
+      mitigations_before_work: [],
+      residual_likelihood_L_1_5: 1,
+      residual_severity_S_1_5: 4,
+      residual_risk_R_1_25: 4,
+      residual_risk_grade: 'Low',
+    },
+    {
+      id: 'PINCH',
+      title: '협착/끼임 위험',
+      evidence_from_image: '설비함 도어 상태 양호. 경첩 및 잠금 장치 정상 작동.',
+      expected_accident: '도어 개폐 시 손가락 경미한 끼임',
+      likelihood_L_1_5: 1,
+      severity_S_1_5: 2,
+      risk_R_1_25: 2,
+      risk_grade: 'Low',
+      mitigations_before_work: [],
+      residual_likelihood_L_1_5: 1,
+      residual_severity_S_1_5: 2,
+      residual_risk_R_1_25: 2,
+      residual_risk_grade: 'Low',
+    },
+    {
+      id: 'ERGO',
+      title: '근골격계 위험',
+      evidence_from_image: '작업 높이가 적절하여 자연스러운 자세 유지 가능.',
+      expected_accident: '장시간 작업 시 경미한 피로',
+      likelihood_L_1_5: 1,
+      severity_S_1_5: 1,
+      risk_R_1_25: 1,
+      risk_grade: 'Low',
+      mitigations_before_work: [],
+      residual_likelihood_L_1_5: 1,
+      residual_severity_S_1_5: 1,
+      residual_risk_R_1_25: 1,
+      residual_risk_grade: 'Low',
+    },
+  ],
+  overall: {
+    overall_max_R: 4,
+    overall_grade: 'Low',
+    work_permission: '작업 가능',
+    urgent_fix_before_work: [],
+  },
+};
+
+const mockWorkspaces: WorkspaceRisk[] = [
   {
     id: 1,
     siteName: '봉천동 작업공간',
     startTime: '08:30',
     workStatus: '작업 전',
     members: [{ id: 1, name: '송영민' }, { id: 2, name: '임정원' }],
+    assessmentId: null,
     photos: { ...emptyPhotos },
     photoUrls: { ...emptyPhotos },
+    adminReport: null,
   },
   {
     id: 2,
@@ -122,8 +409,10 @@ const mockWorkspaces: Omit<WorkspaceRisk, 'assessmentId' | 'adminReport'>[] = [
     startTime: '08:30',
     workStatus: '작업 중',
     members: [{ id: 3, name: '김태호' }, { id: 4, name: '박지수' }],
+    assessmentId: 101,
     photos: { ...emptyPhotos },
     photoUrls: { ...emptyPhotos },
+    adminReport: mockExampleReport1,
   },
   {
     id: 3,
@@ -131,8 +420,10 @@ const mockWorkspaces: Omit<WorkspaceRisk, 'assessmentId' | 'adminReport'>[] = [
     startTime: '08:50',
     workStatus: '작업 중',
     members: [{ id: 5, name: '이준혁' }, { id: 6, name: '최서연' }],
+    assessmentId: 102,
     photos: { ...emptyPhotos },
     photoUrls: { ...emptyPhotos },
+    adminReport: mockExampleReport2,
   },
   {
     id: 4,
@@ -140,8 +431,10 @@ const mockWorkspaces: Omit<WorkspaceRisk, 'assessmentId' | 'adminReport'>[] = [
     startTime: '09:10',
     workStatus: '작업 끝',
     members: [{ id: 7, name: '우수연' }, { id: 8, name: '원인영' }],
+    assessmentId: 103,
     photos: { ...emptyPhotos },
     photoUrls: { ...emptyPhotos },
+    adminReport: mockExampleReport3,
   },
 ];
 
@@ -190,152 +483,76 @@ function IntegratedAssessmentView({ report }: { report: AdminReport }) {
   const gs = getGradeStyle(overall.overall_grade);
   const ps = getPermissionStyle(overall.work_permission);
 
+  // Build flowing passage following generate_admin_report template
   const topHazards = [...hazards]
     .sort((a, b) => b.risk_R_1_25 - a.risk_R_1_25)
     .slice(0, 2);
 
+  const significantHazards = hazards.filter(h => h.risk_R_1_25 >= 5);
+  const allActions = hazards.flatMap(h => h.mitigations_before_work);
+
+  // Executive summary sentence (matches services.py executive_summary.summary_text)
+  const summaryLine =
+    `위험성 평가 결과 '${overall.overall_grade}' 수준이며 작업 상태는 '${overall.work_permission}'입니다.`;
+
+  // Work environment paragraph
+  const envParagraph =
+    `본 작업 현장은 ${scene.work_environment} ` +
+    `작업 위치는 ${scene.work_height_or_location}입니다.` +
+    (scene.observed_safety_facilities.length > 0
+      ? ` 현장에서 ${scene.observed_safety_facilities.join(', ')} 등의 안전 시설이 확인되었습니다.`
+      : '') +
+    (scene.needs_verification.length > 0
+      ? ` 다만, ${scene.needs_verification.join(', ')} 등은 추가 확인이 필요합니다.`
+      : '');
+
+  // Risk details paragraph — top hazards woven into prose
+  const riskLines = topHazards.map(h =>
+    `${h.title}(${h.risk_grade})의 경우, ` +
+    `${h.evidence_from_image} ` +
+    `이로 인해 ${h.expected_accident}의 가능성이 있습니다.`
+  );
+  const riskParagraph = significantHazards.length > 0
+    ? `주요 위험 요소로는 ${topHazards.map(h => h.title).join('과 ')}이(가) 식별되었습니다. ` +
+      riskLines.join(' ')
+    : '현장에서 식별된 위험 요소는 모두 낮은 수준(Low)으로, 기본 안전 수칙을 준수하면 작업이 가능합니다.';
+
+  // Mitigations paragraph
+  const mitigationParagraph = allActions.length > 0
+    ? `작업 전 필요한 조치사항으로는 ${allActions.slice(0, 5).join(', ')} 등이 있습니다.` +
+      (overall.urgent_fix_before_work.length > 0
+        ? ` 특히 긴급 조치가 필요한 사항은 다음과 같습니다: ${overall.urgent_fix_before_work.join('; ')}.`
+        : '')
+    : '현재 별도의 사전 조치사항 없이 작업이 가능합니다.';
+
+  // Residual risk sentence
+  const residualHigh = hazards.filter(h => h.residual_risk_R_1_25 >= 5);
+  const residualParagraph = residualHigh.length > 0
+    ? `조치 이후에도 ${residualHigh.map(h => `${h.title}(잔여 위험: ${h.residual_risk_grade})`).join(', ')}은(는) 주의가 필요합니다.`
+    : '제시된 조치사항을 이행하면 모든 위험 요소가 낮은 수준으로 관리됩니다.';
+
   return (
     <div style={styles.assessmentContainer}>
-      {/* Header: Overall Grade + Permission */}
+      {/* Header badge bar */}
       <div style={styles.assessmentHeader}>
-        <div style={styles.assessmentHeaderLeft}>
-          <span style={{ ...styles.overallGradeBadge, backgroundColor: gs.bg, color: gs.text, borderColor: gs.border }}>
-            {overall.overall_grade}
-          </span>
-          <span style={{ ...styles.overallScore, color: gs.text }}>
-            R = {overall.overall_max_R}
-          </span>
-        </div>
+        <span style={{ ...styles.overallGradeBadge, backgroundColor: gs.bg, color: gs.text, borderColor: gs.border }}>
+          {overall.overall_grade}
+        </span>
         <span style={{ ...styles.permissionBadgeLarge, backgroundColor: ps.bg, color: ps.text }}>
           {overall.work_permission}
         </span>
       </div>
 
-      {/* Executive Summary */}
-      <div style={styles.sectionBlock}>
-        <span style={styles.sectionBlockTitle}>종합 평가</span>
-        <p style={styles.summaryText}>
-          위험성 평가 결과 '<strong>{overall.overall_grade}</strong>' 수준이며
-          작업 상태는 '<strong>{overall.work_permission}</strong>'입니다.
+      {/* Integrated passage */}
+      <div style={styles.passageBlock}>
+        <p style={styles.passageParagraph}>
+          <strong>{summaryLine}</strong>
         </p>
-        {topHazards.length > 0 && (
-          <div style={styles.keyRisksWrap}>
-            <span style={styles.keyRisksLabel}>주요 위험 요소:</span>
-            {topHazards.map((h, i) => {
-              const hgs = getGradeStyle(h.risk_grade);
-              return (
-                <div key={i} style={styles.keyRiskItem}>
-                  <span style={{ ...styles.keyRiskBadge, backgroundColor: hgs.bg, color: hgs.text }}>
-                    {h.risk_grade} (R={h.risk_R_1_25})
-                  </span>
-                  <span style={styles.keyRiskTitle}>{h.title}</span>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <p style={styles.passageParagraph}>{envParagraph}</p>
+        <p style={styles.passageParagraph}>{riskParagraph}</p>
+        <p style={styles.passageParagraph}>{mitigationParagraph}</p>
+        <p style={styles.passageParagraph}>{residualParagraph}</p>
       </div>
-
-      {/* Work Environment */}
-      <div style={styles.sectionBlock}>
-        <span style={styles.sectionBlockTitle}>작업 환경</span>
-        <div style={styles.envGrid}>
-          <div style={styles.envItem}>
-            <span style={styles.envLabel}>작업 환경</span>
-            <span style={styles.envValue}>{scene.work_environment}</span>
-          </div>
-          <div style={styles.envItem}>
-            <span style={styles.envLabel}>작업 높이/위치</span>
-            <span style={styles.envValue}>{scene.work_height_or_location}</span>
-          </div>
-        </div>
-        {scene.observed_safety_facilities.length > 0 && (
-          <div style={styles.listBlock}>
-            <span style={styles.listBlockLabel}>확인된 안전 시설:</span>
-            {scene.observed_safety_facilities.map((item, i) => (
-              <div key={i} style={styles.listItem}>
-                <span style={styles.listBullet}>-</span>
-                <span style={styles.listText}>{item}</span>
-              </div>
-            ))}
-          </div>
-        )}
-        {scene.needs_verification.length > 0 && (
-          <div style={styles.listBlock}>
-            <span style={styles.listBlockLabel}>확인 필요 사항:</span>
-            {scene.needs_verification.map((item, i) => (
-              <div key={i} style={styles.listItem}>
-                <span style={{ ...styles.listBullet, color: '#D97706' }}>!</span>
-                <span style={styles.listText}>{item}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Risk Details */}
-      <div style={styles.sectionBlock}>
-        <span style={styles.sectionBlockTitle}>위험 요소 상세</span>
-        <div style={styles.hazardList}>
-          {hazards.map((h, i) => {
-            const hgs = getGradeStyle(h.risk_grade);
-            const rgs = getGradeStyle(h.residual_risk_grade);
-            return (
-              <div key={i} style={{ ...styles.hazardCard, borderLeftColor: hgs.text }}>
-                <div style={styles.hazardCardHeader}>
-                  <span style={styles.hazardTitle}>{h.title}</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ ...styles.hazardScore, color: hgs.text }}>R={h.risk_R_1_25}</span>
-                    <span style={{ ...styles.hazardGradeBadge, backgroundColor: hgs.bg, color: hgs.text }}>
-                      {h.risk_grade}
-                    </span>
-                  </div>
-                </div>
-                <div style={styles.hazardBody}>
-                  <div style={styles.hazardRow}>
-                    <span style={styles.hazardLabel}>근거:</span>
-                    <span style={styles.hazardValue}>{h.evidence_from_image}</span>
-                  </div>
-                  <div style={styles.hazardRow}>
-                    <span style={styles.hazardLabel}>예상 사고:</span>
-                    <span style={styles.hazardValue}>{h.expected_accident}</span>
-                  </div>
-                  {h.mitigations_before_work.length > 0 && (
-                    <div style={styles.mitigationsBlock}>
-                      <span style={styles.mitigationsLabel}>작업 전 필요 조치:</span>
-                      {h.mitigations_before_work.map((m, j) => (
-                        <div key={j} style={styles.mitigationItem}>
-                          <span style={styles.mitigationBullet}>-</span>
-                          <span style={styles.mitigationText}>{m}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <div style={styles.residualRow}>
-                    <span style={styles.hazardLabel}>조치 후 잔여 위험:</span>
-                    <span style={{ ...styles.residualBadge, backgroundColor: rgs.bg, color: rgs.text }}>
-                      {h.residual_risk_grade} (R={h.residual_risk_R_1_25})
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Mandatory Actions */}
-      {overall.urgent_fix_before_work.length > 0 && (
-        <div style={{ ...styles.sectionBlock, backgroundColor: '#FEF2F2', borderColor: '#FECACA' }}>
-          <span style={{ ...styles.sectionBlockTitle, color: '#DC2626' }}>작업 전 필수 조치사항</span>
-          {overall.urgent_fix_before_work.map((action, i) => (
-            <div key={i} style={styles.urgentActionItem}>
-              <span style={styles.urgentActionNumber}>{i + 1}</span>
-              <span style={styles.urgentActionText}>{action}</span>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -434,79 +651,71 @@ export default function WorkerRiskScreen() {
   const isProfileActive = location.pathname === '/profile';
   const unreadCount = useUnreadAlertCount();
 
-  const [workspaces, setWorkspaces] = useState<WorkspaceRisk[]>([]);
+  const [workspaces, setWorkspaces] = useState<WorkspaceRisk[]>(mockWorkspaces);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const fetchAssessmentForWorkspace = useCallback(
-    async (ws: typeof mockWorkspaces[number]): Promise<WorkspaceRisk> => {
-      const base: WorkspaceRisk = {
-        ...ws,
-        assessmentId: null,
-        adminReport: null,
-      };
+  // Fetch real risk assessments from API and merge with mock worksession data
+  const fetchAssessments = useCallback(async () => {
+    setLoading(true);
+    try {
+      const updated = await Promise.all(
+        mockWorkspaces.map(async (ws): Promise<WorkspaceRisk> => {
+          // If mock already has an adminReport, use it as-is (for demo/preview)
+          if (ws.adminReport) return ws;
 
-      try {
-        // Check if a completed assessment exists for this worksession
-        const latestRes = await apiFetch(`/risk/latest/${ws.id}`);
-        if (!latestRes.ok) return base;
-        const latestData = await latestRes.json();
-        if (!latestData.exists) return base;
+          try {
+            const latestRes = await apiFetch(`/risk/latest/${ws.id}`);
+            if (!latestRes.ok) return ws;
+            const latestData = await latestRes.json();
+            if (!latestData.exists) return ws;
 
-        const assessmentId = latestData.assessment_id;
+            const assessmentId = latestData.assessment_id;
+            const reportRes = await apiFetch(`/risk/admin/${assessmentId}`);
+            if (!reportRes.ok) return { ...ws, assessmentId };
+            const reportData = await reportRes.json();
 
-        // Fetch the full admin report
-        const reportRes = await apiFetch(`/risk/admin/${assessmentId}`);
-        if (!reportRes.ok) return { ...base, assessmentId };
-        const reportData = await reportRes.json();
+            const images: { id: number; blob_name: string; created_at: string }[] = reportData.images ?? [];
+            const adminReport: AdminReport = {
+              scene_summary: reportData.report?.scene_summary ?? {
+                work_environment: '',
+                work_height_or_location: '',
+                observed_safety_facilities: [],
+                needs_verification: [],
+              },
+              hazards: reportData.report?.hazards ?? [],
+              overall: reportData.report?.overall ?? {
+                overall_max_R: 0,
+                overall_grade: 'Low' as RiskGrade,
+                work_permission: '작업 가능',
+                urgent_fix_before_work: [],
+              },
+            };
 
-        const images: { id: number; blob_name: string; created_at: string }[] = reportData.images ?? [];
-        const adminReport: AdminReport = {
-          scene_summary: reportData.report?.scene_summary ?? {
-            work_environment: '',
-            work_height_or_location: '',
-            observed_safety_facilities: [],
-            needs_verification: [],
-          },
-          hazards: reportData.report?.hazards ?? [],
-          overall: reportData.report?.overall ?? {
-            overall_max_R: 0,
-            overall_grade: 'Low',
-            work_permission: '작업 가능',
-            urgent_fix_before_work: [],
-          },
-        };
+            // Map images to the 3 photo categories by order
+            const categories: PhotoCategory[] = ['workspace', 'ladder', 'commbox'];
+            const photos: WorkspacePhotos = { ...emptyPhotos };
+            const photoUrls: WorkspacePhotos = { ...emptyPhotos };
+            for (let i = 0; i < Math.min(images.length, categories.length); i++) {
+              photos[categories[i]] = images[i].blob_name;
+              photoUrls[categories[i]] = await fetchImageUrl(images[i].blob_name);
+            }
 
-        // Map images to the 3 photo categories by order (workspace, ladder, commbox)
-        const categories: PhotoCategory[] = ['workspace', 'ladder', 'commbox'];
-        const photos: WorkspacePhotos = { ...emptyPhotos };
-        const photoUrls: WorkspacePhotos = { ...emptyPhotos };
-
-        for (let i = 0; i < Math.min(images.length, categories.length); i++) {
-          photos[categories[i]] = images[i].blob_name;
-          photoUrls[categories[i]] = await fetchImageUrl(images[i].blob_name);
-        }
-
-        return {
-          ...base,
-          assessmentId,
-          photos,
-          photoUrls,
-          adminReport,
-        };
-      } catch {
-        return base;
-      }
-    },
-    [],
-  );
+            return { ...ws, assessmentId, photos, photoUrls, adminReport };
+          } catch {
+            return ws;
+          }
+        }),
+      );
+      setWorkspaces(updated);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    setLoading(true);
-    Promise.all(mockWorkspaces.map(ws => fetchAssessmentForWorkspace(ws)))
-      .then(resolved => setWorkspaces(resolved))
-      .finally(() => setLoading(false));
-  }, [fetchAssessmentForWorkspace]);
+    fetchAssessments();
+  }, [fetchAssessments]);
 
   const handleToggle = (id: number) => {
     setExpandedId(prev => (prev === id ? null : id));
@@ -783,157 +992,23 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     padding: '16px 20px', backgroundColor: '#F8F9FA', borderRadius: 12, border: '1px solid #E8E9EB',
   },
-  assessmentHeaderLeft: {
-    display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 12,
-  },
   overallGradeBadge: {
     fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 14,
     padding: '6px 14px', borderRadius: 8, border: '1px solid',
-  },
-  overallScore: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 16,
   },
   permissionBadgeLarge: {
     fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 13,
     padding: '6px 16px', borderRadius: 8,
   },
 
-  // Section Blocks
-  sectionBlock: {
-    padding: '16px 20px', backgroundColor: '#FFFFFF', borderRadius: 12,
-    border: '1px solid #E8E9EB', display: 'flex', flexDirection: 'column', gap: 10,
+  // Passage Block
+  passageBlock: {
+    padding: '20px 24px', backgroundColor: '#FFFFFF', borderRadius: 12,
+    border: '1px solid #E8E9EB', display: 'flex', flexDirection: 'column', gap: 0,
   },
-  sectionBlockTitle: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 14, color: '#1F2024',
-  },
-  summaryText: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 400, fontSize: 13, color: '#3A3B40',
-    lineHeight: '1.6', margin: 0,
-  },
-
-  // Key Risks
-  keyRisksWrap: {
-    display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4,
-  },
-  keyRisksLabel: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 12, color: '#71727A',
-  },
-  keyRiskItem: {
-    display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8,
-  },
-  keyRiskBadge: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 11,
-    padding: '2px 8px', borderRadius: 4,
-  },
-  keyRiskTitle: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: 13, color: '#1F2024',
-  },
-
-  // Work Environment
-  envGrid: {
-    display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12,
-  },
-  envItem: {
-    display: 'flex', flexDirection: 'column', gap: 4,
-  },
-  envLabel: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 11, color: '#71727A', textTransform: 'uppercase' as const,
-  },
-  envValue: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 400, fontSize: 13, color: '#1F2024', lineHeight: '1.5',
-  },
-
-  // List blocks
-  listBlock: {
-    display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4,
-  },
-  listBlockLabel: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 12, color: '#71727A',
-  },
-  listItem: {
-    display: 'flex', flexDirection: 'row', gap: 6, alignItems: 'flex-start',
-  },
-  listBullet: {
-    fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#059669', flexShrink: 0, fontWeight: 600,
-  },
-  listText: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 400, fontSize: 13, color: '#1F2024', lineHeight: '1.5',
-  },
-
-  // Hazard Cards
-  hazardList: {
-    display: 'flex', flexDirection: 'column', gap: 12,
-  },
-  hazardCard: {
-    backgroundColor: '#FFFFFF', borderRadius: 12, border: '1px solid #E8E9EB',
-    borderLeft: '4px solid #E8E9EB', padding: '16px 20px',
-    display: 'flex', flexDirection: 'column', gap: 10,
-  },
-  hazardCardHeader: {
-    display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-  },
-  hazardTitle: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 14, color: '#1F2024',
-  },
-  hazardScore: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 13,
-  },
-  hazardGradeBadge: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 11,
-    padding: '3px 10px', borderRadius: 6,
-  },
-  hazardBody: {
-    display: 'flex', flexDirection: 'column', gap: 8,
-  },
-  hazardRow: {
-    display: 'flex', flexDirection: 'row', gap: 8, alignItems: 'flex-start',
-  },
-  hazardLabel: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 12, color: '#71727A',
-    flexShrink: 0, minWidth: 70,
-  },
-  hazardValue: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 400, fontSize: 13, color: '#3A3B40', lineHeight: '1.5',
-  },
-
-  // Mitigations
-  mitigationsBlock: {
-    display: 'flex', flexDirection: 'column', gap: 4,
-    padding: '10px 14px', backgroundColor: '#F8F9FA', borderRadius: 8,
-  },
-  mitigationsLabel: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 12, color: '#71727A', marginBottom: 2,
-  },
-  mitigationItem: {
-    display: 'flex', flexDirection: 'row', gap: 6, alignItems: 'flex-start',
-  },
-  mitigationBullet: {
-    fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#006FFD', flexShrink: 0,
-  },
-  mitigationText: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: 12, color: '#1F2024', lineHeight: '1.5',
-  },
-
-  // Residual risk
-  residualRow: {
-    display: 'flex', flexDirection: 'row', gap: 8, alignItems: 'center', marginTop: 4,
-  },
-  residualBadge: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 11,
-    padding: '2px 10px', borderRadius: 6,
-  },
-
-  // Urgent actions
-  urgentActionItem: {
-    display: 'flex', flexDirection: 'row', gap: 10, alignItems: 'flex-start',
-  },
-  urgentActionNumber: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 13, color: '#DC2626',
-    width: 20, height: 20, borderRadius: '50%', backgroundColor: '#FEE2E2',
-    display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0,
-  },
-  urgentActionText: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: 13, color: '#1F2024', lineHeight: '1.5',
+  passageParagraph: {
+    fontFamily: 'Inter, sans-serif', fontWeight: 400, fontSize: 14, color: '#3A3B40',
+    lineHeight: '1.8', margin: '0 0 12px 0', textAlign: 'justify' as const,
   },
 
   // No Assessment
