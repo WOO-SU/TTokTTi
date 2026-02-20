@@ -4,11 +4,27 @@ set -e
 # Helper function to ensure DB is ready before Django tries to touch it
 wait_for_db() {
     echo "Waiting for MySQL database to be ready..."
-    while ! python manage.py dbshell -c "select 1;" > /dev/null 2>&1; do
+    while ! python - <<'PY' >/dev/null 2>&1
+import os
+import django
+from django.db import connections
+from django.db.utils import OperationalError
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+django.setup()
+
+try:
+    with connections["default"].cursor() as cursor:
+        cursor.execute("SELECT 1;")
+except OperationalError:
+    raise
+PY
+    do
         sleep 2
     done
     echo "Database is ready!"
 }
+  
 
 # Function to handle local development
 run_dev() {
