@@ -69,7 +69,7 @@ services:
 
       - DEBUG=${DEBUG}
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
-    
+      - AUTO_SEED_DB=True
 
     env_file:
       - ./backend/.env
