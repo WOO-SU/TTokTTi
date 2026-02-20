@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.utils import timezone
 from django.db import models
-from django.db.models import Prefetch, OuterRef, Exists, Value, Case, When, Subquery
+from django.db.models import Prefetch, OuterRef, Exists, Value, Case, When, Subquery, IntegerField
 from django.db.models.functions import Coalesce
 
 from rest_framework.decorators import api_view, permission_classes
@@ -117,11 +117,16 @@ def get_admin_today_worksession(request):
         worksession_id=OuterRef("pk")
     )
 
-    equipment_passed = Compliance.objects.filter(
-        worksession_id=OuterRef("worksession_id"),
-        employee_id=OuterRef("user_id"),
-        passed=True,
-        type=Compliance.TypeChoices.EQUIPMENT,
+    passed_count_subquery = (
+        Compliance.objects
+        .filter(
+            worksession_id=OuterRef("worksession_id"),
+            employee_id=OuterRef("user_id"),
+            is_complied=True,
+        )
+        .values("worksession_id", "employee_id")
+        .annotate(cnt=Count("id"))
+        .values("cnt")[:1]
     )
 
     worker_qs = (
@@ -129,7 +134,18 @@ def get_admin_today_worksession(request):
         .filter(role=WorkSessionMember.RoleChoices.WORKER)
         .select_related("user")
         .annotate(
-            equipment_check_status=Exists(equipment_passed)
+            passed_equipment_count=Coalesce(
+                Subquery(passed_count_subquery),
+                Value(0),
+                output_field=IntegerField()
+            )
+        )
+        .annotate(
+            equipment_check_status=Case(
+                When(passed_equipment_count=3, then=Value(True)),
+                default=Value(False),
+                output_field=models.BooleanField()
+            )
         )
     )
 
