@@ -83,7 +83,7 @@ function LargeXIcon() {
 
 export default function EquipmentCameraScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
-  const { title } = route.params;
+  const { title, worksession_id } = route.params;
   const [photoPath, setPhotoPath] = useState<string | null>(null);
   const [screenState, setScreenState] = useState<ScreenState>('idle');
 
@@ -142,28 +142,30 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
   const handleCapture = useCallback(async () => {
     if (!cameraRef.current) { return; }
 
-    // 1. 사진 촬영
-    const photo = await cameraRef.current.takePhoto();
-    const fileUri = `file://${photo.path}`;
-    setPhotoPath(fileUri);
-    setScreenState('uploading');
-
     try {
+      // 1. 사진 촬영
+      const photo = await cameraRef.current.takePhoto();
+      const fileUri = `file://${photo.path}`;
+      setPhotoPath(fileUri);
+      setScreenState('uploading');
+
       // 2. SAS 토큰 발급 → Blob 업로드
       const { upload_url, blob_name } = await getSasToken();
       await uploadToBlob(upload_url, fileUri);
 
       // 3. 탐지 요청 (DB에 Compliance 레코드 생성)
       setScreenState('analyzing');
-      const complianceId = await requestDetection(blob_name, title);
+      const complianceId = await requestDetection(blob_name, title, worksession_id);
 
       // 4. 폴링 시작
       startPolling(complianceId);
     } catch (err) {
       console.error('handleCapture error:', err);
-      setScreenState('failed');
+      if (!photoPath) {
+        setScreenState('failed');
+      }
     }
-  }, [title, startPolling]);
+  }, [title, worksession_id, startPolling, photoPath]);
 
   const handleRetake = useCallback(() => {
     if (pollingRef.current) {
@@ -174,7 +176,7 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
   }, []);
 
   const handleContinue = () => {
-    navigation.navigate('SafetyEquipmentCheck', { completedTitle: title });
+    navigation.navigate('SafetyEquipmentCheck', { worksession_id, completedTitle: title });
   };
 
   const isProcessing = screenState === 'uploading' || screenState === 'analyzing';
@@ -236,7 +238,7 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
             ref={cameraRef}
             style={StyleSheet.absoluteFill}
             device={device}
-            isActive={true}
+            isActive={screenState === 'idle' && !photoPath}
             photo={true}
           />
         ) : (

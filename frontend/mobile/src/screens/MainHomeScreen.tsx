@@ -143,10 +143,10 @@ export default function MainHomeScreen() {
     // in_progress → activate 호출 후 WorkMenu 이동
     try {
       await activateWorkSession(session.id);
-      navigation.navigate('WorkMenu');
+      navigation.navigate('WorkMenu', { worksession_id: session.id });
     } catch {
       // activate 실패 시에도 WorkMenu 이동 (이미 IN_PROGRESS인 경우)
-      navigation.navigate('WorkMenu');
+      navigation.navigate('WorkMenu', { worksession_id: session.id });
     }
   };
 

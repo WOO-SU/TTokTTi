@@ -76,6 +76,7 @@ export default function SafetyEquipmentCheckScreen({
   route,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const { worksession_id } = route.params;
   const [items, setItems] = useState<EquipmentItem[]>(INITIAL_ITEMS);
 
   useEffect(() => {
@@ -124,6 +125,7 @@ export default function SafetyEquipmentCheckScreen({
                   onPress={() =>
                     navigation.navigate('EquipmentCamera', {
                       title: item.title,
+                      worksession_id,
                     })
                   }>
                   <View style={styles.cardBorder} />

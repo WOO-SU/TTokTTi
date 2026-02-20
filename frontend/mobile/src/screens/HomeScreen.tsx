@@ -9,8 +9,9 @@ import {
   ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
 import type { RootStackParamList } from '../../App';
 
 const characterImage = require('../assets/safety-character.png');
@@ -43,6 +44,8 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const route = useRoute<RouteProp<RootStackParamList, 'WorkMenu'>>();
+  const { worksession_id } = route.params;
 
   return (
     <View style={styles.container}>
@@ -67,7 +70,7 @@ export default function HomeScreen() {
         <TouchableOpacity
           style={styles.bannerSection}
           activeOpacity={0.8}
-          onPress={() => navigation.navigate('SafetyEquipmentCheck')}>
+          onPress={() => navigation.navigate('SafetyEquipmentCheck', { worksession_id })}>
           <View style={styles.bannerCard}>
             <Image
               source={equipmentImage}

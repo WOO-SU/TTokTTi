@@ -46,3 +46,16 @@ frontend/mobile/android/app/*.keystore
 vision_fullcam/data/frontend/mobile/android/app/debug.keystore
 frontend/mobile/android/app/debug.keystore
 frontend/mobile/vendor/
+
+# Vite / Frontend Build
+.vite/
+dist/
+coverage/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/

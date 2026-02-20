@@ -7,18 +7,18 @@ const ENDPOINTS = {
   CHECK_UPDATE: '/check/update/',
 };
 
-// 프론트 장비명 → 백엔드 target 매핑
-const TARGET_MAP: Record<string, string> = {
-  안전모: 'helmet',
-  안전조끼: 'safety_vest',
-  안전장갑: 'glove',
+// 프론트 장비명 → 백엔드 category 매핑
+const CATEGORY_MAP: Record<string, string> = {
+  안전모: 'HELMET',
+  안전조끼: 'VEST',
+  안전장갑: 'GLOVE',
 };
 
 export type ComplianceData = {
   id: number;
   is_updated: boolean;
   is_complied: boolean | null;
-  target: string;
+  category: string;
   original_image: string | null;
   detected_image: string | null;
 };
@@ -63,11 +63,13 @@ export function uploadToBlob(
 export async function requestDetection(
   blobName: string,
   equipmentTitle: string,
+  worksessionId: number,
 ): Promise<number> {
-  const target = TARGET_MAP[equipmentTitle] || equipmentTitle;
+  const category = CATEGORY_MAP[equipmentTitle] || equipmentTitle;
   const res = await client.post(ENDPOINTS.CHECK_START, {
-    target,
+    category,
     original_image: blobName,
+    worksession_id: worksessionId,
   });
   // 응답: { ok: true, compliance_id: 123 }
   return res.data.compliance_id;

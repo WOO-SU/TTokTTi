@@ -28,14 +28,14 @@ export type RootStackParamList = {
   Main: undefined;
   SelectMode: undefined;
   Camera: { mode: 'all' | 'worker' };
-  SafetyEquipmentCheck: { completedTitle?: string } | undefined;
-  EquipmentCamera: { title: string };
+  SafetyEquipmentCheck: { worksession_id: number; completedTitle?: string };
+  EquipmentCamera: { title: string; worksession_id: number };
   RiskAssessment: undefined;
   RiskCheck: undefined;
   RiskResult: undefined;
   RiskCamera: { title: string };
   EndWork: undefined;
-  WorkMenu: undefined;
+  WorkMenu: { worksession_id: number };
 };
 
 export type TabParamList = {
