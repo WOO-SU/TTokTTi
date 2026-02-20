@@ -82,8 +82,7 @@ def upload_result(request):
         compliance = Compliance.objects.get(id=data["compliance_id"])
         compliance.detected_image = data["detected_image"]
         compliance.is_complied = data["is_complied"]
-        compliance.is_updated = True
-        compliance.save(update_fields=["detected_image", "is_complied", "is_updated"])
+        compliance.save(update_fields=["detected_image", "is_complied"])
         return Response({"ok": True})
     except Compliance.DoesNotExist:
         return Response({"ok": False, "detail": "compliance not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -99,28 +98,28 @@ def upload_result(request):
 def request_detection(request):
     """
     "/api/check/start": 탐지 요청 레코드를 DB에 업로드 한다. (프론트 -> 백 -> DB)
-    request body: { "target": "helmet", "original_image": "blob 이미지 경로" }   
+    request body: { "category": "HELMET", "original_image": "blob 이미지 경로" }   
     """
     serializer = ComplianceRequestSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
     user = request.user
     worksession_id = request.data.get("worksession_id")
-    target = serializer.validated_data["target"]
+    category = serializer.validated_data["category"]
     original_image = serializer.validated_data["original_image"]
 
     # Compliance 레코드 생성
     compliance = Compliance.objects.create(
         worksession_id=worksession_id,
         employee=user,
-        target=target,
+        category=category,
         original_image=original_image
     )
 
     message = {
         "compliance_id": compliance.id,
         "original_image": original_image,
-        "target": target
+        "category": category
     }
 
     try:
