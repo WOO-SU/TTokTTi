@@ -38,6 +38,7 @@ export type WorkerReport = {
     assessment_id: number;
     status: string;
     short_message: string;
+    images: { id: number; blob_name: string; created_at: string }[];
     top_risks: {
         id: string;
         title: string;
@@ -60,4 +61,13 @@ export async function fetchWorkerReport(
 ): Promise<WorkerReport> {
     const res = await client.get(`/risk/worker/${assessmentId}`);
     return res.data as WorkerReport;
+}
+
+/** GET /risk/media/sas?blob_name=... — blob 읽기용 SAS URL 발급 */
+export async function fetchSasUrl(
+    blobName: string,
+): Promise<string> {
+    const res = await client.get('/risk/media/sas', { params: { blob_name: blobName } });
+    const url = (res.data as { url: string | { download_url: string } }).url;
+    return typeof url === 'string' ? url : url.download_url;
 }

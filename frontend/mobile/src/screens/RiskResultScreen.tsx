@@ -7,12 +7,17 @@ import {
   StatusBar,
   ScrollView,
   ActivityIndicator,
+  Image,
+  FlatList,
+  Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import type { RootStackParamList } from '../../App';
-import { fetchWorkerReport, type WorkerReport } from '../api/risk';
+import { fetchWorkerReport, fetchSasUrl, type WorkerReport } from '../api/risk';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'RiskResult'>;
@@ -50,12 +55,20 @@ export default function RiskResultScreen({ navigation, route }: Props) {
   const [report, setReport] = useState<WorkerReport | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
 
   useEffect(() => {
     async function loadReport() {
       try {
         const data = await fetchWorkerReport(assessment_id);
         setReport(data);
+        // 이미지 SAS URL 병렬 발급
+        if (data.images && data.images.length > 0) {
+          const urls = await Promise.all(
+            data.images.map(img => fetchSasUrl(img.blob_name)),
+          );
+          setImageUrls(urls);
+        }
       } catch (err) {
         console.error('[RiskResult] 보고서 조회 실패:', err);
         setError('보고서를 불러오지 못했습니다.');
@@ -104,6 +117,32 @@ export default function RiskResultScreen({ navigation, route }: Props) {
             { paddingBottom: insets.bottom + 24 },
           ]}
           showsVerticalScrollIndicator={false}>
+
+          {/* 업로드한 사진 */}
+          {imageUrls.length > 0 && (
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>업로드한 사진</Text>
+              <FlatList
+                data={imageUrls}
+                keyExtractor={(_, i) => String(i)}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 10, paddingVertical: 4 }}
+                renderItem={({ item }) => (
+                  <Image
+                    source={{ uri: item }}
+                    style={{
+                      width: SCREEN_WIDTH * 0.55,
+                      height: SCREEN_WIDTH * 0.55,
+                      borderRadius: 10,
+                      backgroundColor: '#F0F0F0',
+                    }}
+                    resizeMode="cover"
+                  />
+                )}
+              />
+            </View>
+          )}
 
           {/* 요약 메시지 */}
           {report?.short_message && (
