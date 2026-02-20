@@ -321,7 +321,7 @@ def check_pass(request, worksession_id):
             status=200
         )
 
-    all_passed = not compliances.filter(is_complied=False).exists()
+    all_passed = not compliances.filter(is_complied=False).exists() # 명시적으로 세개 카테고리 패스 확인해야 함
 
     return Response({
         "ok": True,
