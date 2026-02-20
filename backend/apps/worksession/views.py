@@ -31,8 +31,8 @@ def get_today_worksession(request):
     today = timezone.now().date()
 
     worksessions = WorkSession.objects.filter(
-        worksession_members__user=employee,
-        starts_at__date=today
+        # worksession_members__user=employee,
+        # starts_at__date=today
     )
 
     serializer = WorkSessionListSerializer(worksessions, many=True)
