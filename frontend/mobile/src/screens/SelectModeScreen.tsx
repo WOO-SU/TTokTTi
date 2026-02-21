@@ -13,6 +13,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import { HomeStackParamList, RootStackParamList } from '../../App';
 import TopHeader from '../components/TopHeader';
+import MenuBanner from '../components/MenuBanner';
 
 const tripodImage = require('../assets/tripod-character.png');
 const ladderImage = require('../assets/ladder-character.png');
@@ -43,34 +44,20 @@ export default function SelectModeScreen({ navigation }: Props) {
         showsVerticalScrollIndicator={false}>
         <View style={styles.cardsContainer}>
           {/* Card 1: 전체 */}
-          <TouchableOpacity
-            style={styles.card}
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate('Camera', { mode: 'all' })}>
-            <View style={styles.cardBackground}>
-              <Image
-                source={tripodImage}
-                style={styles.cardImage1}
-                resizeMode="contain"
-              />
-              <Text style={styles.cardText}>전체</Text>
-            </View>
-          </TouchableOpacity>
+          <MenuBanner
+            title="전체"
+            imageSource={tripodImage}
+            imageStyle={styles.cardImage1}
+            onPress={() => navigation.navigate('Camera', { mode: 'all' })}
+          />
 
           {/* Card 2: 작업자 */}
-          <TouchableOpacity
-            style={styles.card}
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate('Camera', { mode: 'worker' })}>
-            <View style={styles.cardBackground}>
-              <Image
-                source={ladderImage}
-                style={styles.cardImage2}
-                resizeMode="contain"
-              />
-              <Text style={styles.cardText}>작업자</Text>
-            </View>
-          </TouchableOpacity>
+          <MenuBanner
+            title="작업자"
+            imageSource={ladderImage}
+            imageStyle={styles.cardImage2}
+            onPress={() => navigation.navigate('Camera', { mode: 'worker' })}
+          />
         </View>
       </ScrollView>
     </View>
@@ -145,30 +132,6 @@ const styles = StyleSheet.create({
     gap: 20,
   },
 
-  /* Card */
-  card: {
-    paddingHorizontal: 12,
-  },
-  cardBackground: {
-    width: '100%',
-    height: 214,
-    borderRadius: 50,
-    borderWidth: 5,
-    borderColor: '#EAF2FF',
-    flexDirection: 'row',
-    alignItems: 'center',
-    overflow: 'hidden',
-    paddingHorizontal: 16,
-    boxShadow: [
-      {
-        offsetX: 0,
-        offsetY: 4,
-        blurRadius: 4,
-        spreadDistance: 0,
-        color: 'rgba(0, 0, 0, 0.05)',
-      },
-    ],
-  },
   cardImage1: {
     width: 181,
     height: 181,
@@ -176,13 +139,5 @@ const styles = StyleSheet.create({
   cardImage2: {
     width: 195,
     height: 195,
-  },
-  cardText: {
-    fontFamily: 'Inter',
-    fontWeight: '400',
-    fontSize: 20,
-    color: '#000000',
-    lineHeight: 24,
-    flexShrink: 1,
   },
 });
