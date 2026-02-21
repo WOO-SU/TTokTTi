@@ -2,11 +2,11 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../App';
+import type { HomeStackParamList } from '../../App';
 
 export default function CaptureWorkScreen() {
-    const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-    const route = useRoute<RouteProp<RootStackParamList, 'CaptureWork'>>();
+    const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
+    const route = useRoute<RouteProp<HomeStackParamList, 'CaptureWork'>>();
 
     return (
         <SafeAreaView style={styles.container}>

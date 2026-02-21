@@ -7,27 +7,31 @@ import {
   StatusBar,
   Alert,
 } from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {useNavigation} from '@react-navigation/native';
-import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import type {RootStackParamList} from '../../App';
-import {useAuth} from '../context/AuthContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation, type CompositeNavigationProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { SettingStackParamList, RootStackParamList } from '../../App';
+import { useAuth } from '../context/AuthContext';
 
 export default function SettingScreen() {
   const insets = useSafeAreaInsets();
-  const {logout} = useAuth();
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { logout } = useAuth();
+  const navigation = useNavigation<
+    CompositeNavigationProp<
+      NativeStackNavigationProp<SettingStackParamList>,
+      NativeStackNavigationProp<RootStackParamList>
+    >
+  >();
 
   const handleLogout = () => {
     Alert.alert('로그아웃', '정말 로그아웃 하시겠습니까?', [
-      {text: '취소', style: 'cancel'},
+      { text: '취소', style: 'cancel' },
       {
         text: '로그아웃',
         style: 'destructive',
         onPress: async () => {
           await logout();
-          navigation.reset({index: 0, routes: [{name: 'Login'}]});
+          navigation.reset({ index: 0, routes: [{ name: 'Login' as never }] });
         },
       },
     ]);
@@ -38,14 +42,14 @@ export default function SettingScreen() {
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       {/* Nav Bar */}
-      <View style={[styles.navBar, {paddingTop: insets.top}]}>
+      <View style={[styles.navBar, { paddingTop: insets.top }]}>
         <View style={styles.navSpacer} />
         <Text style={styles.pageTitle}>Setting</Text>
         <View style={styles.navSpacer} />
       </View>
 
       {/* Content */}
-      <View style={[styles.content, {paddingBottom: insets.bottom + 16}]}>
+      <View style={[styles.content, { paddingBottom: insets.bottom + 16 }]}>
         <TouchableOpacity
           style={styles.logoutButton}
           activeOpacity={0.8}

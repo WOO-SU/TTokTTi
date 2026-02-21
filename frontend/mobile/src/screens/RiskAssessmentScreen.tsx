@@ -10,12 +10,12 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import type { RootStackParamList } from '../../App';
+import type { HomeStackParamList } from '../../App';
 import { checkLatestRisk } from '../api/risk';
 
 type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'RiskAssessment'>;
-  route: RouteProp<RootStackParamList, 'RiskAssessment'>;
+  navigation: NativeStackNavigationProp<HomeStackParamList, 'RiskAssessment'>;
+  route: RouteProp<HomeStackParamList, 'RiskAssessment'>;
 };
 
 /* ──────── Icon Components ──────── */

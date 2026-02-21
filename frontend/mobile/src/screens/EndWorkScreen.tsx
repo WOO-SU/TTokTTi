@@ -18,11 +18,11 @@ import {
   useCameraPermission,
 } from 'react-native-vision-camera';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../App';
+import type { HomeStackParamList } from '../../App';
 import { getSasToken, uploadToBlob } from '../api/equipment';
 
 type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'EndWork'>;
+  navigation: NativeStackNavigationProp<HomeStackParamList, 'EndWork'>;
 };
 
 type ScreenState = 'idle' | 'camera' | 'preview' | 'sending' | 'sent';
@@ -114,7 +114,7 @@ export default function EndWorkScreen({ navigation }: Props) {
   }, [photoPath]);
 
   const handleDone = useCallback(() => {
-    navigation.navigate('Main');
+    navigation.navigate('MainHome');
   }, [navigation]);
 
   return (

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,16 @@ import {
   StatusBar,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../App';
+import type { PersonalStackParamList } from '../../App';
+import { getUserProfile, updateUserProfile, type UserProfile } from '../api/user';
+import { useAuth } from '../context/AuthContext';
 
 function PersonAvatarIcon() {
   return (
@@ -47,9 +51,54 @@ function ChevronRightIcon() {
 
 export default function PersonalScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const [company, setCompany] = useState('');
-  const [area, setArea] = useState('');
+  const navigation = useNavigation<NativeStackNavigationProp<PersonalStackParamList>>();
+  const { userId } = useAuth();
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+  const [sex, setSex] = useState('');
+
+  useEffect(() => {
+    if (userId) {
+      loadProfile();
+    } else {
+      setLoading(false);
+    }
+  }, [userId]);
+
+  const loadProfile = async () => {
+    try {
+      setLoading(true);
+      const data = await getUserProfile(userId!);
+      setName(data.name || '');
+      setPhone(data.phone || '');
+      setAddress(data.address || '');
+      setBirthDate(data.birth_date || '');
+      setSex(data.sex || '');
+    } catch (err) {
+      Alert.alert('오류', '프로필 정보를 불러오는데 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!userId) return;
+    try {
+      setSaving(true);
+      await updateUserProfile(userId, { name, phone, address, birth_date: birthDate, sex });
+      Alert.alert('성공', '프로필이 업데이트 되었습니다.');
+    } catch (err) {
+      Alert.alert('오류', '프로필 저장에 실패했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -59,7 +108,9 @@ export default function PersonalScreen() {
       <View style={[styles.navBar, { paddingTop: insets.top }]}>
         <View style={styles.navSpacer} />
         <Text style={styles.pageTitle}>Personal</Text>
-        <View style={styles.navSpacer} />
+        <TouchableOpacity style={styles.navSpacer} onPress={handleSave} disabled={saving || loading}>
+          <Text style={{ color: '#0052CC', fontWeight: 'bold' }}>저장</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Content */}
@@ -69,64 +120,97 @@ export default function PersonalScreen() {
         bounces={false}
         showsVerticalScrollIndicator={false}>
         <View style={styles.card}>
-          {/* Profile Photo Section */}
-          <Text style={styles.sectionTitle}>Profile Photo</Text>
+          {loading ? (
+            <ActivityIndicator size="large" color="#001D6C" style={{ marginVertical: 32 }} />
+          ) : (
+            <>
+              {/* Profile Photo Section */}
+              <Text style={styles.sectionTitle}>Profile Photo</Text>
 
-          <View style={styles.profileRow}>
-            <View style={styles.avatar}>
-              <PersonAvatarIcon />
-            </View>
-            <Text style={styles.userName}>김반장</Text>
-          </View>
-
-          {/* Divider */}
-          <View style={styles.divider} />
-
-          {/* User Details Section */}
-          <Text style={styles.sectionTitle}>User Details</Text>
-
-          <View style={styles.formFields}>
-            {/* 회사 */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>회사</Text>
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="detail"
-                  placeholderTextColor="#A2A6B0"
-                  value={company}
-                  onChangeText={setCompany}
-                />
+              <View style={styles.profileRow}>
+                <View style={styles.avatar}>
+                  <PersonAvatarIcon />
+                </View>
+                <Text style={styles.userName}>{name}</Text>
               </View>
-            </View>
 
-            {/* 작업 구역 */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>작업 구역</Text>
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="detail"
-                  placeholderTextColor="#A2A6B0"
-                  value={area}
-                  onChangeText={setArea}
-                />
-              </View>
-            </View>
+              {/* Divider */}
+              <View style={styles.divider} />
 
-            {/* 비밀번호 변경 버튼 */}
-            <TouchableOpacity
-              style={styles.actionButton}
-              activeOpacity={0.7}
-              onPress={() => navigation.navigate('ChangePassword')}
-            >
-              <View style={styles.actionLeft}>
-                <LockIcon />
-                <Text style={styles.actionText}>비밀번호 변경</Text>
+              {/* User Details Section */}
+              <Text style={styles.sectionTitle}>User Details</Text>
+
+              <View style={styles.formFields}>
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>이름</Text>
+                  <View style={styles.inputContainer}>
+                    <TextInput
+                      style={styles.input}
+                      value={name}
+                      onChangeText={setName}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>전화번호</Text>
+                  <View style={styles.inputContainer}>
+                    <TextInput
+                      style={styles.input}
+                      value={phone}
+                      onChangeText={setPhone}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>주소</Text>
+                  <View style={styles.inputContainer}>
+                    <TextInput
+                      style={styles.input}
+                      value={address}
+                      onChangeText={setAddress}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>생년월일</Text>
+                  <View style={styles.inputContainer}>
+                    <TextInput
+                      style={styles.input}
+                      value={birthDate}
+                      onChangeText={setBirthDate}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>성별</Text>
+                  <View style={styles.inputContainer}>
+                    <TextInput
+                      style={styles.input}
+                      value={sex}
+                      onChangeText={setSex}
+                    />
+                  </View>
+                </View>
+
+                {/* 비밀번호 변경 버튼 */}
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  activeOpacity={0.7}
+                  onPress={() => navigation.navigate('ChangePassword')}
+                >
+                  <View style={styles.actionLeft}>
+                    <LockIcon />
+                    <Text style={styles.actionText}>비밀번호 변경</Text>
+                  </View>
+                  <ChevronRightIcon />
+                </TouchableOpacity>
               </View>
-              <ChevronRightIcon />
-            </TouchableOpacity>
-          </View>
+            </>
+          )}
         </View>
       </ScrollView>
     </View>

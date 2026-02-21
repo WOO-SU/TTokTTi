@@ -19,7 +19,7 @@ import {
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { useIsFocused } from '@react-navigation/native';
-import type { RootStackParamList } from '../../App';
+import type { HomeStackParamList } from '../../App';
 import { useWorkSession } from '../context/WorkSessionContext';
 import {
   getSasToken,
@@ -31,10 +31,10 @@ import {
 
 type Props = {
   navigation: NativeStackNavigationProp<
-    RootStackParamList,
+    HomeStackParamList,
     'EquipmentCamera'
   >;
-  route: RouteProp<RootStackParamList, 'EquipmentCamera'>;
+  route: RouteProp<HomeStackParamList, 'EquipmentCamera'>;
 };
 
 type ScreenState = 'idle' | 'uploading' | 'analyzing' | 'success' | 'failed';

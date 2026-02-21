@@ -14,14 +14,14 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import type { RootStackParamList } from '../../App';
+import type { HomeStackParamList } from '../../App';
 import { fetchWorkerReport, fetchSasUrl, type WorkerReport } from '../api/risk';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'RiskResult'>;
-  route: RouteProp<RootStackParamList, 'RiskResult'>;
+  navigation: NativeStackNavigationProp<HomeStackParamList, 'RiskResult'>;
+  route: RouteProp<HomeStackParamList, 'RiskResult'>;
 };
 
 const LEVEL_COLOR: Record<string, string> = {

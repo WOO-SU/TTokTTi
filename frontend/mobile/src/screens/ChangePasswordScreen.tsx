@@ -11,11 +11,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../App';
+import type { PersonalStackParamList } from '../../App';
 import { changePassword } from '../api/user';
 
 type Props = {
-    navigation: NativeStackNavigationProp<RootStackParamList, 'ChangePassword'>;
+    navigation: NativeStackNavigationProp<PersonalStackParamList, 'ChangePassword'>;
 };
 
 /* ──────── Icon Components ──────── */

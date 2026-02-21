@@ -11,15 +11,15 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import type { RootStackParamList } from '../../App';
+import type { HomeStackParamList } from '../../App';
 import { useWorkSession } from '../context/WorkSessionContext';
 
 type Props = {
   navigation: NativeStackNavigationProp<
-    RootStackParamList,
+    HomeStackParamList,
     'SafetyEquipmentCheck'
   >;
-  route: RouteProp<RootStackParamList, 'SafetyEquipmentCheck'>;
+  route: RouteProp<HomeStackParamList, 'SafetyEquipmentCheck'>;
 };
 
 type EquipmentItem = {

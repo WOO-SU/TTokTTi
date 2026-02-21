@@ -13,12 +13,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
-import type { RootStackParamList } from '../../App';
+import type { HomeStackParamList } from '../../App';
 import { requestRiskAssess } from '../api/risk';
 
 type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'RiskCheck'>;
-  route: RouteProp<RootStackParamList, 'RiskCheck'>;
+  navigation: NativeStackNavigationProp<HomeStackParamList, 'RiskCheck'>;
+  route: RouteProp<HomeStackParamList, 'RiskCheck'>;
 };
 
 type CheckItem = {

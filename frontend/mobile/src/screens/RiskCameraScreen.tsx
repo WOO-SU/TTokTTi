@@ -17,13 +17,13 @@ import {
 import { useIsFocused } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import type { RootStackParamList } from '../../App';
+import type { HomeStackParamList } from '../../App';
 import { getSasToken, uploadToBlob } from '../api/equipment';
 import { startRiskAssessment, uploadRiskPhoto } from '../api/risk';
 
 type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'RiskCamera'>;
-  route: RouteProp<RootStackParamList, 'RiskCamera'>;
+  navigation: NativeStackNavigationProp<HomeStackParamList, 'RiskCamera'>;
+  route: RouteProp<HomeStackParamList, 'RiskCamera'>;
 };
 
 /* ──────── Icon Components ──────── */

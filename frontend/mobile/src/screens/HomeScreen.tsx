@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import type { RootStackParamList } from '../../App';
+import type { HomeStackParamList } from '../../App';
 
 const characterImage = require('../assets/safety-character.png');
 const equipmentImage = require('../assets/Risk-Assessment.png');
@@ -43,8 +43,8 @@ function ImagePlaceholderIcon() {
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const route = useRoute<RouteProp<RootStackParamList, 'WorkMenu'>>();
+    useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
+  const route = useRoute<RouteProp<HomeStackParamList, 'WorkMenu'>>();
   const { worksession_id } = route.params;
 
   return (

@@ -10,13 +10,17 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../App';
+import type { CompositeNavigationProp } from '@react-navigation/native';
+import { HomeStackParamList, RootStackParamList } from '../../App';
 
 const tripodImage = require('../assets/tripod-character.png');
 const ladderImage = require('../assets/ladder-character.png');
 
 type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'SelectMode'>;
+  navigation: CompositeNavigationProp<
+    NativeStackNavigationProp<HomeStackParamList, 'SelectMode'>,
+    NativeStackNavigationProp<RootStackParamList>
+  >;
 };
 
 /* ──────── Back Arrow Icon ──────── */

@@ -5,6 +5,18 @@ export interface ChangePasswordResponse {
     detail?: string;
 }
 
+export interface UserProfile {
+    id: number;
+    username: string;
+    name: string;
+    phone: string;
+    address: string;
+    birth_date: string;
+    photo: string | null;
+    sex: string;
+    is_active: boolean;
+}
+
 /**
  * 비밀번호 변경 API 호출
  * POST /api/user/password/change/
@@ -17,5 +29,15 @@ export async function changePassword(
         current_password: currentPassword,
         new_password: newPassword,
     });
+    return res.data;
+}
+
+export async function getUserProfile(userId: number): Promise<UserProfile> {
+    const res = await client.get(`/user/${userId}/`);
+    return res.data;
+}
+
+export async function updateUserProfile(userId: number, data: Partial<UserProfile>): Promise<UserProfile> {
+    const res = await client.put(`/user/${userId}/`, data);
     return res.data;
 }

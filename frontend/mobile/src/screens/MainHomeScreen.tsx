@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../App';
+import type { HomeStackParamList } from '../../App';
 import { useAuth } from '../context/AuthContext';
 import {
   getTodayWorkSessions,
@@ -101,7 +101,7 @@ function ClockIcon() {
 export default function MainHomeScreen() {
   const insets = useSafeAreaInsets();
   const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+    useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const { userName } = useAuth();
 
   const [sessions, setSessions] = useState<WorkSessionItem[]>([]);

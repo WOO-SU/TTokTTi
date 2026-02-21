@@ -19,16 +19,17 @@ import RiskCameraScreen from './src/screens/RiskCameraScreen';
 import PersonalScreen from './src/screens/PersonalScreen';
 import SettingScreen from './src/screens/SettingScreen';
 import EndWorkScreen from './src/screens/EndWorkScreen';
+import FavoriteScreen from './src/screens/FavoriteScreen';
 import { AuthProvider } from './src/context/AuthContext';
 import { RiskPhotoProvider } from './src/context/RiskPhotoContext';
 import { WorkSessionProvider } from './src/context/WorkSessionContext';
 
-export type RootStackParamList = {
-  Login: undefined;
-  SignUp: undefined;
-  Main: undefined;
+// --- Types ---
+
+export type HomeStackParamList = {
+  MainHome: undefined;
+  WorkMenu: { worksession_id: number };
   SelectMode: undefined;
-  Camera: { mode: 'all' | 'worker' };
   SafetyEquipmentCheck: { worksession_id: number; completedTitle?: string };
   EquipmentCamera: { title: string; worksession_id: number };
   RiskAssessment: { worksession_id: number };
@@ -37,8 +38,19 @@ export type RootStackParamList = {
   RiskCamera: { title: string; worksession_id: number; assessmentId?: number };
   CaptureWork: { worksession_id: number };
   EndWork: undefined;
-  WorkMenu: { worksession_id: number };
+};
+
+export type PersonalStackParamList = {
+  PersonalHome: undefined;
   ChangePassword: undefined;
+};
+
+export type SettingStackParamList = {
+  SettingHome: undefined;
+};
+
+export type FavoriteStackParamList = {
+  FavoriteHome: undefined;
 };
 
 export type TabParamList = {
@@ -48,41 +60,69 @@ export type TabParamList = {
   Setting: undefined;
 };
 
-const Stack = createNativeStackNavigator<RootStackParamList>();
+export type RootStackParamList = {
+  Login: undefined;
+  SignUp: undefined;
+  Main: undefined; // The Tab Navigator
+  Camera: { mode: 'all' | 'worker' }; // Full screen modal
+};
+
+const RootStack = createNativeStackNavigator<RootStackParamList>();
+const HomeStack = createNativeStackNavigator<HomeStackParamList>();
+const PersonalStack = createNativeStackNavigator<PersonalStackParamList>();
+const FavoriteStack = createNativeStackNavigator<FavoriteStackParamList>();
+const SettingStack = createNativeStackNavigator<SettingStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
 
-/* ──────── Placeholder Screens ──────── */
+// --- Stack Navigators ---
 
-function PlaceholderScreen({ title }: { title: string }) {
+import CaptureWorkScreen from './src/screens/CaptureWorkScreen';
+import ChangePasswordScreen from './src/screens/ChangePasswordScreen';
+
+function HomeStackNavigator() {
   return (
-    <View style={placeholderStyles.container}>
-      <Text style={placeholderStyles.text}>{title}</Text>
-    </View>
+    <HomeStack.Navigator screenOptions={{ headerShown: false }}>
+      <HomeStack.Screen name="MainHome" component={MainHomeScreen} />
+      <HomeStack.Screen name="WorkMenu" component={HomeScreen} />
+      <HomeStack.Screen name="SelectMode" component={SelectModeScreen} />
+      <HomeStack.Screen name="SafetyEquipmentCheck" component={SafetyEquipmentCheckScreen} />
+      <HomeStack.Screen name="EquipmentCamera" component={EquipmentCameraScreen} />
+      <HomeStack.Screen name="RiskAssessment" component={RiskAssessmentScreen} />
+      <HomeStack.Screen name="RiskCheck" component={RiskCheckScreen} />
+      <HomeStack.Screen name="RiskResult" component={RiskResultScreen} />
+      <HomeStack.Screen name="RiskCamera" component={RiskCameraScreen} />
+      <HomeStack.Screen name="CaptureWork" component={CaptureWorkScreen} />
+      <HomeStack.Screen name="EndWork" component={EndWorkScreen} />
+    </HomeStack.Navigator>
   );
 }
 
-
-function FavoriteScreen() {
-  return <PlaceholderScreen title="Favorite" />;
+function PersonalStackNavigator() {
+  return (
+    <PersonalStack.Navigator screenOptions={{ headerShown: false }}>
+      <PersonalStack.Screen name="PersonalHome" component={PersonalScreen} />
+      <PersonalStack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+    </PersonalStack.Navigator>
+  );
 }
 
+function FavoriteStackNavigator() {
+  return (
+    <FavoriteStack.Navigator screenOptions={{ headerShown: false }}>
+      <FavoriteStack.Screen name="FavoriteHome" component={FavoriteScreen} />
+    </FavoriteStack.Navigator>
+  );
+}
 
-const placeholderStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-  },
-  text: {
-    fontFamily: 'Inter',
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2024',
-  },
-});
+function SettingStackNavigator() {
+  return (
+    <SettingStack.Navigator screenOptions={{ headerShown: false }}>
+      <SettingStack.Screen name="SettingHome" component={SettingScreen} />
+    </SettingStack.Navigator>
+  );
+}
 
-/* ──────── Tab Icon Components ──────── */
+// --- Bottom Tab Navigator ---
 
 function HomeTabIcon({ focused }: { focused: boolean }) {
   const color = focused ? '#1F2024' : '#71727A';
@@ -178,8 +218,6 @@ const tabIconStyles = StyleSheet.create({
   },
 });
 
-/* ──────── Bottom Tab Navigator ──────── */
-
 function MainTabs() {
   const insets = useSafeAreaInsets();
   return (
@@ -206,7 +244,7 @@ function MainTabs() {
       }}>
       <Tab.Screen
         name="Home"
-        component={MainHomeScreen}
+        component={HomeStackNavigator}
         options={{
           tabBarIcon: ({ focused }) => <HomeTabIcon focused={focused} />,
           tabBarLabelStyle: {
@@ -219,14 +257,14 @@ function MainTabs() {
       />
       <Tab.Screen
         name="Personal"
-        component={PersonalScreen}
+        component={PersonalStackNavigator}
         options={{
           tabBarIcon: ({ focused }) => <PersonTabIcon focused={focused} />,
         }}
       />
       <Tab.Screen
         name="Favorite"
-        component={FavoriteScreen}
+        component={FavoriteStackNavigator}
         options={{
           tabBarLabel: 'favorite',
           tabBarIcon: ({ focused }) => <StarTabIcon focused={focused} />,
@@ -234,7 +272,7 @@ function MainTabs() {
       />
       <Tab.Screen
         name="Setting"
-        component={SettingScreen}
+        component={SettingStackNavigator}
         options={{
           tabBarIcon: ({ focused }) => <SettingTabIcon focused={focused} />,
         }}
@@ -243,10 +281,7 @@ function MainTabs() {
   );
 }
 
-/* ──────── App Root ──────── */
-
-import CaptureWorkScreen from './src/screens/CaptureWorkScreen';
-import ChangePasswordScreen from './src/screens/ChangePasswordScreen';
+// --- App Root ---
 
 function App() {
   return (
@@ -255,25 +290,14 @@ function App() {
         <RiskPhotoProvider>
           <SafeAreaProvider>
             <NavigationContainer>
-              <Stack.Navigator
+              <RootStack.Navigator
                 initialRouteName="Login"
                 screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="Login" component={LoginScreen} />
-                <Stack.Screen name="SignUp" component={SignUpScreen} />
-                <Stack.Screen name="Main" component={MainTabs} />
-                <Stack.Screen name="SelectMode" component={SelectModeScreen} />
-                <Stack.Screen name="Camera" component={CameraScreen} />
-                <Stack.Screen name="SafetyEquipmentCheck" component={SafetyEquipmentCheckScreen} />
-                <Stack.Screen name="EquipmentCamera" component={EquipmentCameraScreen} />
-                <Stack.Screen name="RiskAssessment" component={RiskAssessmentScreen} />
-                <Stack.Screen name="RiskCheck" component={RiskCheckScreen} />
-                <Stack.Screen name="RiskResult" component={RiskResultScreen} />
-                <Stack.Screen name="RiskCamera" component={RiskCameraScreen} />
-                <Stack.Screen name="CaptureWork" component={CaptureWorkScreen} />
-                <Stack.Screen name="EndWork" component={EndWorkScreen} />
-                <Stack.Screen name="WorkMenu" component={HomeScreen} />
-                <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
-              </Stack.Navigator>
+                <RootStack.Screen name="Login" component={LoginScreen} />
+                <RootStack.Screen name="SignUp" component={SignUpScreen} />
+                <RootStack.Screen name="Main" component={MainTabs} />
+                <RootStack.Screen name="Camera" component={CameraScreen} />
+              </RootStack.Navigator>
             </NavigationContainer>
           </SafeAreaProvider>
         </RiskPhotoProvider>
