@@ -14,6 +14,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import type { HomeStackParamList } from '../../App';
 import TopHeader from '../components/TopHeader';
+import MenuBanner from '../components/MenuBanner';
 
 const characterImage = require('../assets/safety-character.png');
 const equipmentImage = require('../assets/Risk-Assessment.png');
@@ -51,90 +52,40 @@ export default function HomeScreen() {
 
         <TopHeader title="작업 메뉴" />
 
-        {/* Banner 1: 안전 장비 점검 */}
-        <TouchableOpacity
-          style={styles.bannerSection}
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate('SafetyEquipmentCheck', { worksession_id })}>
-          <View style={styles.bannerCard}>
-            <Image
-              source={equipmentImage}
-              style={styles.bannerImage1}
-              resizeMode="contain"
-            />
-            <Text style={styles.bannerText}>
-              {'안전 장비 점검'}
-            </Text>
-          </View>
-        </TouchableOpacity>
+        <MenuBanner
+          title="안전 장비 점검"
+          imageSource={equipmentImage}
+          imageStyle={styles.bannerImage1}
+          onPress={() => navigation.navigate('SafetyEquipmentCheck', { worksession_id })}
+        />
 
-        {/* Banner 2: 위험성 평가 */}
-        <TouchableOpacity
-          style={styles.bannerSection}
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate('RiskAssessment', { worksession_id })}>
-          <View style={styles.bannerCard}>
-            <Image
-              source={riskAssessmentImage}
-              style={styles.bannerImage2}
-              resizeMode="contain"
-            />
-            <Text style={styles.bannerText}>
-              {'위험성 평가'}
-            </Text>
-          </View>
-        </TouchableOpacity>
+        <MenuBanner
+          title="위험성 평가"
+          imageSource={riskAssessmentImage}
+          imageStyle={styles.bannerImage2}
+          onPress={() => navigation.navigate('RiskAssessment', { worksession_id })}
+        />
 
-        {/* Banner 3: 작업시작하기 (실시간 촬영) */}
-        <TouchableOpacity
-          style={styles.bannerSection}
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate('SelectMode')}>
-          <View style={styles.bannerCard}>
-            <Image
-              source={characterImage}
-              style={styles.bannerImage3}
-              resizeMode="contain"
-            />
-            <Text style={styles.bannerText}>
-              {'작업시작하기\n(실시간 촬영)'}
-            </Text>
-          </View>
-        </TouchableOpacity>
+        <MenuBanner
+          title={'작업시작하기\n(실시간 촬영)'}
+          imageSource={characterImage}
+          imageStyle={styles.bannerImage3}
+          onPress={() => navigation.navigate('SelectMode')}
+        />
 
-        {/* Banner 4: 작업물 촬영 */}
-        <TouchableOpacity
-          style={styles.bannerSection}
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate('CaptureWork', { worksession_id })}>
-          <View style={styles.bannerCard}>
-            <Image
-              source={characterImage}
-              style={styles.bannerImage4}
-              resizeMode="contain"
-            />
-            <Text style={styles.bannerText}>
-              {'작업물 촬영'}
-            </Text>
-          </View>
-        </TouchableOpacity>
+        <MenuBanner
+          title="작업물 촬영"
+          imageSource={characterImage}
+          imageStyle={styles.bannerImage4}
+          onPress={() => navigation.navigate('CaptureWork', { worksession_id })}
+        />
 
-        {/* Banner 4: 근무 마무리 */}
-        <TouchableOpacity
-          style={styles.bannerSection}
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate('EndWork')}>
-          <View style={styles.bannerCard}>
-            <Image
-              source={characterImage}
-              style={styles.bannerImage4}
-              resizeMode="contain"
-            />
-            <Text style={styles.bannerText}>
-              {'근무 마무리'}
-            </Text>
-          </View>
-        </TouchableOpacity>
+        <MenuBanner
+          title="근무 마무리"
+          imageSource={characterImage}
+          imageStyle={styles.bannerImage4}
+          onPress={() => navigation.navigate('EndWork')}
+        />
 
       </ScrollView>
     </View>
@@ -183,30 +134,6 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
 
-  /* Banner */
-  bannerSection: {
-    paddingHorizontal: 12,
-  },
-  bannerCard: {
-    width: '100%',
-    height: 214,
-    borderRadius: 50,
-    borderWidth: 5,
-    borderColor: '#EAF2FF',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    overflow: 'hidden',
-    boxShadow: [
-      {
-        offsetX: 0,
-        offsetY: 4,
-        blurRadius: 4,
-        spreadDistance: 0,
-        color: 'rgba(0, 0, 0, 0.25)',
-      },
-    ],
-  },
   bannerImage1: {
     width: 224,
     height: 224,
@@ -222,14 +149,6 @@ const styles = StyleSheet.create({
   bannerImage4: {
     width: 206,
     height: 206,
-  },
-  bannerText: {
-    fontFamily: 'Inter',
-    fontWeight: '400',
-    fontSize: 20,
-    color: '#000000',
-    lineHeight: 24,
-    flexShrink: 1,
   },
 
   /* Products Section */
