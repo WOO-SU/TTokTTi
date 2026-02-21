@@ -38,6 +38,6 @@ export async function getUserProfile(userId: number): Promise<UserProfile> {
 }
 
 export async function updateUserProfile(userId: number, data: Partial<UserProfile>): Promise<UserProfile> {
-    const res = await client.put(`/user/${userId}/`, data);
+    const res = await client.patch(`/user/${userId}/`, data);
     return res.data;
 }

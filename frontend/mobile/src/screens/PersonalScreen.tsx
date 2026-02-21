@@ -91,10 +91,17 @@ export default function PersonalScreen() {
     if (!userId) return;
     try {
       setSaving(true);
-      await updateUserProfile(userId, { name, phone, address, birth_date: birthDate, sex });
+
+      // 빈 문자열인 경우 백엔드 에러 방지를 위해 null 처리
+      const payload: any = { name, phone, address };
+      payload.birth_date = birthDate.trim() === '' ? null : birthDate;
+      payload.sex = sex.trim() === '' ? null : sex;
+
+      await updateUserProfile(userId, payload);
       Alert.alert('성공', '프로필이 업데이트 되었습니다.');
-    } catch (err) {
-      Alert.alert('오류', '프로필 저장에 실패했습니다.');
+    } catch (err: any) {
+      const serverMsg = err.response?.data ? JSON.stringify(err.response.data) : '알 수 없는 오류';
+      Alert.alert('저장 실패', `형식이 올바르지 않습니다.\n\n${serverMsg}`);
     } finally {
       setSaving(false);
     }
@@ -175,10 +182,11 @@ export default function PersonalScreen() {
                 </View>
 
                 <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>생년월일</Text>
+                  <Text style={styles.fieldLabel}>생년월일 (YYYY-MM-DD)</Text>
                   <View style={styles.inputContainer}>
                     <TextInput
                       style={styles.input}
+                      placeholder="예: 1990-01-01"
                       value={birthDate}
                       onChangeText={setBirthDate}
                     />
@@ -186,10 +194,11 @@ export default function PersonalScreen() {
                 </View>
 
                 <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>성별</Text>
+                  <Text style={styles.fieldLabel}>성별 (M 또는 F)</Text>
                   <View style={styles.inputContainer}>
                     <TextInput
                       style={styles.input}
+                      placeholder="M (남) 또는 F (여)"
                       value={sex}
                       onChangeText={setSex}
                     />
