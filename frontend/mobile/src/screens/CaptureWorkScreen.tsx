@@ -10,11 +10,8 @@ import {
     Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-    Camera,
-    useCameraDevice,
-    useCameraPermission,
-} from 'react-native-vision-camera';
+import { Camera } from 'react-native-vision-camera';
+import BaseCamera from '../components/BaseCamera';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { HomeStackParamList } from '../../App';
@@ -53,14 +50,6 @@ export default function CaptureWorkScreen() {
     const [photoPath, setPhotoPath] = useState<string | null>(null);
 
     const cameraRef = useRef<Camera>(null);
-    const device = useCameraDevice('back');
-    const { hasPermission, requestPermission } = useCameraPermission();
-
-    useEffect(() => {
-        if (!hasPermission) {
-            requestPermission();
-        }
-    }, [hasPermission, requestPermission]);
 
     const handleStartCamera = useCallback(() => {
         setScreenState('camera');
@@ -127,21 +116,11 @@ export default function CaptureWorkScreen() {
             {/* Camera State */}
             {screenState === 'camera' && (
                 <View style={styles.cameraPreview}>
-                    {device && hasPermission ? (
-                        <Camera
-                            ref={cameraRef}
-                            style={StyleSheet.absoluteFill}
-                            device={device}
-                            isActive={true}
-                            photo={true}
-                        />
-                    ) : (
-                        <Text style={styles.noCameraText}>
-                            {!hasPermission
-                                ? '카메라 권한이 필요합니다'
-                                : '카메라를 불러오는 중...'}
-                        </Text>
-                    )}
+                    <BaseCamera
+                        ref={cameraRef}
+                        isActive={true}
+                        photo={true}
+                    />
                     <TouchableOpacity
                         style={styles.captureButton}
                         activeOpacity={0.7}

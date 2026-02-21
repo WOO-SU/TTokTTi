@@ -9,11 +9,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  Camera,
-  useCameraDevice,
-  useCameraPermission,
-} from 'react-native-vision-camera';
+import { Camera } from 'react-native-vision-camera';
+import BaseCamera from '../components/BaseCamera';
 import { useIsFocused } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
@@ -50,15 +47,7 @@ export default function RiskCameraScreen({ navigation, route }: Props) {
 
   const cameraRef = useRef<Camera>(null);
   const isCameraReadyRef = useRef(false);
-  const device = useCameraDevice('back');
-  const { hasPermission, requestPermission } = useCameraPermission();
   const isFocused = useIsFocused();
-
-  useEffect(() => {
-    if (!hasPermission) {
-      requestPermission();
-    }
-  }, [hasPermission, requestPermission]);
 
   const handleCapture = useCallback(async () => {
     if (!cameraRef.current) { return; }
@@ -119,19 +108,13 @@ export default function RiskCameraScreen({ navigation, route }: Props) {
       <View style={styles.cameraPreview}>
         {photoPath ? (
           <Image source={{ uri: photoPath }} style={styles.capturedImage} />
-        ) : device && hasPermission ? (
-          <Camera
+        ) : (
+          <BaseCamera
             ref={cameraRef}
-            style={StyleSheet.absoluteFill}
-            device={device}
             isActive={isFocused && !photoPath}
             photo={true}
             onInitialized={() => { isCameraReadyRef.current = true; }}
           />
-        ) : (
-          <Text style={styles.noCameraText}>
-            {!hasPermission ? '카메라 권한이 필요합니다' : '카메라를 불러오는 중...'}
-          </Text>
         )}
 
         {/* Capture Button */}

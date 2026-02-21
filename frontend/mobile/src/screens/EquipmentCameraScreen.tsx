@@ -11,11 +11,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  Camera,
-  useCameraDevice,
-  useCameraPermission,
-} from 'react-native-vision-camera';
+import { Camera } from 'react-native-vision-camera';
+import BaseCamera from '../components/BaseCamera';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { useIsFocused } from '@react-navigation/native';
@@ -85,17 +82,9 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
 
   const cameraRef = useRef<Camera>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const device = useCameraDevice('back');
-  const { hasPermission, requestPermission } = useCameraPermission();
   const isFocused = useIsFocused();
   const isCameraReadyRef = useRef(false);
   const complianceIdRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (!hasPermission) {
-      requestPermission();
-    }
-  }, [hasPermission, requestPermission]);
 
   // 화면 이탈 시 폴링 정리
   useEffect(() => {
@@ -264,19 +253,13 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
               </View>
             )}
           </>
-        ) : device && hasPermission ? (
-          <Camera
+        ) : (
+          <BaseCamera
             ref={cameraRef}
-            style={StyleSheet.absoluteFill}
-            device={device}
             isActive={isFocused && screenState === 'idle' && !photoPath}
             photo={true}
             onInitialized={() => { isCameraReadyRef.current = true; }}
           />
-        ) : (
-          <Text style={styles.noCameraText}>
-            {!hasPermission ? '카메라 권한이 필요합니다' : '카메라를 불러오는 중...'}
-          </Text>
         )}
 
         {/* Camera Capture Button */}

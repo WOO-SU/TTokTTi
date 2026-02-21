@@ -12,11 +12,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Camera,
-  useCameraDevice,
-  useCameraPermission,
-  useMicrophonePermission,
   PhotoFile,
 } from 'react-native-vision-camera';
+import BaseCamera from '../components/BaseCamera';
 import RNFS from 'react-native-fs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
@@ -66,18 +64,6 @@ export default function CameraScreen({ navigation, route }: Props) {
   const cameraRef = useRef<Camera>(null);
   const streamRef = useRef<SafetyStream | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Permissions
-  const device = useCameraDevice('back');
-  const { hasPermission, requestPermission } = useCameraPermission();
-  const { hasPermission: hasMicPermission, requestPermission: requestMicPermission } = useMicrophonePermission();
-
-  // WebSocket & Stream Setup
-  useEffect(() => {
-    if (!hasPermission) requestPermission();
-    if (!hasMicPermission) requestMicPermission();
-
-  }, [hasPermission, requestPermission, hasMicPermission, requestMicPermission]);
 
   useEffect(() => {
     const userId = "AuthContext_user_id"
@@ -149,33 +135,25 @@ export default function CameraScreen({ navigation, route }: Props) {
 
       {/* Camera Preview Area */}
       <View style={styles.cameraPreview}>
-        {device && hasPermission ? (
-          <Camera
-            ref={cameraRef}
-            style={StyleSheet.absoluteFill}
-            device={device}
-            isActive={true}
-            video={true}
-            audio={true}
-          />
-        ) : (
-          <Text style={styles.noCameraText}>
-            {!hasPermission
-              ? '카메라 권한이 필요합니다'
-              : '카메라를 불러오는 중...'}
-          </Text>
-        )}
-
-        {/* Record / Stop Button */}
-        <TouchableOpacity
-          style={[
-            styles.captureButton,
-            isRecording && styles.captureButtonRecording,
-          ]}
-          activeOpacity={0.7}
-          onPress={handleToggleRecording}>
-          {isRecording ? <StopIcon /> : <CameraIcon />}
-        </TouchableOpacity>
+        <BaseCamera
+          ref={cameraRef}
+          isActive={true}
+          video={true}
+          audio={true}
+        >
+          {/* Record / Stop Button */}
+          <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', paddingBottom: 24 }}>
+            <TouchableOpacity
+              style={[
+                styles.captureButton,
+                isRecording && styles.captureButtonRecording,
+              ]}
+              activeOpacity={0.7}
+              onPress={handleToggleRecording}>
+              {isRecording ? <StopIcon /> : <CameraIcon />}
+            </TouchableOpacity>
+          </View>
+        </BaseCamera>
       </View>
 
       {/* Continue Button */}
@@ -277,15 +255,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginHorizontal: 15,
     backgroundColor: '#000000',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    paddingBottom: 24,
     overflow: 'hidden',
-  },
-  noCameraText: {
-    fontFamily: 'Noto Sans KR',
-    fontSize: 14,
-    color: '#FFFFFF',
   },
   captureButton: {
     width: 58,
