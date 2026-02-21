@@ -6,6 +6,7 @@ import signal
 import threading
 from collections import OrderedDict, deque
 from typing import Any, Dict, Optional
+from datetime import datetime, timezone
 
 import httpx
 import redis.asyncio as redis
@@ -58,14 +59,16 @@ analyzer = SafetyAnalyzer(api_url=VLLM_URL) # Connects to local vLLM
 retriever = DynamicRetriever()
 shutdown_event = asyncio.Event()
 
-async def report_to_django(user_id, image_b64, reason: str):
-    """Async fire-and-forget report to backend"""
+async def report_to_django(user_id: str, reason: str, timestamp: str):
+    """Async fire-and-forget report to backend (Lightweight Payload)"""
     async with httpx.AsyncClient() as client:
         try:
+            # We removed the heavy base64 image!
+            # Once your Blob storage is set up, you will just add: "image_url": blob_url
             payload = {
                 "user_id": user_id, 
                 "description": reason, 
-                "image_base64": image_b64,
+                "timestamp": timestamp,
             }
 
             response = await client.post(
@@ -73,14 +76,13 @@ async def report_to_django(user_id, image_b64, reason: str):
                 json=payload,
                 headers={
                     "X-Internal-Key": DJANGO_API_KEY,
-                    "Content-Type": "'application/json"
-                
+                    "Content-Type": "application/json"
                 },
-                timeout=10.0
+                timeout=5.0 
             )
 
             if response.status_code == 201:
-                logger.info(f"Reported violation to backend for {user_id}")
+                logger.info(f"Reported violation to backend for {user_id} at {timestamp}")
             else:
                 logger.warning(f"Backend Error {response.status_code}: {response.text}")
         except Exception as e:
@@ -102,7 +104,7 @@ async def process_job(queue_name, payload):
         data = json.loads(payload)
         client_id = data["client_id"]
         content = data["data"]
-        image_b64 = content.get("image")
+        image_b64 = content.get("data")
 
         if not image_b64: return
 
@@ -126,7 +128,7 @@ async def process_job(queue_name, payload):
             else:
                 context_text += "No recent context available."
             
-            answer = analyzer.answer_question(image_b64, user_text, context_text)
+            answer = await analyzer.answer_question(image_b64, user_text, context_text)
             
             # Send Answer Back
             await redis_client.publish(f"alerts:{client_id}", json.dumps({
@@ -141,10 +143,10 @@ async def process_job(queue_name, payload):
             # --- THE SLOW LOOP: Action Recognition & RAG Update ---
             if state["frame_count"] % FRAMES_BETWEEN_ACTION_CHECKS == 1:
                 # 1. Ask the VLM what the worker is doing right now
-                current_action = analyzer.detect_action(image_b64)
+                current_action = await analyzer.detect_action(image_b64)
                 
                 # 2. Do the Vector Math / DB Lookup based on the action
-                new_rule = retriever.get_context(query=current_action)
+                new_rule = retriever.get_context(scene_type=current_action)
                 
                 # 3. Cache the specific manual rule
                 state["current_rule"] = new_rule
@@ -154,23 +156,27 @@ async def process_job(queue_name, payload):
             active_rules = state["current_rule"]
                     
             # 2. Run Inference
-            result = analyzer.detect_danger(image_b64, active_rules)
+            result = await analyzer.detect_danger(image_b64, active_rules)
 
             update_client_memory(client_id, image_b64, result)
             
             # 3. If Danger, Alert & Report
             if result["is_danger"]:
+                # Generate exact time of detection
+                now_iso = datetime.now(timezone.utc).isoformat()
+                
                 logger.warning(f"DANGER DETECTED: {client_id} - {result['details']}")
                 
-                # A. Alert Phone
+                # A. Alert Phone (Now with timestamp)
                 await redis_client.publish(f"alerts:{client_id}", json.dumps({
                     "type": "DANGER",
                     "message": "Safety Violation Detected",
-                    "details": result["details"]
+                    "details": result["details"],
+                    "timestamp": now_iso
                 }))
                 
-                # B. Report to Django
-                asyncio.create_task(report_to_django(client_id, image_b64, result["details"]))
+                # B. Report to Django (Update the report function to accept this timestamp)
+                asyncio.create_task(report_to_django(client_id, result["details"], now_iso))
 
     except Exception as e:
         logger.error(f"Job Processing Error: {e}", exc_info=True)
