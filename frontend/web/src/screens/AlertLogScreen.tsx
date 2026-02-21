@@ -41,6 +41,19 @@ const sidebarItems = [
 ];
 
 const POLL_INTERVAL = 10_000;
+const READ_ALERTS_KEY = 'rp_read_alerts';
+
+function getReadAlertIds(): Set<number> {
+  try {
+    const raw = localStorage.getItem(READ_ALERTS_KEY);
+    if (raw) return new Set(JSON.parse(raw) as number[]);
+  } catch { /* ignore */ }
+  return new Set();
+}
+
+function persistReadAlertIds(ids: Set<number>) {
+  localStorage.setItem(READ_ALERTS_KEY, JSON.stringify([...ids]));
+}
 
 type FilterType = 'ALL' | 'AUTO' | 'MANUAL';
 
@@ -156,7 +169,7 @@ function LogDetailModal({
               fontSize: 14,
               color: statusInfo?.color ?? '#71727A',
             }}>
-              이 요청은 이미 {statusInfo?.text ?? '처리'}되었습니다.
+              이 요청은 {statusInfo?.text ?? '처리'}되었습니다.
             </span>
           </div>
         )}
@@ -178,6 +191,7 @@ export default function AlertLogScreen() {
   const [filter, setFilter] = useState<FilterType>('ALL');
   const [selectedLog, setSelectedLog] = useState<AdminLog | null>(null);
   const [approving, setApproving] = useState(false);
+  const [readIds, setReadIds] = useState<Set<number>>(getReadAlertIds);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchLogs = useCallback(async () => {
@@ -218,6 +232,16 @@ export default function AlertLogScreen() {
       }
     } catch { /* ignore */ }
     setApproving(false);
+  }, []);
+
+  const markAsRead = useCallback((logId: number) => {
+    setReadIds(prev => {
+      if (prev.has(logId)) return prev;
+      const next = new Set(prev);
+      next.add(logId);
+      persistReadAlertIds(next);
+      return next;
+    });
   }, []);
 
   const handleLogout = async () => {
@@ -336,7 +360,7 @@ export default function AlertLogScreen() {
                     key={log.id}
                     style={{
                       ...styles.tableRow,
-                      backgroundColor: log.is_read ? '#FFFFFF' : (isManual ? '#F8FAFF' : '#FFFBFB'),
+                      backgroundColor: (log.is_read || readIds.has(log.id)) ? '#FFFFFF' : (isManual ? '#F8FAFF' : '#FFFBFB'),
                     }}>
                     <span style={{ ...styles.tableCell, flex: 0.8, fontSize: 12, color: '#71727A' }}>
                       {formatDateTime(log.created_at)}
@@ -378,7 +402,7 @@ export default function AlertLogScreen() {
                       <button
                         type="button"
                         style={styles.viewBtn}
-                        onClick={() => setSelectedLog(log)}>
+                        onClick={() => { markAsRead(log.id); setSelectedLog(log); }}>
                         보기
                       </button>
                     </span>

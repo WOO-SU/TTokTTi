@@ -220,7 +220,7 @@ function AlertDetailModal({
               fontSize: 14,
               color: statusInfo?.color ?? '#71727A',
             }}>
-              이 요청은 이미 {statusInfo?.text ?? '처리'}되었습니다.
+              이 요청은 {statusInfo?.text ?? '처리'}되었습니다.
             </span>
           </div>
         )}
