@@ -20,6 +20,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { useIsFocused } from '@react-navigation/native';
 import type { HomeStackParamList } from '../../App';
+import TopHeader from '../components/TopHeader';
 import { useWorkSession } from '../context/WorkSessionContext';
 import {
   getSasToken,
@@ -43,15 +44,6 @@ const POLLING_INTERVAL = 2000;
 const POLLING_TIMEOUT = 60000; // 최대 60초
 
 /* ──────── Icon Components ──────── */
-
-function BackArrowIcon() {
-  return (
-    <View style={iconStyles.backContainer}>
-      <View style={iconStyles.arrowTop} />
-      <View style={iconStyles.arrowBottom} />
-    </View>
-  );
-}
 
 function CameraIcon() {
   return (
@@ -213,15 +205,7 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <BackArrowIcon />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{title}</Text>
-      </View>
+      <TopHeader title={title || '장비 점검 촬영'} />
 
       {/* Camera Preview Area */}
       <View style={styles.cameraPreview}>
@@ -312,28 +296,6 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
 /* ──────── Icon Styles ──────── */
 
 const iconStyles = StyleSheet.create({
-  backContainer: {
-    width: 28,
-    height: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  arrowTop: {
-    width: 14,
-    height: 2,
-    backgroundColor: '#006FFD',
-    borderRadius: 1,
-    position: 'absolute',
-    transform: [{ rotate: '-45deg' }, { translateY: -5.5 }],
-  },
-  arrowBottom: {
-    width: 14,
-    height: 2,
-    backgroundColor: '#006FFD',
-    borderRadius: 1,
-    position: 'absolute',
-    transform: [{ rotate: '45deg' }, { translateY: 5.5 }],
-  },
   cameraContainer: {
     width: 28,
     height: 28,

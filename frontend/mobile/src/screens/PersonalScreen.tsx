@@ -17,6 +17,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { PersonalStackParamList } from '../../App';
 import { getUserProfile, updateUserProfile, type UserProfile } from '../api/user';
 import { useAuth } from '../context/AuthContext';
+import TopHeader from '../components/TopHeader';
 
 function PersonAvatarIcon() {
   return (
@@ -111,14 +112,15 @@ export default function PersonalScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Nav Bar */}
-      <View style={[styles.navBar, { paddingTop: insets.top }]}>
-        <View style={styles.navSpacer} />
-        <Text style={styles.pageTitle}>Personal</Text>
-        <TouchableOpacity style={styles.navSpacer} onPress={handleSave} disabled={saving || loading}>
-          <Text style={{ color: '#0052CC', fontWeight: 'bold' }}>저장</Text>
-        </TouchableOpacity>
-      </View>
+      <TopHeader
+        title="Personal"
+        showBackButton={false}
+        rightComponent={
+          <TouchableOpacity onPress={handleSave} disabled={saving || loading}>
+            <Text style={{ color: '#0052CC', fontWeight: 'bold', fontSize: 16 }}>저장</Text>
+          </TouchableOpacity>
+        }
+      />
 
       {/* Content */}
       <ScrollView
@@ -316,24 +318,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-  },
-  navBar: {
-    height: 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    backgroundColor: '#FFFFFF',
-  },
-  navSpacer: {
-    width: 20,
-  },
-  pageTitle: {
-    fontFamily: 'Inter',
-    fontWeight: '700',
-    fontSize: 14,
-    color: '#1F2024',
-    textAlign: 'center',
   },
   scrollContent: {
     flexGrow: 1,

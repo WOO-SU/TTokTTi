@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import type { HomeStackParamList } from '../../App';
+import TopHeader from '../components/TopHeader';
 import { useWorkSession } from '../context/WorkSessionContext';
 
 type Props = {
@@ -93,15 +94,7 @@ export default function SafetyEquipmentCheckScreen({
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Nav Bar */}
-      <View style={[styles.navBar, { paddingTop: insets.top }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <BackArrowIcon />
-        </TouchableOpacity>
-        <Text style={styles.pageTitle}>안전 장비 점검</Text>
-      </View>
+      <TopHeader title="안전 장비 점검" />
 
       {/* Content */}
       <ScrollView
@@ -213,28 +206,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-  },
-
-  /* Nav Bar */
-  navBar: {
-    height: 64,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    backgroundColor: '#FFFFFF',
-    gap: 8,
-  },
-  backButton: {
-    width: 28,
-    height: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pageTitle: {
-    fontFamily: 'Inter',
-    fontWeight: '700',
-    fontSize: 18,
-    color: '#1F2024',
   },
 
   /* Content */

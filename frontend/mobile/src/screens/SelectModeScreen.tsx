@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import { HomeStackParamList, RootStackParamList } from '../../App';
+import TopHeader from '../components/TopHeader';
 
 const tripodImage = require('../assets/tripod-character.png');
 const ladderImage = require('../assets/ladder-character.png');
@@ -23,17 +24,6 @@ type Props = {
   >;
 };
 
-/* ──────── Back Arrow Icon ──────── */
-
-function BackArrowIcon() {
-  return (
-    <View style={iconStyles.backContainer}>
-      <View style={iconStyles.backArrowTop} />
-      <View style={iconStyles.backArrowBottom} />
-    </View>
-  );
-}
-
 /* ──────── Main Component ──────── */
 
 export default function SelectModeScreen({ navigation }: Props) {
@@ -43,16 +33,7 @@ export default function SelectModeScreen({ navigation }: Props) {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Nav Bar */}
-      <View style={[styles.navBar, { paddingTop: insets.top }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <BackArrowIcon />
-        </TouchableOpacity>
-        <Text style={styles.pageTitle}>사용 방식 선택</Text>
-        <View style={styles.backButton} />
-      </View>
+      <TopHeader title="사용 방식 선택" />
 
       {/* Content */}
       <ScrollView
@@ -131,14 +112,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
 
-  /* Nav Bar */
-  navBar: {
+  /* Header */
+  header: {
     height: 64,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 24,
     backgroundColor: '#FFFFFF',
+    gap: 8,
   },
   backButton: {
     width: 28,
@@ -146,12 +127,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  pageTitle: {
+  headerTitle: {
     fontFamily: 'Inter',
     fontWeight: '700',
     fontSize: 18,
     color: '#1F2024',
-    textAlign: 'center',
   },
 
   /* Content */

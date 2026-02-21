@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import type { HomeStackParamList } from '../../App';
+import TopHeader from '../components/TopHeader';
 import { fetchWorkerReport, fetchSasUrl, type WorkerReport } from '../api/risk';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -35,17 +36,6 @@ const LEVEL_LABEL: Record<string, string> = {
   MEDIUM: '보통',
   LOW: '낮음',
 };
-
-/* ──────── Icon Components ──────── */
-
-function BackArrowIcon() {
-  return (
-    <View style={iconStyles.backContainer}>
-      <View style={iconStyles.backArrowTop} />
-      <View style={iconStyles.backArrowBottom} />
-    </View>
-  );
-}
 
 /* ──────── Main Component ──────── */
 
@@ -87,15 +77,7 @@ export default function RiskResultScreen({ navigation, route }: Props) {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Nav Bar */}
-      <View style={[styles.navBar, { paddingTop: insets.top }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <BackArrowIcon />
-        </TouchableOpacity>
-        <Text style={styles.pageTitle}>위험성 평가 결과</Text>
-      </View>
+      <TopHeader title="위험성 평가 결과" />
 
       {isLoading ? (
         <View style={styles.loadingContainer}>
@@ -233,26 +215,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F9FE',
-  },
-  navBar: {
-    height: 64,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    backgroundColor: '#FFFFFF',
-    gap: 8,
-  },
-  backButton: {
-    width: 28,
-    height: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pageTitle: {
-    fontFamily: 'Inter',
-    fontWeight: '700',
-    fontSize: 18,
-    color: '#1F2024',
   },
   loadingContainer: {
     flex: 1,

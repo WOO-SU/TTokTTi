@@ -12,6 +12,7 @@ import { useNavigation, type CompositeNavigationProp } from '@react-navigation/n
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { SettingStackParamList, RootStackParamList } from '../../App';
 import { useAuth } from '../context/AuthContext';
+import TopHeader from '../components/TopHeader';
 
 export default function SettingScreen() {
   const insets = useSafeAreaInsets();
@@ -41,12 +42,7 @@ export default function SettingScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Nav Bar */}
-      <View style={[styles.navBar, { paddingTop: insets.top }]}>
-        <View style={styles.navSpacer} />
-        <Text style={styles.pageTitle}>Setting</Text>
-        <View style={styles.navSpacer} />
-      </View>
+      <TopHeader title="Setting" showBackButton={false} />
 
       {/* Content */}
       <View style={[styles.content, { paddingBottom: insets.bottom + 16 }]}>
@@ -65,24 +61,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-  },
-  navBar: {
-    height: 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    backgroundColor: '#FFFFFF',
-  },
-  navSpacer: {
-    width: 20,
-  },
-  pageTitle: {
-    fontFamily: 'Inter',
-    fontWeight: '700',
-    fontSize: 14,
-    color: '#1F2024',
-    textAlign: 'center',
   },
   content: {
     flex: 1,

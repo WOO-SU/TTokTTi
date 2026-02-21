@@ -12,22 +12,12 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { PersonalStackParamList } from '../../App';
+import TopHeader from '../components/TopHeader';
 import { changePassword } from '../api/user';
 
 type Props = {
     navigation: NativeStackNavigationProp<PersonalStackParamList, 'ChangePassword'>;
 };
-
-/* ──────── Icon Components ──────── */
-
-function BackArrowIcon() {
-    return (
-        <View style={iconStyles.backContainer}>
-            <View style={iconStyles.arrowTop} />
-            <View style={iconStyles.arrowBottom} />
-        </View>
-    );
-}
 
 /* ──────── Main Component ──────── */
 
@@ -85,15 +75,7 @@ export default function ChangePasswordScreen({ navigation }: Props) {
         <View style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-            {/* Header */}
-            <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-                <TouchableOpacity
-                    style={styles.backButton}
-                    onPress={() => navigation.goBack()}>
-                    <BackArrowIcon />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>비밀번호 변경</Text>
-            </View>
+            <TopHeader title="비밀번호 변경" />
 
             <View style={styles.content}>
                 <Text style={styles.descriptionText}>

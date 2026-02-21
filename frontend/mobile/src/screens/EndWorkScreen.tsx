@@ -19,6 +19,7 @@ import {
 } from 'react-native-vision-camera';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { HomeStackParamList } from '../../App';
+import TopHeader from '../components/TopHeader';
 import { getSasToken, uploadToBlob } from '../api/equipment';
 
 type Props = {
@@ -28,15 +29,6 @@ type Props = {
 type ScreenState = 'idle' | 'camera' | 'preview' | 'sending' | 'sent';
 
 /* ──────── Icon Components ──────── */
-
-function BackArrowIcon() {
-  return (
-    <View style={iconStyles.backContainer}>
-      <View style={iconStyles.arrowTop} />
-      <View style={iconStyles.arrowBottom} />
-    </View>
-  );
-}
 
 function CameraIcon() {
   return (
@@ -121,15 +113,7 @@ export default function EndWorkScreen({ navigation }: Props) {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <BackArrowIcon />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>근무 마무리</Text>
-      </View>
+      <TopHeader title="근무 마무리" />
 
       {/* Idle State */}
       {screenState === 'idle' && (

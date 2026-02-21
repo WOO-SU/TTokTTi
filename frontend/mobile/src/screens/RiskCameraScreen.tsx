@@ -18,6 +18,7 @@ import { useIsFocused } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import type { HomeStackParamList } from '../../App';
+import TopHeader from '../components/TopHeader';
 import { getSasToken, uploadToBlob } from '../api/equipment';
 import { startRiskAssessment, uploadRiskPhoto } from '../api/risk';
 
@@ -27,15 +28,6 @@ type Props = {
 };
 
 /* ──────── Icon Components ──────── */
-
-function BackArrowIcon() {
-  return (
-    <View style={iconStyles.backContainer}>
-      <View style={iconStyles.arrowTop} />
-      <View style={iconStyles.arrowBottom} />
-    </View>
-  );
-}
 
 function CameraIcon() {
   return (
@@ -121,15 +113,7 @@ export default function RiskCameraScreen({ navigation, route }: Props) {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <BackArrowIcon />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{title}</Text>
-      </View>
+      <TopHeader title={title} />
 
       {/* Camera Preview */}
       <View style={styles.cameraPreview}>
@@ -195,28 +179,6 @@ export default function RiskCameraScreen({ navigation, route }: Props) {
 /* ──────── Icon Styles ──────── */
 
 const iconStyles = StyleSheet.create({
-  backContainer: {
-    width: 28,
-    height: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  arrowTop: {
-    width: 14,
-    height: 2,
-    backgroundColor: '#006FFD',
-    borderRadius: 1,
-    position: 'absolute',
-    transform: [{ rotate: '-45deg' }, { translateY: -5.5 }],
-  },
-  arrowBottom: {
-    width: 14,
-    height: 2,
-    backgroundColor: '#006FFD',
-    borderRadius: 1,
-    position: 'absolute',
-    transform: [{ rotate: '45deg' }, { translateY: 5.5 }],
-  },
   cameraContainer: {
     width: 28,
     height: 28,
@@ -259,26 +221,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
-  header: {
-    height: 64,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    backgroundColor: '#FFFFFF',
-    gap: 8,
-  },
-  backButton: {
-    width: 28,
-    height: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontFamily: 'Inter',
-    fontWeight: '700',
-    fontSize: 18,
-    color: '#1F2024',
-  },
+
   cameraPreview: {
     flex: 1,
     marginHorizontal: 15,

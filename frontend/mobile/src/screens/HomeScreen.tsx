@@ -13,21 +13,13 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import type { HomeStackParamList } from '../../App';
+import TopHeader from '../components/TopHeader';
 
 const characterImage = require('../assets/safety-character.png');
 const equipmentImage = require('../assets/Risk-Assessment.png');
 const riskAssessmentImage = require('../assets/tripod-character.png');
 
 /* ──────────────── Icon Components ──────────────── */
-
-function BackArrowIcon() {
-  return (
-    <View style={iconStyles.backContainer}>
-      <View style={iconStyles.arrowTop} />
-      <View style={iconStyles.arrowBottom} />
-    </View>
-  );
-}
 
 function ImagePlaceholderIcon() {
   return (
@@ -56,15 +48,8 @@ export default function HomeScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 24 }]}
         bounces={false}
         showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}>
-            <BackArrowIcon />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>작업 메뉴</Text>
-        </View>
+
+        <TopHeader title="작업 메뉴" />
 
         {/* Banner 1: 안전 장비 점검 */}
         <TouchableOpacity
@@ -159,28 +144,6 @@ export default function HomeScreen() {
 /* ──────────────── Icon Styles ──────────────── */
 
 const iconStyles = StyleSheet.create({
-  backContainer: {
-    width: 28,
-    height: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  arrowTop: {
-    width: 14,
-    height: 2,
-    backgroundColor: '#006FFD',
-    borderRadius: 1,
-    position: 'absolute',
-    transform: [{ rotate: '-45deg' }, { translateY: -5.5 }],
-  },
-  arrowBottom: {
-    width: 14,
-    height: 2,
-    backgroundColor: '#006FFD',
-    borderRadius: 1,
-    position: 'absolute',
-    transform: [{ rotate: '45deg' }, { translateY: 5.5 }],
-  },
   placeholderContainer: {
     width: 40,
     height: 40,
@@ -218,28 +181,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     gap: 15,
     paddingBottom: 24,
-  },
-
-  /* Header */
-  header: {
-    height: 64,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    backgroundColor: '#FFFFFF',
-    gap: 8,
-  },
-  backButton: {
-    width: 28,
-    height: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontFamily: 'Inter',
-    fontWeight: '700',
-    fontSize: 18,
-    color: '#1F2024',
   },
 
   /* Banner */
