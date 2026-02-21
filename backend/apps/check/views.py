@@ -9,20 +9,7 @@ import json
 
 from .models import Compliance, Photo
 from ..detect.models import VideoLog
-from .serializers import (
-    ComplianceSerializer, 
-    ComplianceRequestSerializer,
-    ComplianceResultSerializer, 
-    CheckUpdateResponseSerializer, 
-    UploadResultResponseSerializer, 
-    RequestDetectionResponseSerializer,
-    TargetPhotoRequestSerializer,
-    RequestCheckSerializer,
-    ApproveCheckSerializer,
-    ApproveCheckResponseSerializer,
-    CheckPassRequestSerializer,
-    CheckPassResponseSerializer
-)
+from .serializers import *
 
 from ..worksession.models import WorkSession
 # temporary measure. if two redis queues are needed,, pull the client code .
@@ -345,3 +332,31 @@ def check_pass(request, worksession_id):
         "ok": True,
         "passed": passed
     })
+
+# @swagger_auto_schema(
+#     method="get",
+#     responses={
+#         200: ManualCheckResponseSerializer,
+#         403: ManualCheckResponseSerializer,
+#     }
+# )
+# @api_view(["GET"])
+# @permission_classes([IsAuthenticated])
+# def manual_check(request):
+#     """
+#     "/api/check/admin/request": 관리자 수동 점검 요청 조회
+#     """
+#     if request.user.is_manager == False:
+#         return Response(
+#             {"ok": False, "detail": "Only managers can access manual check requests"},
+#             status=403
+#         )
+
+#     pending_logs = VideoLog.objects.filter(
+#         source=VideoLog.SourceChoices.MANUAL,
+#         status=VideoLog.StatusChoices.PENDING
+#     ).select_related("compliance", "compliance__employee")
+
+#     serializer = ManualCheckSerializer(pending_logs, many=True)
+
+#     return Response({"ok": True, "data": serializer.data}, status=200)
