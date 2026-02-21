@@ -38,6 +38,7 @@ export type RootStackParamList = {
   CaptureWork: { worksession_id: number };
   EndWork: undefined;
   WorkMenu: { worksession_id: number };
+  ChangePassword: undefined;
 };
 
 export type TabParamList = {
@@ -245,6 +246,7 @@ function MainTabs() {
 /* ──────── App Root ──────── */
 
 import CaptureWorkScreen from './src/screens/CaptureWorkScreen';
+import ChangePasswordScreen from './src/screens/ChangePasswordScreen';
 
 function App() {
   return (
@@ -270,6 +272,7 @@ function App() {
                 <Stack.Screen name="CaptureWork" component={CaptureWorkScreen} />
                 <Stack.Screen name="EndWork" component={EndWorkScreen} />
                 <Stack.Screen name="WorkMenu" component={HomeScreen} />
+                <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
               </Stack.Navigator>
             </NavigationContainer>
           </SafeAreaProvider>

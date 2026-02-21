@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,10 +6,13 @@ import {
   StyleSheet,
   StatusBar,
   ScrollView,
+  TouchableOpacity,
 } from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-/* ──────── Icon Components ──────── */
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../App';
 
 function PersonAvatarIcon() {
   return (
@@ -20,10 +23,31 @@ function PersonAvatarIcon() {
   );
 }
 
+function LockIcon() {
+  return (
+    <View style={iconStyles.lockContainer}>
+      <View style={iconStyles.lockShackle} />
+      <View style={iconStyles.lockBody}>
+        <View style={iconStyles.lockKeyhole} />
+      </View>
+    </View>
+  );
+}
+
+function ChevronRightIcon() {
+  return (
+    <View style={iconStyles.chevronContainer}>
+      <View style={iconStyles.chevronTop} />
+      <View style={iconStyles.chevronBottom} />
+    </View>
+  );
+}
+
 /* ──────── Main Component ──────── */
 
 export default function PersonalScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [company, setCompany] = useState('');
   const [area, setArea] = useState('');
 
@@ -32,7 +56,7 @@ export default function PersonalScreen() {
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       {/* Nav Bar */}
-      <View style={[styles.navBar, {paddingTop: insets.top}]}>
+      <View style={[styles.navBar, { paddingTop: insets.top }]}>
         <View style={styles.navSpacer} />
         <Text style={styles.pageTitle}>Personal</Text>
         <View style={styles.navSpacer} />
@@ -40,8 +64,8 @@ export default function PersonalScreen() {
 
       {/* Content */}
       <ScrollView
-        style={{flex: 1}}
-        contentContainerStyle={[styles.scrollContent, {paddingBottom: insets.bottom + 24}]}
+        style={{ flex: 1 }}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 24 }]}
         bounces={false}
         showsVerticalScrollIndicator={false}>
         <View style={styles.card}>
@@ -89,6 +113,19 @@ export default function PersonalScreen() {
                 />
               </View>
             </View>
+
+            {/* 비밀번호 변경 버튼 */}
+            <TouchableOpacity
+              style={styles.actionButton}
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('ChangePassword')}
+            >
+              <View style={styles.actionLeft}>
+                <LockIcon />
+                <Text style={styles.actionText}>비밀번호 변경</Text>
+              </View>
+              <ChevronRightIcon />
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
@@ -124,6 +161,59 @@ const iconStyles = StyleSheet.create({
     borderColor: '#A2A6B0',
     position: 'absolute',
     bottom: 2,
+  },
+  lockContainer: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lockShackle: {
+    width: 10,
+    height: 10,
+    borderWidth: 2,
+    borderBottomWidth: 0,
+    borderColor: '#71727A',
+    borderTopLeftRadius: 5,
+    borderTopRightRadius: 5,
+    position: 'absolute',
+    top: 2,
+  },
+  lockBody: {
+    width: 14,
+    height: 10,
+    backgroundColor: '#71727A',
+    borderRadius: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+    bottom: 4,
+  },
+  lockKeyhole: {
+    width: 2,
+    height: 4,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 1,
+  },
+  chevronContainer: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chevronTop: {
+    width: 8,
+    height: 2,
+    backgroundColor: '#C5C6CC',
+    borderRadius: 1,
+    transform: [{ rotate: '45deg' }, { translateY: -2.5 }, { translateX: 2 }],
+  },
+  chevronBottom: {
+    width: 8,
+    height: 2,
+    backgroundColor: '#C5C6CC',
+    borderRadius: 1,
+    transform: [{ rotate: '-45deg' }, { translateY: 2.5 }, { translateX: 2 }],
   },
 });
 
@@ -233,5 +323,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#21272A',
     padding: 0,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 56,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F2F4F8',
+    marginTop: 8,
+  },
+  actionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  actionText: {
+    fontFamily: 'Roboto',
+    fontWeight: '400',
+    fontSize: 16,
+    color: '#1F2024',
   },
 });
