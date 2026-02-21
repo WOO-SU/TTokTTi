@@ -53,7 +53,7 @@ export default function SelectModeScreen({ navigation }: Props) {
       {/* Content */}
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={[styles.scrollContent, {paddingBottom: insets.bottom + 24}]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 24 }]}
         bounces={false}
         showsVerticalScrollIndicator={false}>
         <View style={styles.cardsContainer}>
@@ -181,8 +181,7 @@ const styles = StyleSheet.create({
         offsetY: 4,
         blurRadius: 4,
         spreadDistance: 0,
-        color: 'rgba(0, 0, 0, 0.25)',
-        outset: true,
+        color: 'rgba(0, 0, 0, 0.05)',
       },
     ],
   },

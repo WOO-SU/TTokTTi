@@ -265,7 +265,6 @@ const styles = StyleSheet.create({
         blurRadius: 4,
         spreadDistance: 0,
         color: 'rgba(0, 0, 0, 0.25)',
-        outset: true,
       },
     ],
     borderRadius: 20,

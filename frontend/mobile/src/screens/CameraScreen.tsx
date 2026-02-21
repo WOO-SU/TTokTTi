@@ -1,5 +1,5 @@
 /* 현장 촬영 화면 */
-import React, {useState, useRef, useCallback, useEffect} from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   Modal,
   Alert,
 } from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Camera,
   useCameraDevice,
@@ -18,9 +18,9 @@ import {
   PhotoFile,
 } from 'react-native-vision-camera';
 import RNFS from 'react-native-fs';
-import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import type {RouteProp} from '@react-navigation/native';
-import type {RootStackParamList} from '../../App';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
+import type { RootStackParamList } from '../../App';
 
 import SafetyStream, { StreamResponse } from '../api/stream'
 
@@ -61,30 +61,30 @@ function StopIcon() {
 
 /* ──────── Main Component ──────── */
 
-export default function CameraScreen({navigation, route}: Props) {
+export default function CameraScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
-  const {mode} = route.params;
-  
+  const { mode } = route.params;
+
   // State
   const [isRecording, setIsRecording] = useState(false);
   const [alertVisible, setAlertVisible] = useState(false);
-  const [alertMessage, setAlergMessage] = useState('');
+  const [alertMessage, setAlertMessage] = useState('');
 
   // Refs
   const cameraRef = useRef<Camera>(null);
   const streamRef = useRef<SafetyStream | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Permissions
   const device = useCameraDevice('back');
-  const {hasPermission, requestPermission} = useCameraPermission();
-  const {hasPermission: hasMicPermission, requestPermission: requestMicPermission} = useMicrophonePermission();
+  const { hasPermission, requestPermission } = useCameraPermission();
+  const { hasPermission: hasMicPermission, requestPermission: requestMicPermission } = useMicrophonePermission();
 
   // WebSocket & Stream Setup
   useEffect(() => {
     if (!hasPermission) requestPermission();
     if (!hasMicPermission) requestMicPermission();
-    
+
   }, [hasPermission, requestPermission, hasMicPermission, requestMicPermission]);
 
   useEffect(() => {
@@ -105,7 +105,6 @@ export default function CameraScreen({navigation, route}: Props) {
       if (cameraRef.current && streamRef.current) {
         try {
           const photo = await cameraRef.current.takePhoto({
-            qualityPrioritization: 'speed',
             flash: 'off',
             enableShutterSound: false,
           });
@@ -155,7 +154,7 @@ export default function CameraScreen({navigation, route}: Props) {
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       {/* Header */}
-      <View style={[styles.header, {paddingTop: insets.top + 12}]}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}>
@@ -197,7 +196,7 @@ export default function CameraScreen({navigation, route}: Props) {
 
       {/* Continue Button */}
       <View
-        style={[styles.continueSection, {paddingBottom: insets.bottom + 16}]}>
+        style={[styles.continueSection, { paddingBottom: insets.bottom + 16 }]}>
         <TouchableOpacity style={styles.continueButton} activeOpacity={0.8}>
           <Text style={styles.continueText}>Continue</Text>
         </TouchableOpacity>
@@ -227,7 +226,7 @@ export default function CameraScreen({navigation, route}: Props) {
       </Modal>
     </View>
 
-      
+
   );
 }
 
@@ -246,7 +245,7 @@ const iconStyles = StyleSheet.create({
     backgroundColor: '#006FFD',
     borderRadius: 1,
     position: 'absolute',
-    transform: [{rotate: '-45deg'}, {translateY: -5.5}],
+    transform: [{ rotate: '-45deg' }, { translateY: -5.5 }],
   },
   arrowBottom: {
     width: 14,
@@ -254,7 +253,7 @@ const iconStyles = StyleSheet.create({
     backgroundColor: '#006FFD',
     borderRadius: 1,
     position: 'absolute',
-    transform: [{rotate: '45deg'}, {translateY: 5.5}],
+    transform: [{ rotate: '45deg' }, { translateY: 5.5 }],
   },
   cameraContainer: {
     width: 28,
