@@ -35,6 +35,7 @@ export type RootStackParamList = {
   RiskCheck: { worksession_id: number; assessmentId?: number; completedTitle?: string };
   RiskResult: { assessment_id: number; worksession_id: number };
   RiskCamera: { title: string; worksession_id: number; assessmentId?: number };
+  CaptureWork: { worksession_id: number };
   EndWork: undefined;
   WorkMenu: { worksession_id: number };
 };
@@ -243,6 +244,8 @@ function MainTabs() {
 
 /* ──────── App Root ──────── */
 
+import CaptureWorkScreen from './src/screens/CaptureWorkScreen';
+
 function App() {
   return (
     <AuthProvider>
@@ -264,6 +267,7 @@ function App() {
                 <Stack.Screen name="RiskCheck" component={RiskCheckScreen} />
                 <Stack.Screen name="RiskResult" component={RiskResultScreen} />
                 <Stack.Screen name="RiskCamera" component={RiskCameraScreen} />
+                <Stack.Screen name="CaptureWork" component={CaptureWorkScreen} />
                 <Stack.Screen name="EndWork" component={EndWorkScreen} />
                 <Stack.Screen name="WorkMenu" component={HomeScreen} />
               </Stack.Navigator>

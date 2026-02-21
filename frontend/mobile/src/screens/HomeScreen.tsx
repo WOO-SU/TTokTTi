@@ -117,6 +117,23 @@ export default function HomeScreen() {
           </View>
         </TouchableOpacity>
 
+        {/* Banner 4: 작업물 촬영 */}
+        <TouchableOpacity
+          style={styles.bannerSection}
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate('CaptureWork', { worksession_id })}>
+          <View style={styles.bannerCard}>
+            <Image
+              source={characterImage}
+              style={styles.bannerImage4}
+              resizeMode="contain"
+            />
+            <Text style={styles.bannerText}>
+              {'작업물 촬영'}
+            </Text>
+          </View>
+        </TouchableOpacity>
+
         {/* Banner 4: 근무 마무리 */}
         <TouchableOpacity
           style={styles.bannerSection}
@@ -134,33 +151,6 @@ export default function HomeScreen() {
           </View>
         </TouchableOpacity>
 
-        {/* 근무 도우미 Section */}
-        <View style={styles.productsSection}>
-          {/* Section Header */}
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>근무 도우미</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeMoreText}>See more</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Cards */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.cardsContainer}>
-            {/* Card: 알람 */}
-            <TouchableOpacity style={styles.card} activeOpacity={0.8}>
-              <View style={styles.cardImageArea}>
-                <ImagePlaceholderIcon />
-              </View>
-              <View style={styles.cardContent}>
-                <Text style={styles.cardTitle}>휴식</Text>
-                <Text style={styles.cardSubtitle}>알람</Text>
-              </View>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
       </ScrollView>
     </View>
   );
