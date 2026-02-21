@@ -7,35 +7,125 @@ from datetime import timedelta
 from faker import Faker
 
 # Import your models
-from apps.user.models import User
-from apps.worksession.models import Worksite, WorkSession, WorkSessionMember
-from apps.detect.models import RiskType, VideoLog
-from apps.check.models import Compliance
-from apps.risk.models import RiskAssessment, RiskAssessmentImage, RiskReport, WorkerRecommendation
+from apps.user.models import *
+from apps.worksession.models import *
+from apps.detect.models import *
+from apps.check.models import *
+from apps.risk.models import *
+from apps.report.models import *
 
 class Command(BaseCommand):
     help = 'Idempotently seeds the database with a large volume of mock data for testing.'
-
+    
     def handle(self, *args, **kwargs):
-        fake = Faker()
+        fake = Faker("ko_KR")
         self.stdout.write("Starting high-volume database seeding...")
 
-        # 1. Check if already seeded to maintain idempotency
-        if User.objects.filter(username="admin").exists():
-            self.stdout.write(self.style.WARNING("Database already seeded. Skipping..."))
-            return
+        now = timezone.now()
+        days = [now - timedelta(days=i) for i in range(1, 7)] + [now + timedelta(days=i) for i in range(7)]
+        DEFAULT_PASSWORD = "1234"
 
-        # 2. Seed Admin & Base Users
-        admin = User.objects.create_superuser(username="admin", password="adminpassword", name="System Admin", sex="M")
+        # ------------------------------------------------------------------
+        # user.User
+        # ------------------------------------------------------------------
         
-        users_to_create = []
-        for i in range(50):
-            users_to_create.append(User(
-                username=f"worker_{i}",
-                name=fake.name(),
-                phone=fake.phone_number()[:20],
-                sex=random.choice(['M', 'F']),
-            ))
+        # employee
+        users = []
+        for i in range(1, 6): # f1 ~ f5
+            username = f"user{i}"
+
+            user, created = User.objects.get_or_create(
+                username=username,
+                defaults={
+                    "name": fake.name(),
+                    "phone": fake.phone_number(), 
+                    "address": fake.address(),
+                    "birth_date": fake.date_of_birth(minimum_age=20, maximum_age=65),
+                    "photo": f"photo/f{i}.jpg", 
+                    "sex": "F",
+                    "is_active": True,
+                    "is_manager": False,
+                    "is_staff": False,
+                }
+            )
+
+            if created:
+                user.set_password(DEFAULT_PASSWORD)
+                user.save()
+
+            users.append(user)
+        
+        for i in range(1, 6): # m1 ~ m5
+            username = f"user{i+5}"
+
+            user, created = User.objects.get_or_create(
+                username=username,
+                defaults={
+                    "name": fake.name(),
+                    "phone": fake.phone_number(), 
+                    "address": fake.address(),
+                    "birth_date": fake.date_of_birth(minimum_age=20, maximum_age=65),
+                    "photo": f"photo/m{i}.jpg", 
+                    "sex": "M",
+                    "is_active": True,
+                    "is_manager": False,
+                    "is_staff": False,
+                }
+            )
+
+            if created:
+                user.set_password(DEFAULT_PASSWORD)
+                user.save()
+
+            users.append(user)
+        
+        for i in range(6, 11): # f6 ~ f10
+            username = f"manager{i}"
+
+            user, created = User.objects.get_or_create(
+                username=username,
+                defaults={
+                    "name": fake.name(),
+                    "phone": fake.phone_number(), 
+                    "address": fake.address(),
+                    "birth_date": fake.date_of_birth(minimum_age=20, maximum_age=65),
+                    "photo": f"photo/f{i}.jpg", 
+                    "sex": "F",
+                    "is_active": True,
+                    "is_manager": True,
+                    "is_staff": False,
+                }
+            )
+
+            if created:
+                user.set_password(DEFAULT_PASSWORD)
+                user.save()
+
+            users.append(user)
+        
+        for i in range(6, 11): # m6 ~ m10
+            username = f"manager{i+5}"
+
+            user, created = User.objects.get_or_create(
+                username=username,
+                defaults={
+                    "name": fake.name(),
+                    "phone": fake.phone_number(), 
+                    "address": fake.address(),
+                    "birth_date": fake.date_of_birth(minimum_age=20, maximum_age=65),
+                    "photo": f"photo/m{i}.jpg", 
+                    "sex": "M",
+                    "is_active": True,
+                    "is_manager": True,
+                    "is_staff": False,
+                }
+            )
+
+            if created:
+                user.set_password(DEFAULT_PASSWORD)
+                user.save()
+
+            users.append(user)
 
         # 2. Worksites
         sites = []
