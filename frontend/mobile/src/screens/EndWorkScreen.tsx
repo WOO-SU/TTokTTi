@@ -18,14 +18,11 @@ import {
   useCameraPermission,
 } from 'react-native-vision-camera';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RouteProp } from '@react-navigation/native';
-import { uploadTargetPhoto } from '../api/check';
 import type { RootStackParamList } from '../../App';
 import { getSasToken, uploadToBlob } from '../api/equipment';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'EndWork'>;
-  route: RouteProp<RootStackParamList, 'EndWork'>;
 };
 
 type ScreenState = 'idle' | 'camera' | 'preview' | 'sending' | 'sent';
@@ -63,12 +60,10 @@ function LargeCheckIcon() {
 
 /* ──────── Main Component ──────── */
 
-export default function EndWorkScreen({ navigation, route }: Props) {
+export default function EndWorkScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const [screenState, setScreenState] = useState<ScreenState>('idle');
   const [photoPath, setPhotoPath] = useState<string | null>(null);
-
-  const worksessionId = route.params.worksession_id;
 
   const cameraRef = useRef<Camera>(null);
   const device = useCameraDevice('back');
@@ -105,13 +100,8 @@ export default function EndWorkScreen({ navigation, route }: Props) {
     }
     setScreenState('sending');
     try {
-      // 1. Upload to Blob
-      const { upload_url, blob_name } = await getSasToken();
+      const { upload_url } = await getSasToken();
       await uploadToBlob(upload_url, photoPath);
-
-      // 2. Call target API with AFTER status
-      await uploadTargetPhoto(worksessionId, 'AFTER', blob_name);
-
       setScreenState('sent');
     } catch (err) {
       console.error('EndWork upload error:', err);
@@ -121,7 +111,7 @@ export default function EndWorkScreen({ navigation, route }: Props) {
       );
       setScreenState('preview');
     }
-  }, [photoPath, worksessionId]);
+  }, [photoPath]);
 
   const handleDone = useCallback(() => {
     navigation.navigate('Main');
