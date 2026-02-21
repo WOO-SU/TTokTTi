@@ -219,19 +219,21 @@ export default function MainHomeScreen() {
                   <View style={styles.taskInfo}>
                     <View style={styles.taskHeader}>
                       <Text style={styles.taskTitle}>{session.name}</Text>
-                      <View
-                        style={[styles.statusBadge, { backgroundColor: config.bg }]}>
-                        <Text style={styles.statusIcon}>{config.icon}</Text>
-                        <Text
-                          style={[styles.statusText, { color: config.text }]}>
-                          {config.label}
-                        </Text>
-                      </View>
                     </View>
                     <View style={styles.taskTime}>
                       <ClockIcon />
                       <Text style={styles.taskTimeText}>
                         {formatTime(session.starts_at)} - {formatTime(session.ends_at)}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Status Badge at Bottom Right */}
+                  <View style={styles.statusBadgeContainer}>
+                    <View style={[styles.statusBadge, { backgroundColor: config.bg }]}>
+                      <Text style={styles.statusIcon}>{config.icon}</Text>
+                      <Text style={[styles.statusText, { color: config.text }]}>
+                        {config.label}
                       </Text>
                     </View>
                   </View>
@@ -477,6 +479,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     gap: 12,
+    position: 'relative',
+    minHeight: 96,
   },
   taskImageWrapper: {
     width: 65,
@@ -505,6 +509,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 16,
     color: '#000000',
+  },
+  statusBadgeContainer: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
   },
   statusBadge: {
     flexDirection: 'row',

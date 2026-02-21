@@ -1,4 +1,4 @@
-import React, {createContext, useContext, useState, useEffect} from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import client from '../api/client';
 
@@ -14,11 +14,11 @@ const AuthContext = createContext<AuthContextType>({
   isLoggedIn: false,
   loading: true,
   userName: null,
-  login: async () => {},
-  logout: async () => {},
+  login: async () => { },
+  logout: async () => { },
 });
 
-export function AuthProvider({children}: {children: React.ReactNode}) {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState<string | null>(null);
@@ -41,7 +41,7 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
       password,
     });
 
-    const {access, refresh} = res.data;
+    const { access, refresh } = res.data;
     await AsyncStorage.setItem('access_token', access);
     await AsyncStorage.setItem('refresh_token', refresh);
     await AsyncStorage.setItem('user_name', userName);
@@ -53,7 +53,7 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
     try {
       const refreshToken = await AsyncStorage.getItem('refresh_token');
       if (refreshToken) {
-        await client.post('/user/logout/', {refresh: refreshToken});
+        await client.post('/user/logout/', { refresh: refreshToken });
       }
     } catch {
       // 로그아웃 API 실패해도 로컬 토큰은 삭제
@@ -64,7 +64,7 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
   };
 
   return (
-    <AuthContext.Provider value={{isLoggedIn, loading, userName, login, logout}}>
+    <AuthContext.Provider value={{ isLoggedIn, loading, userName, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
