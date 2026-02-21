@@ -333,7 +333,7 @@ function WorkSiteCardComponent({
           상세 보기
         </button>
 
-        {card.status === 'READY' && (
+        {/* {card.status === 'READY' && (
           <button
             type="button"
             style={styles.activateBtn}
@@ -344,7 +344,7 @@ function WorkSiteCardComponent({
           >
             작업 시작
           </button>
-        )}
+        )} */}
       </div>
 
       {/* Expandable section — grows card vertically on hover */}
