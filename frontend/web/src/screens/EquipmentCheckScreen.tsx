@@ -15,23 +15,25 @@ type EquipmentItem = {
   icon: string;
 };
 
-type ComplianceRecord = {
-  id: number;
-  employee: number;
-  worksession: number;
-  category: string;
-  is_complied: boolean | null;
-  original_image: string | null;
-  detected_image: string | null;
-  created_at: string;
-  updated_at: string;
+type WorkerDetail = {
+  employee_id: number;
+  name: string;
+  equipment_check: boolean;
 };
 
-type WorkerGroup = {
+type WorkSessionCard = {
   id: number;
   name: string;
-  members: { employeeId: number; name: string; color: string }[];
+  starts_at: string;
+  ends_at: string | null;
+  status: 'READY' | 'IN_PROGRESS' | 'DONE';
+  workers_detail: WorkerDetail[];
+  risk_assessment: string;
+  report: boolean;
 };
+
+// compliance key: "wsId-employeeId-category"
+type ComplianceMap = Record<string, boolean>;
 
 // ── Data ──
 
@@ -41,88 +43,15 @@ const equipmentItems: EquipmentItem[] = [
   { category: 'SHOES', label: '안전장갑 착용', icon: '🧤' },
 ];
 
-const workerGroups: WorkerGroup[] = [
-  {
-    id: 1,
-    name: '봉천동 작업공간',
-    members: [
-      { employeeId: 1, name: '송영민', color: '#006FFD' },
-      { employeeId: 2, name: '임정원', color: '#E87C5D' },
-    ],
-  },
-  {
-    id: 2,
-    name: '신대방동 작업공간',
-    members: [
-      { employeeId: 3, name: '김태호', color: '#22A06B' },
-      { employeeId: 4, name: '박지수', color: '#8F9098' },
-    ],
-  },
-  {
-    id: 3,
-    name: '신림동 작업공간',
-    members: [
-      { employeeId: 5, name: '이준혁', color: '#7B61FF' },
-      { employeeId: 6, name: '최서연', color: '#E85DBF' },
-    ],
-  },
-  {
-    id: 4,
-    name: '보라매동 작업공간',
-    members: [
-      { employeeId: 7, name: '우수연', color: '#FF6B35' },
-      { employeeId: 8, name: '원인영', color: '#9B59B6' },
-    ],
-  },
-];
+const MEMBER_COLORS = ['#006FFD', '#E87C5D', '#22A06B', '#8F9098', '#7B61FF', '#E85DBF', '#FF6B35', '#9B59B6'];
 
-// Mock compliance data matching WorkSessionDetailScreen's mockEquipmentResults
-const mockComplianceRecords: ComplianceRecord[] = (() => {
-  const mockEquip: Record<number, { employeeId: number; helmet: boolean; vest: boolean; gloves: boolean }[]> = {
-    1: [
-      { employeeId: 1, helmet: true, vest: true, gloves: true },
-      { employeeId: 2, helmet: true, vest: false, gloves: false },
-    ],
-    2: [
-      { employeeId: 3, helmet: true, vest: true, gloves: true },
-      { employeeId: 4, helmet: true, vest: true, gloves: true },
-    ],
-    3: [
-      { employeeId: 5, helmet: false, vest: false, gloves: false },
-      { employeeId: 6, helmet: false, vest: false, gloves: false },
-    ],
-    4: [
-      { employeeId: 7, helmet: true, vest: true, gloves: true },
-      { employeeId: 8, helmet: true, vest: true, gloves: true },
-    ],
-  };
-  const records: ComplianceRecord[] = [];
-  let id = 1;
-  const now = new Date().toISOString();
-  for (const [wsId, members] of Object.entries(mockEquip)) {
-    for (const m of members) {
-      const mapping: [EquipmentCategory, boolean][] = [
-        ['HELMET', m.helmet],
-        ['VEST', m.vest],
-        ['SHOES', m.gloves],
-      ];
-      for (const [cat, complied] of mapping) {
-        records.push({
-          id: id++,
-          employee: m.employeeId,
-          worksession: Number(wsId),
-          category: cat,
-          is_complied: complied,
-          original_image: null,
-          detected_image: null,
-          created_at: now,
-          updated_at: now,
-        });
-      }
-    }
-  }
-  return records;
-})();
+function getMemberColor(index: number): string {
+  return MEMBER_COLORS[index % MEMBER_COLORS.length];
+}
+
+function complianceKey(wsId: number, empId: number, cat: string): string {
+  return `${wsId}-${empId}-${cat}`;
+}
 
 const sidebarItems = [
   { label: 'Home', icon: '🏠', path: '/home' },
@@ -137,41 +66,34 @@ const POLL_INTERVAL = 15_000;
 
 // ── Helpers ──
 
-// How many equipment categories (out of 3) have ALL members in a group compliant
-function getGroupCategoryProgress(records: ComplianceRecord[], group: WorkerGroup): { done: number; total: number } {
+function getGroupCategoryProgress(
+  compliance: ComplianceMap,
+  ws: WorkSessionCard,
+): { done: number; total: number } {
+  const workers = ws.workers_detail ?? [];
   let done = 0;
-  equipmentItems.forEach(eq => {
-    const allComplied = group.members.every(m => {
-      const match = records.find(r => r.employee === m.employeeId && r.worksession === group.id && r.category === eq.category);
-      return match?.is_complied === true;
-    });
+  for (const eq of equipmentItems) {
+    const allComplied = workers.length > 0 && workers.every(
+      m => compliance[complianceKey(ws.id, m.employee_id, eq.category)] === true,
+    );
     if (allComplied) done++;
-  });
+  }
   return { done, total: equipmentItems.length };
 }
 
-function getGroupOverallStatus(records: ComplianceRecord[], group: WorkerGroup): { label: string; color: string; bg: string } {
-  const { done, total } = getGroupCategoryProgress(records, group);
-  if (done === total) return { label: '완료', color: '#22A06B', bg: '#E8F5E9' };
+function getGroupOverallStatus(
+  compliance: ComplianceMap,
+  ws: WorkSessionCard,
+): { label: string; color: string; bg: string } {
+  const { done, total } = getGroupCategoryProgress(compliance, ws);
+  if (done === total && total > 0) return { label: '완료', color: '#22A06B', bg: '#E8F5E9' };
   if (done > 0) return { label: '진행중', color: '#1565C0', bg: '#E8F0FE' };
-  let anyStarted = false;
-  group.members.forEach(m => {
-    equipmentItems.forEach(eq => {
-      if (records.find(r => r.employee === m.employeeId && r.worksession === group.id && r.category === eq.category)) anyStarted = true;
-    });
-  });
-  if (anyStarted) return { label: '진행중', color: '#1565C0', bg: '#E8F0FE' };
+  const workers = ws.workers_detail ?? [];
+  const anyChecked = workers.some(m =>
+    equipmentItems.some(eq => compliance[complianceKey(ws.id, m.employee_id, eq.category)] === true),
+  );
+  if (anyChecked) return { label: '진행중', color: '#1565C0', bg: '#E8F0FE' };
   return { label: '미시작', color: '#71727A', bg: '#F0F1F3' };
-}
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return '방금 전';
-  if (mins < 60) return `${mins}분 전`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}시간 전`;
-  return `${Math.floor(hrs / 24)}일 전`;
 }
 
 // ── Main Component ──
@@ -183,68 +105,46 @@ export default function SafetyRegulationScreen() {
   const isProfileActive = location.pathname === '/profile';
   const unreadCount = useUnreadAlertCount();
 
-  const [expandedGroupId, setExpandedGroupId] = useState<number | null>(1);
+  const [expandedGroupId, setExpandedGroupId] = useState<number | null>(null);
   const [expandedEquipment, setExpandedEquipment] = useState<string | null>(null);
-  const [records, setRecords] = useState<ComplianceRecord[]>([]);
+  const [workSessions, setWorkSessions] = useState<WorkSessionCard[]>([]);
+  const [compliance, setCompliance] = useState<ComplianceMap>({});
   const [loading, setLoading] = useState(true);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const fetchRecords = useCallback(async () => {
+  const fetchWorkSessions = useCallback(async () => {
     try {
-      // Fetch today's work sessions to get compliance data
-      const res = await apiFetch('/worksession/today/');
+      const res = await apiFetch('/worksession/admin/today/');
       if (res.ok) {
         const json = await res.json();
-        const sessions: { id: number }[] = json.data ?? [];
-        // Fetch compliance records for each session via check/pass
-        // Since the backend doesn't have a list endpoint, use mock data as baseline
-        // and overlay any real data when available
-        const apiRecords: ComplianceRecord[] = [];
-        for (const session of sessions) {
-          try {
-            const passRes = await apiFetch(`/check/pass/?worksession_id=${session.id}`);
-            if (passRes.ok) {
-              const passData = await passRes.json();
-              // If we got real pass data, it means the session has compliance records
-              if (passData.ok && passData.passed !== undefined) {
-                // Mark records from this session as real
-                const group = workerGroups.find(g => g.id === session.id);
-                if (group) {
-                  for (const member of group.members) {
-                    for (const eq of equipmentItems) {
-                      apiRecords.push({
-                        id: apiRecords.length + 1,
-                        employee: member.employeeId,
-                        worksession: session.id,
-                        category: eq.category,
-                        is_complied: passData.passed,
-                        original_image: null,
-                        detected_image: null,
-                        created_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString(),
-                      });
-                    }
+        if (Array.isArray(json)) {
+          setWorkSessions(json);
+          // Initialize compliance from equipment_check (preserve manual overrides)
+          setCompliance(prev => {
+            const next = { ...prev };
+            for (const ws of json as WorkSessionCard[]) {
+              for (const worker of ws.workers_detail ?? []) {
+                for (const eq of equipmentItems) {
+                  const key = complianceKey(ws.id, worker.employee_id, eq.category);
+                  if (!(key in next)) {
+                    next[key] = worker.equipment_check;
                   }
                 }
               }
             }
-          } catch { /* ignore individual session errors */ }
-        }
-        if (apiRecords.length > 0) {
-          setRecords(apiRecords);
-          return;
+            return next;
+          });
+          setExpandedGroupId(prev => prev ?? (json.length > 0 ? (json[0] as WorkSessionCard).id : null));
         }
       }
     } catch { /* ignore */ }
-    // Fallback to mock data consistent with WorkSessionDetailScreen
-    setRecords(mockComplianceRecords);
   }, []);
 
   useEffect(() => {
-    fetchRecords().finally(() => setLoading(false));
-    pollingRef.current = setInterval(fetchRecords, POLL_INTERVAL);
+    fetchWorkSessions().finally(() => setLoading(false));
+    pollingRef.current = setInterval(fetchWorkSessions, POLL_INTERVAL);
     return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
-  }, [fetchRecords]);
+  }, [fetchWorkSessions]);
 
   const handleLogout = async () => {
     await logout();
@@ -258,6 +158,10 @@ export default function SafetyRegulationScreen() {
 
   const toggleEquipment = (key: string) => {
     setExpandedEquipment(prev => (prev === key ? null : key));
+  };
+
+  const toggleCompliance = (key: string) => {
+    setCompliance(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
   return (
@@ -313,15 +217,15 @@ export default function SafetyRegulationScreen() {
           <button type="button" style={styles.logoutBtn} onClick={handleLogout}>Logout</button>
         </div>
 
-        {/* Summary — 작업공간 */}
+        {/* Summary */}
         <div style={styles.summaryRow}>
-          {workerGroups.map(group => {
-            const { done, total } = getGroupCategoryProgress(records, group);
-            const status = getGroupOverallStatus(records, group);
+          {workSessions.map(ws => {
+            const { done, total } = getGroupCategoryProgress(compliance, ws);
+            const status = getGroupOverallStatus(compliance, ws);
             return (
-              <div key={group.id} style={styles.summaryCard}>
+              <div key={ws.id} style={styles.summaryCard}>
                 <div style={styles.summarySiteInfo}>
-                  <span style={styles.summaryLabel}>{group.name}</span>
+                  <span style={styles.summaryLabel}>{ws.name}</span>
                   <span style={{
                     ...styles.summarySiteBadge,
                     backgroundColor: status.bg,
@@ -347,21 +251,25 @@ export default function SafetyRegulationScreen() {
             <div style={styles.loadingWrap}>
               <span style={styles.loadingText}>로딩 중...</span>
             </div>
+          ) : workSessions.length === 0 ? (
+            <div style={styles.loadingWrap}>
+              <span style={styles.loadingText}>오늘 예정된 작업 현장이 없습니다.</span>
+            </div>
           ) : (
-            workerGroups.map(group => {
-              const isGroupExpanded = expandedGroupId === group.id;
-              const groupStatus = getGroupOverallStatus(records, group);
+            workSessions.map(ws => {
+              const isGroupExpanded = expandedGroupId === ws.id;
+              const groupStatus = getGroupOverallStatus(compliance, ws);
+              const workers = ws.workers_detail ?? [];
 
-              // Group progress: count categories (out of 3) where ALL members comply
-              const { done: groupDone, total: totalChecks } = getGroupCategoryProgress(records, group);
+              const { done: groupDone, total: totalChecks } = getGroupCategoryProgress(compliance, ws);
               const groupPct = totalChecks > 0 ? (groupDone / totalChecks) * 100 : 0;
 
               return (
-                <div key={group.id} style={styles.groupCard}>
+                <div key={ws.id} style={styles.groupCard}>
                   {/* Group Header */}
-                  <button type="button" style={styles.groupHeaderBtn} onClick={() => toggleGroup(group.id)}>
+                  <button type="button" style={styles.groupHeaderBtn} onClick={() => toggleGroup(ws.id)}>
                     <div style={styles.groupHeaderLeft}>
-                      <span style={styles.groupName}>{group.name}</span>
+                      <span style={styles.groupName}>{ws.name}</span>
                       <span style={{
                         ...styles.groupStatusBadge,
                         backgroundColor: groupStatus.bg,
@@ -375,18 +283,21 @@ export default function SafetyRegulationScreen() {
 
                   {/* Group Members */}
                   <div style={styles.groupMembersRow}>
-                    {group.members.map(member => (
+                    {workers.map((member, idx) => (
                       <button
-                        key={member.employeeId}
+                        key={member.employee_id}
                         type="button"
                         style={styles.groupMember}
-                        onClick={() => navigate(`/employee/${member.employeeId}`, { state: { siteName: group.name } })}>
-                        <span style={{ ...styles.memberAvatar, backgroundColor: member.color }}>
+                        onClick={() => navigate(`/employee/${member.employee_id}`, { state: { siteName: ws.name } })}>
+                        <span style={{ ...styles.memberAvatar, backgroundColor: getMemberColor(idx) }}>
                           {member.name[0]}{member.name[member.name.length - 1]}
                         </span>
                         <span style={styles.memberNameLink}>{member.name}</span>
                       </button>
                     ))}
+                    {workers.length === 0 && (
+                      <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#8F9098' }}>작업자 미지정</span>
+                    )}
                   </div>
 
                   {/* Group Progress */}
@@ -410,15 +321,13 @@ export default function SafetyRegulationScreen() {
                   {isGroupExpanded && (
                     <div style={styles.groupEquipments}>
                       {equipmentItems.map(eq => {
-                        const eqKey = `${group.id}-${eq.category}`;
+                        const eqKey = `${ws.id}-${eq.category}`;
                         const isEqExpanded = expandedEquipment === eqKey;
-                        // Count members compliant for this equipment type
                         let done = 0;
-                        group.members.forEach(m => {
-                          const match = records.find(r => r.employee === m.employeeId && r.worksession === group.id && r.category === eq.category);
-                          if (match?.is_complied === true) done++;
+                        workers.forEach(m => {
+                          if (compliance[complianceKey(ws.id, m.employee_id, eq.category)] === true) done++;
                         });
-                        const total = group.members.length;
+                        const total = workers.length;
                         const allDone = done === total && total > 0;
                         const pct = total > 0 ? (done / total) * 100 : 0;
 
@@ -454,33 +363,41 @@ export default function SafetyRegulationScreen() {
                             {/* Expanded: Per-member checklist */}
                             {isEqExpanded && (
                               <div style={styles.memberStatusList}>
-                                {group.members.map(member => {
-                                  const matchRecord = records.find(r => r.employee === member.employeeId && r.worksession === group.id && r.category === eq.category);
-                                  const isChecked = matchRecord?.is_complied === true;
+                                {workers.map((member, idx) => {
+                                  const key = complianceKey(ws.id, member.employee_id, eq.category);
+                                  const isChecked = compliance[key] === true;
                                   return (
-                                    <div key={member.employeeId} style={styles.memberStatusRow}>
+                                    <div key={member.employee_id} style={styles.memberStatusRow}>
                                       <div style={styles.memberStatusLeft}>
-                                        <span style={{ ...styles.memberAvatarSmall, backgroundColor: member.color }}>
+                                        <span style={{ ...styles.memberAvatarSmall, backgroundColor: getMemberColor(idx) }}>
                                           {member.name[0]}{member.name[member.name.length - 1]}
                                         </span>
                                         <span style={styles.memberStatusName}>{member.name}</span>
                                       </div>
                                       <div style={styles.memberStatusRight}>
-                                        {matchRecord && (
-                                          <span style={styles.memberStatusTime}>{timeAgo(matchRecord.created_at)}</span>
-                                        )}
-                                        {/* Checkbox — read-only */}
-                                        <div style={{
-                                          ...styles.checkbox,
-                                          backgroundColor: isChecked ? '#006FFD' : '#FFFFFF',
-                                          borderColor: isChecked ? '#006FFD' : '#C5C6CC',
+                                        <span style={{
+                                          fontFamily: 'Inter, sans-serif',
+                                          fontSize: 11,
+                                          color: isChecked ? '#22A06B' : '#DC2626',
+                                          fontWeight: 600,
                                         }}>
+                                          {isChecked ? '확인됨' : '미확인'}
+                                        </span>
+                                        <button
+                                          type="button"
+                                          style={{
+                                            ...styles.checkbox,
+                                            backgroundColor: isChecked ? '#006FFD' : '#FFFFFF',
+                                            borderColor: isChecked ? '#006FFD' : '#C5C6CC',
+                                          }}
+                                          onClick={() => toggleCompliance(key)}
+                                        >
                                           {isChecked && (
                                             <svg width="14" height="10" viewBox="0 0 14 10" fill="none">
                                               <path d="M1.5 5L5.5 9L12.5 1" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                             </svg>
                                           )}
-                                        </div>
+                                        </button>
                                       </div>
                                     </div>
                                   );
@@ -677,9 +594,11 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'row',
     gap: 16,
     marginBottom: 20,
+    flexWrap: 'wrap',
   },
   summaryCard: {
     flex: 1,
+    minWidth: 180,
     backgroundColor: '#FFFFFF',
     border: '1px solid #E8E9EB',
     borderRadius: 12,
@@ -785,6 +704,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'row',
     gap: 16,
+    flexWrap: 'wrap',
   },
   groupMember: {
     display: 'flex',
@@ -959,12 +879,6 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: 10,
   },
-  memberStatusTime: {
-    fontFamily: 'Inter, sans-serif',
-    fontWeight: 400,
-    fontSize: 12,
-    color: '#8F9098',
-  },
   checkbox: {
     width: 28,
     height: 28,
@@ -974,12 +888,9 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'center',
     alignItems: 'center',
     flexShrink: 0,
+    cursor: 'pointer',
+    background: 'none',
+    padding: 0,
     transition: 'background-color 0.15s, border-color 0.15s',
-  },
-  checkboxPendingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: '50%',
-    backgroundColor: '#E37D00',
   },
 };

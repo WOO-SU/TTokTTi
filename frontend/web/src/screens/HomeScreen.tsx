@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../api/client';
+import useUnreadAlertCount from '../hooks/useUnreadAlertCount';
 import logoImg from '../assets/logo.png';
 import ladderCharImg from '../assets/ladder-character.png';
 
@@ -254,12 +255,14 @@ function WorkSiteCardComponent({
   onHoverChange: (hov: boolean) => void;
   onMemberClick: (id: number, siteName: string) => void;
   onCardClick: (card: WorkSessionCard) => void;
-  onReportClick: (card: WorkSessionCard, e: React.MouseEvent) => void;
-  onActivateClick: (card: WorkSessionCard, e: React.MouseEvent) => void;
+  onReportClick: (card: WorkSessionCard, e: React.MouseEvent<HTMLButtonElement>) => void;
+  onActivateClick: (card: WorkSessionCard, e: React.MouseEvent<HTMLButtonElement>) => void;
 }) {
-  const sc = workStatusColors[card.status] ?? workStatusColors['READY'];
+  const sc = workStatusColors[card.status] ?? workStatusColors.READY;
   const statusText = statusTextMap[card.status] ?? '작업 전';
-  const riskAssessmentDone = card.risk_assessment !== 'PENDING';
+
+  const workers = Array.isArray(card.workers_detail) ? card.workers_detail : [];
+  const riskAssessmentDone = String(card.risk_assessment ?? '').toUpperCase() !== 'PENDING';
 
   return (
     <div
@@ -270,8 +273,14 @@ function WorkSiteCardComponent({
           : '0 2px 10px rgba(0,0,0,0.08)',
       }}
       onMouseEnter={() => onHoverChange(true)}
-      onMouseLeave={() => onHoverChange(false)}>
-
+      onMouseLeave={() => onHoverChange(false)}
+      onClick={() => onCardClick(card)} // 카드 바깥 클릭 시 상세 보기(원하면 제거 가능)
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') onCardClick(card);
+      }}
+    >
       {/* Image area */}
       <div style={styles.cardImageArea}>
         <img src={ladderCharImg} alt="character" style={styles.cardCharImage} />
@@ -285,45 +294,67 @@ function WorkSiteCardComponent({
             {statusText}
           </span>
         </div>
+
         <div style={styles.cardMeta}>
           <span style={{ fontSize: 13 }}>⏰</span>
           <span style={styles.cardMetaText}>작업 시작 {formatSessionTime(card.starts_at)}</span>
         </div>
+
         <div style={styles.cardMembers}>
-          {card.workers_detail.map((m, i) => (
-            <React.Fragment key={m.employee_id}>
-              {i > 0 && <span style={styles.memberSep}>, </span>}
-              <button
-                type="button"
-                style={styles.memberBtn}
-                onClick={e => { e.stopPropagation(); onMemberClick(m.employee_id, card.name); }}>
-                {m.name}
-              </button>
-            </React.Fragment>
-          ))}
+          {workers.length > 0 ? (
+            workers.map((m, i) => (
+              <React.Fragment key={`${m.employee_id}-${i}`}>
+                {i > 0 && <span style={styles.memberSep}>, </span>}
+                <button
+                  type="button"
+                  style={styles.memberBtn}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMemberClick(m.employee_id, card.name);
+                  }}
+                >
+                  {m.name}
+                </button>
+              </React.Fragment>
+            ))
+          ) : (
+            <span style={{ ...styles.cardMetaText, opacity: 0.7 }}>작업자 미지정</span>
+          )}
         </div>
+
         <button
           type="button"
           style={styles.detailBtn}
-          onClick={e => { e.stopPropagation(); onCardClick(card); }}>
+          onClick={(e) => {
+            e.stopPropagation();
+            onCardClick(card);
+          }}
+        >
           상세 보기
         </button>
+
         {card.status === 'READY' && (
           <button
             type="button"
             style={styles.activateBtn}
-            onClick={e => { e.stopPropagation(); onActivateClick(card, e); }}>
+            onClick={(e) => {
+              e.stopPropagation();
+              onActivateClick(card, e);
+            }}
+          >
             작업 시작
           </button>
         )}
       </div>
 
       {/* Expandable section — grows card vertically on hover */}
-      <div style={{
-        maxHeight: isHovered ? 300 : 0,
-        overflow: 'hidden',
-        transition: 'max-height 0.3s ease',
-      }}>
+      <div
+        style={{
+          maxHeight: isHovered ? 300 : 0,
+          overflow: 'hidden',
+          transition: 'max-height 0.3s ease',
+        }}
+      >
         <div style={styles.expandSection}>
           <div style={styles.expandDivider} />
 
@@ -331,26 +362,31 @@ function WorkSiteCardComponent({
           <div style={styles.expandRow}>
             <span style={styles.expandLabel}>🦺 장비 점검</span>
             <div style={styles.expandEquipRow}>
-              {card.workers_detail.map(ec => (
-                <span key={ec.employee_id} style={styles.expandEquipItem}>
+              {workers.map((ec, i) => (
+                <span key={`${ec.employee_id}-equip-${i}`} style={styles.expandEquipItem}>
                   {ec.name}:&nbsp;
                   <span style={{ color: ec.equipment_check ? '#22A06B' : '#D32F2F', fontWeight: 700 }}>
                     {ec.equipment_check ? 'O' : 'X'}
                   </span>
                 </span>
               ))}
+              {workers.length === 0 && (
+                <span style={{ ...styles.cardMetaText, opacity: 0.7 }}>작업자 미지정</span>
+              )}
             </div>
           </div>
 
           {/* Risk assessment */}
           <div style={styles.expandRow}>
             <span style={styles.expandLabel}>⚠️ 위험성 평가</span>
-            <span style={{
-              fontFamily: 'Inter, sans-serif',
-              fontWeight: 600,
-              fontSize: 12,
-              color: riskAssessmentDone ? '#22A06B' : '#8F9098',
-            }}>
+            <span
+              style={{
+                fontFamily: 'Inter, sans-serif',
+                fontWeight: 600,
+                fontSize: 12,
+                color: riskAssessmentDone ? '#22A06B' : '#8F9098',
+              }}
+            >
               {riskAssessmentDone ? '완료' : '미완료'}
             </span>
           </div>
@@ -365,7 +401,11 @@ function WorkSiteCardComponent({
                 color: card.report ? '#006FFD' : '#8F9098',
                 borderColor: card.report ? '#006FFD' : '#C5C6CC',
               }}
-              onClick={e => { e.stopPropagation(); onReportClick(card, e); }}>
+              onClick={(e) => {
+                e.stopPropagation();
+                onReportClick(card, e);
+              }}
+            >
               {card.report ? '완료 · 보기' : '미완료 · 작성'}
             </button>
           </div>
@@ -496,7 +536,7 @@ export default function HomeScreen() {
     return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
   }, [fetchLogs, fetchWorkSessions]);
 
-  const unreadCount = logs.filter(l => !l.is_read && !readIds.has(l.id)).length;
+  const unreadCount = useUnreadAlertCount();
 
   const markAsRead = useCallback((logId: number) => {
     setReadIds(prev => {

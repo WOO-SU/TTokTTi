@@ -77,7 +77,7 @@ export default function ProfileScreen() {
       else body.birth_date = `${body.birth_date}T00:00:00Z`;
 
       const res = await apiFetch(`/user/user/${user.userId}/`, {
-        method: 'PATCH',
+        method: 'PUT',
         body: JSON.stringify(body),
       });
       if (res.ok) {

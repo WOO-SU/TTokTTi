@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../api/client';
+import useUnreadAlertCount from '../hooks/useUnreadAlertCount';
 import logoImg from '../assets/logo.png';
 
 // ── Types ──
@@ -224,7 +225,7 @@ export default function AlertLogScreen() {
     navigate('/login');
   };
 
-  const unreadCount = logs.filter(l => !l.is_read).length;
+  const unreadCount = useUnreadAlertCount();
 
   return (
     <div style={styles.container}>

@@ -18,13 +18,12 @@ export default function useUnreadAlertCount(): number {
 
   const fetchCount = useCallback(async () => {
     try {
-      const res = await apiFetch('/api/detect/search/?is_risky=true');
+      const res = await apiFetch('/detect/admin/logs/');
       if (res.ok) {
         const data = await res.json();
-        const videos: { id: number }[] = data.data ?? data.results ?? data ?? [];
-        if (Array.isArray(videos)) {
+        if (Array.isArray(data)) {
           const readIds = getReadAlertIds();
-          setUnreadCount(videos.filter(v => !readIds.has(v.id)).length);
+          setUnreadCount(data.filter((l: { id: number; is_read: boolean }) => !l.is_read && !readIds.has(l.id)).length);
         }
       }
     } catch { /* ignore */ }
