@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   noCameraText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontSize: 14,
     color: '#FFFFFF',
   },
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   continueText: {
-    fontFamily: 'Roboto',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 14,
     color: '#F6F6F6',

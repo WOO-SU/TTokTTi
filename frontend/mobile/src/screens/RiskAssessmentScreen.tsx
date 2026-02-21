@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   loadingText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontSize: 14,
     color: '#71727A',
   },

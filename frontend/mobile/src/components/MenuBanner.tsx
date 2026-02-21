@@ -40,7 +40,7 @@ export default function MenuBanner({ title, imageSource, imageStyle, onPress }: 
 const styles = StyleSheet.create({
     bannerSection: {
         paddingHorizontal: 20,
-        marginTop: 24,
+        marginTop: 10,
     },
     bannerCard: {
         height: 120, // Reduced from 140 to 120 based on HomeScreen visual weight
@@ -49,6 +49,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 24,
+        overflow: 'hidden',
         // Add subtle shadow for premium feel
         shadowColor: '#000',
         shadowOffset: {
@@ -61,11 +62,11 @@ const styles = StyleSheet.create({
     },
     bannerImageBase: {
         position: 'absolute',
-        right: 32,
+        right: -10,
         bottom: -10,
     },
     bannerText: {
-        fontFamily: 'Inter',
+        fontFamily: 'Noto Sans KR',
         fontWeight: '700',
         fontSize: 20,
         color: '#1F2024',

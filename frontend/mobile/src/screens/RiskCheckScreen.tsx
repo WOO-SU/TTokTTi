@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
     gap: 24,
   },
   guideText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 14,
     color: '#71727A',
@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   cardLabel: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 15,
     color: '#000000',
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#C5C6CC',
   },
   requestButtonText: {
-    fontFamily: 'Roboto',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '500',
     fontSize: 16,
     color: '#FFFFFF',

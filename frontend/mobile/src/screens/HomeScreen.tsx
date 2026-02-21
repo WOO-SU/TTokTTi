@@ -16,9 +16,12 @@ import type { HomeStackParamList } from '../../App';
 import TopHeader from '../components/TopHeader';
 import MenuBanner from '../components/MenuBanner';
 
-const characterImage = require('../assets/safety-character.png');
+
 const equipmentImage = require('../assets/Risk-Assessment.png');
-const riskAssessmentImage = require('../assets/tripod-character.png');
+const riskAssessmentImage = require('../assets/riskAssessment.png');
+const workstartImage = require('../assets/workstart.png');
+const targetPictureImage = require('../assets/targetpicture.png');
+const endWorkImage = require('../assets/safety-character.png');
 
 /* ──────────────── Icon Components ──────────────── */
 
@@ -68,21 +71,21 @@ export default function HomeScreen() {
 
         <MenuBanner
           title={'작업시작하기\n(실시간 촬영)'}
-          imageSource={characterImage}
+          imageSource={workstartImage}
           imageStyle={styles.bannerImage3}
           onPress={() => navigation.navigate('SelectMode')}
         />
 
         <MenuBanner
           title="작업물 촬영"
-          imageSource={characterImage}
+          imageSource={targetPictureImage}
           imageStyle={styles.bannerImage4}
           onPress={() => navigation.navigate('CaptureWork', { worksession_id })}
         />
 
         <MenuBanner
           title="근무 마무리"
-          imageSource={characterImage}
+          imageSource={endWorkImage}
           imageStyle={styles.bannerImage4}
           onPress={() => navigation.navigate('EndWork')}
         />
@@ -135,20 +138,20 @@ const styles = StyleSheet.create({
   },
 
   bannerImage1: {
-    width: 224,
-    height: 224,
+    width: 140,
+    height: 140,
   },
   bannerImage2: {
-    width: 207,
-    height: 207,
+    width: 130,
+    height: 130,
   },
   bannerImage3: {
-    width: 206,
-    height: 206,
+    width: 130,
+    height: 130,
   },
   bannerImage4: {
-    width: 206,
-    height: 206,
+    width: 130,
+    height: 130,
   },
 
   /* Products Section */
@@ -163,13 +166,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sectionTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '700',
     fontSize: 14,
     color: '#000000',
   },
   seeMoreText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '600',
     fontSize: 12,
     color: '#006FFD',
@@ -196,14 +199,14 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   cardTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 12,
     color: '#1F2024',
     letterSpacing: 0.12,
   },
   cardSubtitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '700',
     fontSize: 14,
     color: '#1F2024',

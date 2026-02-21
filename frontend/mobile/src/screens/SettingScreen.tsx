@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoutText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '600',
     fontSize: 14,
     color: '#FFFFFF',

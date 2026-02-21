@@ -17,7 +17,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
     },
     text: {
-        fontFamily: 'Inter',
+        fontFamily: 'Noto Sans KR',
         fontSize: 16,
         color: '#1F2024',
     },

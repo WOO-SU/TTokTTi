@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
     gap: 24,
   },
   welcomeTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '800',
     fontSize: 24,
     letterSpacing: 0.24,
@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 14,
     color: '#000000',
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   forgotPassword: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '600',
     fontSize: 12,
     color: '#006FFD',
@@ -322,13 +322,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loginButtonText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '600',
     fontSize: 12,
     color: '#FFFFFF',
   },
   registerText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 12,
     color: '#71727A',
@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   socialText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 12,
     color: '#71727A',

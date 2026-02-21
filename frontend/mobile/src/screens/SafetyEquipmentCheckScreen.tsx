@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   cardLabel: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 15,
     color: '#000000',

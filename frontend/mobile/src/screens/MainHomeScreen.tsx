@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   badgeText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '600',
     fontSize: 10,
     color: '#FFFFFF',
@@ -452,13 +452,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   titleText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '700',
     fontSize: 18,
     color: '#000000',
   },
   subtitleText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 14,
     color: '#71727A',
@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   taskTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '600',
     fontSize: 16,
     color: '#000000',
@@ -528,7 +528,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   statusText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '600',
     fontSize: 12,
   },
@@ -538,7 +538,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   taskTimeText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 14,
     color: '#71727A',
@@ -546,7 +546,7 @@ const styles = StyleSheet.create({
 
   /* Empty State */
   emptyText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 14,
     color: '#71727A',
@@ -580,7 +580,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   modalTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '800',
     fontSize: 16,
     color: '#1F2024',
@@ -592,7 +592,7 @@ const styles = StyleSheet.create({
     height: 87,
   },
   modalDesc: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 12,
     color: '#71727A',
@@ -608,7 +608,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalFilledBtnText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '600',
     fontSize: 12,
     color: '#FFFFFF',

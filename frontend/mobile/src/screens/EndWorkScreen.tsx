@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '700',
     fontSize: 18,
     color: '#1F2024',
@@ -340,13 +340,13 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   idleTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '600',
     fontSize: 20,
     color: '#1F2024',
   },
   idleSubtitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 14,
     color: '#71727A',
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   startCameraButtonText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '600',
     fontSize: 16,
     color: '#FFFFFF',
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   noCameraText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontSize: 14,
     color: '#FFFFFF',
   },
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   resultText: {
-    fontFamily: 'Roboto',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 20,
     color: '#000000',
@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   retakeButtonText: {
-    fontFamily: 'Roboto',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '500',
     fontSize: 16,
     color: '#006FFD',
@@ -450,7 +450,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sendButtonText: {
-    fontFamily: 'Roboto',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '500',
     fontSize: 16,
     color: '#FFFFFF',
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   doneButtonText: {
-    fontFamily: 'Roboto',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '500',
     fontSize: 16,
     color: '#FFFFFF',

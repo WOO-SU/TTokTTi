@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '700',
     fontSize: 18,
     color: '#1F2024',
@@ -133,11 +133,17 @@ const styles = StyleSheet.create({
   },
 
   cardImage1: {
-    width: 181,
-    height: 181,
+    width: 120,
+    height: 120,
+    position: 'absolute',
+    right: 5,
+    bottom: -10,
   },
   cardImage2: {
-    width: 195,
-    height: 195,
+    width: 130,
+    height: 130,
+    position: 'absolute',
+    right: 5,
+    bottom: -10,
   },
 });

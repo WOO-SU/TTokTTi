@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '700',
     fontSize: 18,
     color: '#1F2024',
@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   noCameraText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontSize: 14,
     color: '#FFFFFF',
   },
@@ -428,13 +428,13 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   resultText: {
-    fontFamily: 'Roboto',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '700',
     fontSize: 20,
     color: '#1F2024',
   },
   failedText: {
-    fontFamily: 'Roboto',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '700',     // Bold
     fontSize: 20,
     color: '#1F2024',      // Black text
@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   errorButtonText: {
-    fontFamily: 'Roboto',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '600',
     fontSize: 16,
     color: '#006FFD',
@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   retakeButtonText: {
-    fontFamily: 'Roboto',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '600',
     fontSize: 16,
     color: '#FFFFFF',
@@ -498,7 +498,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   continueText: {
-    fontFamily: 'Roboto',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 14,
     color: '#F6F6F6',

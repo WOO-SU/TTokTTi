@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
 
   /* Section */
   sectionTitle: {
-    fontFamily: 'Roboto',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '700',
     fontSize: 18,
     color: '#21272A',
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   userName: {
-    fontFamily: 'Roboto',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 14,
     color: '#001D6C',
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   fieldLabel: {
-    fontFamily: 'Roboto',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 14,
     color: '#21272A',
@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   input: {
-    fontFamily: 'Roboto',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 14,
     color: '#21272A',
@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   actionText: {
-    fontFamily: 'Roboto',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 16,
     color: '#1F2024',

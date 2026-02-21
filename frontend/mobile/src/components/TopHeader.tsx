@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     headerTitle: {
-        fontFamily: 'Inter',
+        fontFamily: 'Noto Sans KR',
         fontWeight: '700',
         fontSize: 18,
         color: '#1F2024',

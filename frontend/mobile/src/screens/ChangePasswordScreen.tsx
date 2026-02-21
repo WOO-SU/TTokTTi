@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     headerTitle: {
-        fontFamily: 'Inter',
+        fontFamily: 'Noto Sans KR',
         fontWeight: '700',
         fontSize: 18,
         color: '#1F2024',
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     descriptionText: {
-        fontFamily: 'Inter',
+        fontFamily: 'Noto Sans KR',
         fontSize: 14,
         color: '#71727A',
         marginBottom: 32,
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     inputLabel: {
-        fontFamily: 'Inter',
+        fontFamily: 'Noto Sans KR',
         fontWeight: '600',
         fontSize: 14,
         color: '#21272A',
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
     },
     input: {
-        fontFamily: 'Inter',
+        fontFamily: 'Noto Sans KR',
         fontSize: 14,
         color: '#1F2024',
         padding: 0,
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#A2A6B0',
     },
     submitButtonText: {
-        fontFamily: 'Inter',
+        fontFamily: 'Noto Sans KR',
         fontWeight: '600',
         fontSize: 16,
         color: '#FFFFFF',

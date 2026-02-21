@@ -223,12 +223,12 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   loadingText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontSize: 14,
     color: '#71727A',
   },
   errorText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontSize: 14,
     color: '#E53E3E',
     textAlign: 'center',
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#006FFD',
   },
   retryButtonText: {
-    fontFamily: 'Roboto',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '500',
     fontSize: 14,
     color: '#FFFFFF',
@@ -259,13 +259,13 @@ const styles = StyleSheet.create({
     borderColor: '#E8E9F1',
   },
   sectionTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '700',
     fontSize: 16,
     color: '#1F2024',
   },
   summaryText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 14,
     color: '#3D3D3D',
@@ -284,14 +284,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   levelBadgeText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '600',
     fontSize: 11,
     color: '#FFFFFF',
   },
   hazardText: {
     flex: 1,
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 14,
     color: '#3D3D3D',
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
   },
   recText: {
     flex: 1,
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 14,
     color: '#3D3D3D',
@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   regenerateButtonText: {
-    fontFamily: 'Roboto',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '500',
     fontSize: 16,
     color: '#006FFD',

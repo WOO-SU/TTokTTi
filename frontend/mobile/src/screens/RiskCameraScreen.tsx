@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   noCameraText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontSize: 14,
     color: '#FFFFFF',
   },
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   retakeButtonText: {
-    fontFamily: 'Roboto',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '500',
     fontSize: 16,
     color: '#006FFD',
@@ -284,13 +284,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   confirmButtonText: {
-    fontFamily: 'Roboto',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '500',
     fontSize: 16,
     color: '#FFFFFF',
   },
   guideText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 14,
     color: '#71727A',
