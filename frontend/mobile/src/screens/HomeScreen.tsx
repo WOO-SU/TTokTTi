@@ -138,7 +138,7 @@ export default function HomeScreen() {
         <TouchableOpacity
           style={styles.bannerSection}
           activeOpacity={0.8}
-          onPress={() => navigation.navigate('EndWork')}>
+          onPress={() => navigation.navigate('EndWork', { worksession_id })}>
           <View style={styles.bannerCard}>
             <Image
               source={characterImage}

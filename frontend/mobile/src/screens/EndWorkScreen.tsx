@@ -1,6 +1,6 @@
 /* 근무 마무리 화면 */
 
-import React, {useState, useRef, useCallback, useEffect} from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,18 +11,21 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Camera,
   useCameraDevice,
   useCameraPermission,
 } from 'react-native-vision-camera';
-import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import type {RootStackParamList} from '../../App';
-import {getSasToken, uploadToBlob} from '../api/equipment';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
+import { uploadTargetPhoto } from '../api/check';
+import type { RootStackParamList } from '../../App';
+import { getSasToken, uploadToBlob } from '../api/equipment';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'EndWork'>;
+  route: RouteProp<RootStackParamList, 'EndWork'>;
 };
 
 type ScreenState = 'idle' | 'camera' | 'preview' | 'sending' | 'sent';
@@ -60,14 +63,16 @@ function LargeCheckIcon() {
 
 /* ──────── Main Component ──────── */
 
-export default function EndWorkScreen({navigation}: Props) {
+export default function EndWorkScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const [screenState, setScreenState] = useState<ScreenState>('idle');
   const [photoPath, setPhotoPath] = useState<string | null>(null);
 
+  const worksessionId = route.params.worksession_id;
+
   const cameraRef = useRef<Camera>(null);
   const device = useCameraDevice('back');
-  const {hasPermission, requestPermission} = useCameraPermission();
+  const { hasPermission, requestPermission } = useCameraPermission();
 
   useEffect(() => {
     if (!hasPermission) {
@@ -100,8 +105,13 @@ export default function EndWorkScreen({navigation}: Props) {
     }
     setScreenState('sending');
     try {
-      const {upload_url} = await getSasToken();
+      // 1. Upload to Blob
+      const { upload_url, blob_name } = await getSasToken();
       await uploadToBlob(upload_url, photoPath);
+
+      // 2. Call target API with AFTER status
+      await uploadTargetPhoto(worksessionId, 'AFTER', blob_name);
+
       setScreenState('sent');
     } catch (err) {
       console.error('EndWork upload error:', err);
@@ -111,7 +121,7 @@ export default function EndWorkScreen({navigation}: Props) {
       );
       setScreenState('preview');
     }
-  }, [photoPath]);
+  }, [photoPath, worksessionId]);
 
   const handleDone = useCallback(() => {
     navigation.navigate('Main');
@@ -122,7 +132,7 @@ export default function EndWorkScreen({navigation}: Props) {
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       {/* Header */}
-      <View style={[styles.header, {paddingTop: insets.top + 12}]}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}>
@@ -176,60 +186,60 @@ export default function EndWorkScreen({navigation}: Props) {
       {(screenState === 'preview' ||
         screenState === 'sending' ||
         screenState === 'sent') && (
-        <>
-          <View style={styles.cameraPreview}>
-            <Image
-              source={{uri: photoPath!}}
-              style={styles.capturedImage}
-            />
+          <>
+            <View style={styles.cameraPreview}>
+              <Image
+                source={{ uri: photoPath! }}
+                style={styles.capturedImage}
+              />
 
-            {screenState === 'sending' && (
-              <View style={styles.resultCard}>
-                <ActivityIndicator size="large" color="#006FFD" />
-                <Text style={styles.resultText}>업로드 중...</Text>
-              </View>
-            )}
+              {screenState === 'sending' && (
+                <View style={styles.resultCard}>
+                  <ActivityIndicator size="large" color="#006FFD" />
+                  <Text style={styles.resultText}>업로드 중...</Text>
+                </View>
+              )}
 
-            {screenState === 'sent' && (
-              <View style={styles.resultCard}>
-                <LargeCheckIcon />
-                <Text style={styles.resultText}>전송 완료</Text>
-              </View>
-            )}
-          </View>
+              {screenState === 'sent' && (
+                <View style={styles.resultCard}>
+                  <LargeCheckIcon />
+                  <Text style={styles.resultText}>전송 완료</Text>
+                </View>
+              )}
+            </View>
 
-          <View
-            style={[
-              styles.bottomSection,
-              {paddingBottom: insets.bottom + 16},
-            ]}>
-            {screenState === 'preview' && (
-              <View style={styles.buttonRow}>
+            <View
+              style={[
+                styles.bottomSection,
+                { paddingBottom: insets.bottom + 16 },
+              ]}>
+              {screenState === 'preview' && (
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={styles.retakeButton}
+                    activeOpacity={0.8}
+                    onPress={handleRetake}>
+                    <Text style={styles.retakeButtonText}>다시 찍기</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.sendButton}
+                    activeOpacity={0.8}
+                    onPress={handleSend}>
+                    <Text style={styles.sendButtonText}>사진 보내기</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              {screenState === 'sent' && (
                 <TouchableOpacity
-                  style={styles.retakeButton}
+                  style={styles.doneButton}
                   activeOpacity={0.8}
-                  onPress={handleRetake}>
-                  <Text style={styles.retakeButtonText}>다시 찍기</Text>
+                  onPress={handleDone}>
+                  <Text style={styles.doneButtonText}>확인</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.sendButton}
-                  activeOpacity={0.8}
-                  onPress={handleSend}>
-                  <Text style={styles.sendButtonText}>사진 보내기</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-            {screenState === 'sent' && (
-              <TouchableOpacity
-                style={styles.doneButton}
-                activeOpacity={0.8}
-                onPress={handleDone}>
-                <Text style={styles.doneButtonText}>확인</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </>
-      )}
+              )}
+            </View>
+          </>
+        )}
     </View>
   );
 }
@@ -249,7 +259,7 @@ const iconStyles = StyleSheet.create({
     backgroundColor: '#006FFD',
     borderRadius: 1,
     position: 'absolute',
-    transform: [{rotate: '-45deg'}, {translateY: -5.5}],
+    transform: [{ rotate: '-45deg' }, { translateY: -5.5 }],
   },
   arrowBottom: {
     width: 14,
@@ -257,7 +267,7 @@ const iconStyles = StyleSheet.create({
     backgroundColor: '#006FFD',
     borderRadius: 1,
     position: 'absolute',
-    transform: [{rotate: '45deg'}, {translateY: 5.5}],
+    transform: [{ rotate: '45deg' }, { translateY: 5.5 }],
   },
   cameraContainer: {
     width: 28,
@@ -306,7 +316,7 @@ const iconStyles = StyleSheet.create({
     position: 'absolute',
     left: 16,
     bottom: 24,
-    transform: [{rotate: '45deg'}],
+    transform: [{ rotate: '45deg' }],
   },
   largeCheckLong: {
     width: 72,
@@ -316,7 +326,7 @@ const iconStyles = StyleSheet.create({
     position: 'absolute',
     right: 8,
     bottom: 36,
-    transform: [{rotate: '-45deg'}],
+    transform: [{ rotate: '-45deg' }],
   },
 });
 

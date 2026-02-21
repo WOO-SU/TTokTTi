@@ -36,7 +36,7 @@ export type RootStackParamList = {
   RiskResult: { assessment_id: number; worksession_id: number };
   RiskCamera: { title: string; worksession_id: number; assessmentId?: number };
   CaptureWork: { worksession_id: number };
-  EndWork: undefined;
+  EndWork: { worksession_id: number };
   WorkMenu: { worksession_id: number };
 };
 

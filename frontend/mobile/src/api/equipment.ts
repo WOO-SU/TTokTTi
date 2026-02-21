@@ -43,19 +43,29 @@ export function uploadToBlob(
   fileUri: string,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
+    // 안드로이드/iOS 경로 차이 대응: 'file://' 가 여러 개 붙는 문제 방지
+    let normalizedUri = fileUri.replace(/^file:\/\//, '');
+    normalizedUri = `file://${normalizedUri}`;
+
     const xhr = new XMLHttpRequest();
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
+        console.log('Upload successful:', xhr.status);
         resolve();
       } else {
-        reject(new Error(`Blob upload failed: ${xhr.status}`));
+        console.error('Blob upload failed via XHR:', xhr.status, xhr.responseText);
+        reject(new Error(`Blob upload failed: ${xhr.status} ${xhr.responseText}`));
       }
     };
-    xhr.onerror = () => reject(new Error('Upload network error'));
+    xhr.onerror = () => {
+      console.error('XHR Upload Network error');
+      reject(new Error('Upload network error'));
+    };
     xhr.open('PUT', uploadUrl);
     xhr.setRequestHeader('x-ms-blob-type', 'BlockBlob');
     xhr.setRequestHeader('Content-Type', 'image/jpeg');
-    xhr.send({ uri: fileUri, type: 'image/jpeg', name: 'photo.jpg' } as any);
+    // React Native XMLHttpRequest 확장 (네이티브에서 파일 읽어 전송)
+    xhr.send({ uri: normalizedUri, type: 'image/jpeg', name: 'photo.jpg' } as any);
   });
 }
 
