@@ -18,6 +18,17 @@ class Config:
 
     # ===== monitor fps =====
     fps_monitor: int = 7
+    
+        # ===== fall detection =====
+    fall_sec: float = 0.3                 # debounce window
+    fall_window_sec: float = 0.8          # fall candidate window
+    fall_immobile_sec: float = 1.2        # post-fall immobility check
+    fall_immobile_px: float = 3.0         # hip_y movement threshold
+    fall_drop_px: float = 35.0            # hip_y drop threshold (pixels)
+    fall_drop_speed_px_per_s: float = 80.0
+    fall_tilt_deg: float = 55.0
+    fall_aspect_max: float = 1.1
+    fall_min_kp_conf: float = 0.20
 
     # ===== durations (sec) =====
     ppe_missing_sec: float = 2.0

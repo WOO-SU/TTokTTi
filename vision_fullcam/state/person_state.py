@@ -24,7 +24,7 @@ class PersonState:
         self.bbox = None
 
         # 포즈(선택)
-        self.pose_hist = deque(maxlen=60)  # dict of keypoints: by movenet
+        self.pose_hist = deque(maxlen=90)  # dict of keypoints: by movenet
         self.keypoints = None
 
         self.ladder_id: Optional[int] = None

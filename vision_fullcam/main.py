@@ -4,7 +4,7 @@ import cv2
 from .config import Config
 from .stream.reader import FrameReader
 
-from .detection.yolo_detector import YoloDetector
+# from .detection.yolo_detector import YoloDetector
 from .detection.fake_detector import FakeDetector
 
 from .tracking.simple_tracker import SimpleTracker, Tracked
@@ -30,7 +30,7 @@ from .rules.posture_rules import (
     ExcessiveBodyTiltRule,
     TopStepUsageRule,
 )
-
+from .rules.fall_rules import FallDetectionRule
 from .events.clip_buffer import ClipBuffer
 from .events.emitter import EventEmitter
 
@@ -38,17 +38,11 @@ def build_detector(cfg: Config):
     if getattr(cfg, "use_fake_detector", True):
         return FakeDetector(fps=cfg.fps_monitor)
 
+    from vision_fullcam.detection.yolo_detector import YoloDetector
     cls_map = {
-        0: "person",
-        1: "ladder",
-        2: "helmet",
-        3: "safety_vest",
-        4: "outtrigger",
+        0:"person",1:"ladder",2:"helmet",3:"safety_vest",4:"safety_shoes",5:"outtrigger"
     }
-    return YoloDetector(
-        model_path=getattr(cfg, "yolo_model_path", "yolov8n.pt"),
-        cls_map=cls_map,
-    )
+    return YoloDetector(getattr(cfg, "yolo_model_path", "yolov8n.pt"), cls_map=cls_map)
 
 
 # --------------------------------------------------
@@ -72,6 +66,7 @@ def _handle_keys(detector, task: TaskState, key: int):
         ord("5"): ("tilted_ladder", "ladder_tilt"),
         ord("6"): ("outtrigger_missing", "outtrigger_not_deployed"),
         ord("7"): ("outtrigger_deployed", "normal"),
+        ord("8"): ("outtrigger_deployed", "normal")
     }
 
     if key in mapping:
@@ -132,6 +127,8 @@ def main():
 
         ExcessiveBodyTiltRule(cfg),
         TopStepUsageRule(cfg),
+
+        FallDetectionRule(cfg)
     ]
 
     dt_target = 1.0 / max(1, cfg.fps_monitor) # 1프레임 처리 목표 시간 (일정하게 맞추기 위함)
@@ -161,9 +158,36 @@ def main():
 
             # 4️⃣ pose estimation: by MoveNet, 사람 몸체에 대한 판단
             for p in state.persons.values():
-                pose = pose_estimator.infer(frame, p.bbox) # person의 bbox를 movenet에 넘겨서 pose estimation
-                if pose:
-                    p.pose_hist.append(pose) # keypoints, body_tilt_deg, torso_vector를 pose_hist에 저장
+                pose = pose_estimator.infer(frame, p.bbox)
+                if not pose:
+                    continue
+
+                # 필요하면 최신 keypoints도 따로 보관
+                p.keypoints = pose.keypoints
+
+                kp = pose.keypoints
+                ls, rs = kp["left_shoulder"], kp["right_shoulder"]
+                lh, rh = kp["left_hip"], kp["right_hip"]
+
+                hip_y = (lh.y + rh.y) / 2.0
+                shoulder_y = (ls.y + rs.y) / 2.0
+                kp_conf = float(min(ls.confidence, rs.confidence, lh.confidence, rh.confidence))
+
+                aspect = None
+                if p.bbox is not None:
+                    x1, y1, x2, y2 = p.bbox
+                    bbox_h = max(1.0, float(y2 - y1))
+                    bbox_w = max(1.0, float(x2 - x1))
+                    aspect = bbox_h / bbox_w
+
+                p.pose_hist.append({
+                    "ts": float(now),
+                    "tilt_deg": float(pose.body_tilt_deg),
+                    "hip_y": float(hip_y),
+                    "shoulder_y": float(shoulder_y),
+                    "aspect": float(aspect) if aspect is not None else None,
+                    "kp_conf": kp_conf,
+                })
 
             # 5️⃣ PPE observer: 각 사람에 대한 PPE 관측 정보 업데이트
             ppe_observer.update(
