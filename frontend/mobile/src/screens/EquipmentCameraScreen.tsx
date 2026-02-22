@@ -29,6 +29,10 @@ import {
 } from '../api/equipment';
 import LargeCheckIcon from '../components/LargeCheckIcon';
 
+const NO_HELMET = require('../assets/no_helmet.png');
+const NO_VEST = require('../assets/no_vest.png');
+const NO_GLOVE = require('../assets/no_glove.png');
+
 type Props = {
   navigation: NativeStackNavigationProp<
     HomeStackParamList,
@@ -49,6 +53,7 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
   const [photoPath, setPhotoPath] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isFailed, setIsFailed] = useState(false);
 
   const cameraRef = useRef<Camera>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -68,12 +73,10 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
     const startTime = Date.now();
 
     pollingRef.current = setInterval(async () => {
-      // 타임아웃 체크
       if (Date.now() - startTime > POLLING_TIMEOUT) {
-        if (pollingRef.current) {
-          clearInterval(pollingRef.current);
-        }
-        setIsSuccess(false);
+        if (pollingRef.current) clearInterval(pollingRef.current);
+        setIsUploading(false);
+        setIsFailed(true);
         return;
       }
 
@@ -81,62 +84,63 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
         const { isUpdated, isComplied } = await fetchCheckUpdate(complianceId);
 
         if (isUpdated) {
-          if (pollingRef.current) {
-            clearInterval(pollingRef.current);
+          if (pollingRef.current) clearInterval(pollingRef.current);
+          setIsUploading(false);
+          if (isComplied) {
+            setIsSuccess(true);
+            setTimeout(() => {
+              markItemAsCompleted(title);
+              navigation.goBack();
+            }, 1500);
+          } else {
+            setIsFailed(true);
           }
-          setIsSuccess(isComplied ?? false);
         }
       } catch {
-        if (pollingRef.current) {
-          clearInterval(pollingRef.current);
-        }
-        setIsSuccess(false);
+        if (pollingRef.current) clearInterval(pollingRef.current);
+        setIsUploading(false);
+        setIsFailed(true);
       }
     }, POLLING_INTERVAL);
-  }, []);
+  }, [markItemAsCompleted, navigation, title]);
 
+  // 촬영만 — 업로드는 선택 버튼 누를 때
   const handleCapture = useCallback(async () => {
-    if (!cameraRef.current) { return; }
-    if (!isCameraReadyRef.current) {
-      console.warn('Camera not ready yet');
-      return;
-    }
-
-    try {
-      setIsUploading(true);
-      // 1. 사진 촬영
-      const photo = await cameraRef.current.takePhoto();
-      const fileUri = `file://${photo.path}`;
-      setPhotoPath(fileUri);
-
-      // 2. SAS 토큰 발급 → Blob 업로드
-      const { upload_url, blob_name } = await getSasToken();
-      await uploadToBlob(upload_url, fileUri);
-
-      // 3. 탐지 요청 (DB에 Compliance 레코드 생성)
-      setIsUploading(true);
-      const complianceId = await requestDetection(blob_name, title, worksession_id);
-
-      // 4. 폴링 시작
-      startPolling(complianceId);
-    } catch (err) {
-      console.error('handleCapture error:', err);
-      setIsSuccess(false);
-    } finally {
-      setIsUploading(false);
-    }
-  }, [title, worksession_id, startPolling]);
+    if (!cameraRef.current || !isCameraReadyRef.current) return;
+    const photo = await cameraRef.current.takePhoto();
+    setPhotoPath(`file://${photo.path}`);
+  }, []);
 
   const handleRetake = useCallback(() => {
     setPhotoPath(null);
     setIsUploading(false);
     setIsSuccess(false);
+    setIsFailed(false);
   }, []);
 
-  const handleConfirm = useCallback(() => {
-    markItemAsCompleted(title);
-    navigation.goBack();
-  }, [markItemAsCompleted, navigation, title]);
+  // 선택 버튼 → 업로드 + 탐지 요청 + 폴링
+  const handleConfirm = useCallback(async () => {
+    if (!photoPath || isUploading) return;
+    try {
+      setIsUploading(true);
+      setIsFailed(false);
+      const { upload_url, blob_name } = await getSasToken();
+      await uploadToBlob(upload_url, photoPath);
+      const complianceId = await requestDetection(blob_name, title, worksession_id);
+      startPolling(complianceId);
+    } catch (err) {
+      console.error('handleConfirm error:', err);
+      setIsUploading(false);
+      setIsFailed(true);
+    }
+  }, [photoPath, isUploading, title, worksession_id, startPolling]);
+
+  const getFailureImage = () => {
+    if (title.includes('헬멧') || title.includes('안전모')) return NO_HELMET;
+    if (title.includes('조끼')) return NO_VEST;
+    if (title.includes('장갑')) return NO_GLOVE;
+    return NO_HELMET; // 기본값
+  };
 
   return (
     <View style={styles.container}>
@@ -151,13 +155,25 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
             photoPath={photoPath}
             onRetake={handleRetake}
             onConfirm={handleConfirm}
-            confirmText="선택"
+            confirmText={isUploading ? '분석 중...' : '선택'}
             isConfirming={isUploading}
           >
             {isSuccess && (
               <View style={styles.resultCardOverlay}>
                 <LargeCheckIcon />
-                <Text style={styles.resultText}>전송 완료</Text>
+                <Text style={styles.resultText}>착용 확인 완료 ✅</Text>
+              </View>
+            )}
+            {isUploading && !isSuccess && (
+              <View style={styles.resultCardOverlay}>
+                <ActivityIndicator size="large" color="#006FFD" />
+                <Text style={styles.resultText}>AI 분석 중...</Text>
+              </View>
+            )}
+            {isFailed && !isUploading && (
+              <View style={styles.resultCardOverlay}>
+                <Image source={getFailureImage()} style={styles.failureImage} resizeMode="contain" />
+                <Text style={styles.resultText}>❌ 미착용 감지{`\n`}다시 촬영해주세요</Text>
               </View>
             )}
           </PhotoResultView>
@@ -191,14 +207,14 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8F9FE',
   },
   header: {
     height: 64,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 24,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8F9FE',
     gap: 8,
   },
   backButton: {
@@ -242,6 +258,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 20,
     color: '#1F2024',
+    textAlign: 'center',
+  },
+  failureImage: {
+    width: 140,
+    height: 140,
+    marginBottom: 8,
   },
   failedText: {
     fontFamily: 'Noto Sans KR',
@@ -320,7 +342,7 @@ const styles = StyleSheet.create({
   bottomSection: {
     alignItems: 'center',
     paddingHorizontal: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8F9FE',
   },
   largeCheckContainer: {
     width: 112,
