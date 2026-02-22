@@ -99,7 +99,7 @@ export default function RiskResultScreen({ navigation, route }: Props) {
           style={{ flex: 1 }}
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingBottom: insets.bottom + 24 },
+            { paddingBottom: insets.bottom + 88 },
           ]}
           showsVerticalScrollIndicator={false}>
 

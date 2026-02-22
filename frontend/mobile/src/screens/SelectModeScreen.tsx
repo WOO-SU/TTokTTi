@@ -96,7 +96,7 @@ const iconStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8F9FE',
   },
 
   /* Header */

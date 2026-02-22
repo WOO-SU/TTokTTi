@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
     },
     bannerCard: {
         height: 120, // Reduced from 140 to 120 based on HomeScreen visual weight
-        backgroundColor: '#F8F9FE',
+        backgroundColor: '#FFFFFF',
         borderRadius: 16,
         flexDirection: 'row',
         alignItems: 'center',
@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
     },
     bannerImageBase: {
         position: 'absolute',
-        right: -10,
+        right: 5,
         bottom: -10,
     },
     bannerText: {

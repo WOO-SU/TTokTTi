@@ -315,7 +315,7 @@ const iconStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8F9FE',
   },
   scrollContent: {
     flexGrow: 1,
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
   taskCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8F9FE',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     paddingHorizontal: 20,
     paddingVertical: 16,

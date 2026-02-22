@@ -45,7 +45,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor="#F8F9FE" />
 
       <ScrollView
         style={{ flex: 1 }}
@@ -129,7 +129,7 @@ const iconStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8F9FE',
   },
   scrollContent: {
     flexGrow: 1,
