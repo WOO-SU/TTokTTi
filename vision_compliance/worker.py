@@ -52,7 +52,8 @@ def main():
 
         compliance_id = task["compliance_id"]
         original_image = task["original_image"]
-        target = task["target"]
+        # Backend sends "category", map it to "target"
+        target = task["category"].lower()
 
         logger.info("[%d] 작업 수신 - target=%s, image=%s", compliance_id, target, original_image)
 

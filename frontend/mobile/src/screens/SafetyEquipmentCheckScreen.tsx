@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -11,14 +11,17 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import type { RootStackParamList } from '../../App';
+import type { HomeStackParamList } from '../../App';
+import TopHeader from '../components/TopHeader';
+import { useWorkSession } from '../context/WorkSessionContext';
+import CheckCard from '../components/CheckCard';
 
 type Props = {
   navigation: NativeStackNavigationProp<
-    RootStackParamList,
+    HomeStackParamList,
     'SafetyEquipmentCheck'
   >;
-  route: RouteProp<RootStackParamList, 'SafetyEquipmentCheck'>;
+  route: RouteProp<HomeStackParamList, 'SafetyEquipmentCheck'>;
 };
 
 type EquipmentItem = {
@@ -60,15 +63,6 @@ function BackArrowIcon() {
   );
 }
 
-function CheckIcon() {
-  return (
-    <View style={iconStyles.checkContainer}>
-      <View style={iconStyles.checkShort} />
-      <View style={iconStyles.checkLong} />
-    </View>
-  );
-}
-
 /* ──────── Main Component ──────── */
 
 export default function SafetyEquipmentCheckScreen({
@@ -76,45 +70,23 @@ export default function SafetyEquipmentCheckScreen({
   route,
 }: Props) {
   const insets = useSafeAreaInsets();
-  const [items, setItems] = useState<EquipmentItem[]>(INITIAL_ITEMS);
+  const { worksession_id } = route.params;
+  const { completedItems } = useWorkSession();
 
-  useEffect(() => {
-    const completedTitle = route.params?.completedTitle;
-    if (completedTitle) {
-      setItems(prev =>
-        prev.map(item =>
-          item.title === completedTitle ? { ...item, checked: true } : item,
-        ),
-      );
-    }
-  }, [route.params?.completedTitle]);
-
-  const toggleItem = (id: string) => {
-    setItems(prev =>
-      prev.map(item =>
-        item.id === id ? { ...item, checked: !item.checked } : item,
-      ),
-    );
-  };
-
-  const rows = [];
-  for (let i = 0; i < items.length; i += 2) {
-    rows.push(items.slice(i, i + 2));
+  const rows: EquipmentItem[][] = [];
+  const displayItems = INITIAL_ITEMS.map(item => ({
+    ...item,
+    checked: completedItems.includes(item.title),
+  }));
+  for (let i = 0; i < displayItems.length; i += 2) {
+    rows.push(displayItems.slice(i, i + 2));
   }
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Nav Bar */}
-      <View style={[styles.navBar, { paddingTop: insets.top }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <BackArrowIcon />
-        </TouchableOpacity>
-        <Text style={styles.pageTitle}>안전 장비 점검</Text>
-      </View>
+      <TopHeader title="안전 장비 점검" />
 
       {/* Content */}
       <ScrollView
@@ -125,36 +97,19 @@ export default function SafetyEquipmentCheckScreen({
           {rows.map((row, rowIndex) => (
             <View key={rowIndex} style={styles.gridRow}>
               {row.map(item => (
-                <TouchableOpacity
+                <CheckCard
                   key={item.id}
-                  style={styles.equipmentCard}
-                  activeOpacity={0.8}
-                  onPress={() =>
+                  title={item.title}
+                  image={item.image}
+                  isChecked={item.checked}
+                  onPress={() => {
+                    if (item.checked) return;
                     navigation.navigate('EquipmentCamera', {
                       title: item.title,
-                    })
-                  }>
-                  <View style={styles.cardBorder} />
-                  <Image
-                    source={item.image}
-                    style={styles.cardImage}
-                    resizeMode="contain"
-                  />
-                  <View style={styles.cardBottom}>
-                    <Text style={styles.cardLabel}>{item.title}</Text>
-                    <TouchableOpacity
-                      style={[
-                        styles.checkbox,
-                        item.checked
-                          ? styles.checkboxChecked
-                          : styles.checkboxUnchecked,
-                      ]}
-                      onPress={() => toggleItem(item.id)}
-                      activeOpacity={0.7}>
-                      {item.checked && <CheckIcon />}
-                    </TouchableOpacity>
-                  </View>
-                </TouchableOpacity>
+                      worksession_id,
+                    });
+                  }}
+                />
               ))}
             </View>
           ))}
@@ -162,11 +117,7 @@ export default function SafetyEquipmentCheckScreen({
       </ScrollView>
 
       {/* 요청하기 Button */}
-      <View style={[styles.buttonSection, { paddingBottom: insets.bottom + 16 }]}>
-        <TouchableOpacity style={styles.requestButton} activeOpacity={0.8}>
-          <Text style={styles.requestButtonText}>요청하기</Text>
-        </TouchableOpacity>
-      </View>
+
     </View>
   );
 }
@@ -196,32 +147,6 @@ const iconStyles = StyleSheet.create({
     position: 'absolute',
     transform: [{ rotate: '45deg' }, { translateY: 5.5 }],
   },
-  checkContainer: {
-    width: 10,
-    height: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkShort: {
-    width: 5,
-    height: 1.5,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 1,
-    position: 'absolute',
-    left: 0,
-    bottom: 1,
-    transform: [{ rotate: '45deg' }],
-  },
-  checkLong: {
-    width: 9,
-    height: 1.5,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 1,
-    position: 'absolute',
-    right: 0,
-    bottom: 2.5,
-    transform: [{ rotate: '-45deg' }],
-  },
 });
 
 /* ──────── Main Styles ──────── */
@@ -229,29 +154,7 @@ const iconStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-
-  /* Nav Bar */
-  navBar: {
-    height: 64,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    backgroundColor: '#FFFFFF',
-    gap: 8,
-  },
-  backButton: {
-    width: 28,
-    height: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pageTitle: {
-    fontFamily: 'Inter',
-    fontWeight: '700',
-    fontSize: 18,
-    color: '#1F2024',
+    backgroundColor: '#F8F9FE',
   },
 
   /* Content */
@@ -267,94 +170,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-start',
     gap: 20,
-  },
-
-  /* Equipment Card */
-  equipmentCard: {
-    width: 154.5,
-    height: 154.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: [
-      {
-        offsetX: 0,
-        offsetY: 4,
-        blurRadius: 4,
-        spreadDistance: 0,
-        color: 'rgba(0, 0, 0, 0.25)',
-        outset: true,
-      },
-    ],
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  cardBorder: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 20,
-    borderWidth: 5,
-    borderColor: '#EAF2FF',
-  },
-  cardImage: {
-    width: 100,
-    height: 100,
-  },
-  cardBottom: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 4,
-  },
-  cardLabel: {
-    fontFamily: 'Inter',
-    fontWeight: '400',
-    fontSize: 15,
-    color: '#000000',
-  },
-
-  /* Checkbox */
-  checkbox: {
-    width: 16,
-    height: 16,
-    borderRadius: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: '#006FFD',
-    borderWidth: 1.5,
-    borderColor: '#006FFD',
-  },
-  checkboxUnchecked: {
-    backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: '#C5C6CC',
-  },
-
-  /* Button */
-  buttonSection: {
-    alignItems: 'flex-end',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-  },
-  requestButton: {
-    paddingHorizontal: 28,
-    height: 48,
-    borderRadius: 10,
-    backgroundColor: '#0F62FE',
-    borderWidth: 2,
-    borderColor: '#0F62FE',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  requestButtonText: {
-    fontFamily: 'Roboto',
-    fontWeight: '500',
-    fontSize: 16,
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
   },
 });

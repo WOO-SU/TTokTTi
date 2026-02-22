@@ -35,7 +35,7 @@ class RiskAssessment(models.Model):
     # LLM 전체 결과 저장
     llm_result = models.JSONField(null=True, blank=True)
 
-    overall_grade = models.CharField(max_length=5, null=True, blank=True)
+    overall_grade = models.CharField(max_length=20, null=True, blank=True)
     overall_max_R = models.IntegerField(null=True, blank=True)
     work_permission = models.BooleanField(null=True, blank=True)
 

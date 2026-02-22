@@ -11,92 +11,54 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  Camera,
-  useCameraDevice,
-  useCameraPermission,
-} from 'react-native-vision-camera';
+import { Camera } from 'react-native-vision-camera';
+import BaseCamera from '../components/BaseCamera';
+import PhotoResultView from '../components/PhotoResultView';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import type { RootStackParamList } from '../../App';
+import { useIsFocused } from '@react-navigation/native';
+import type { HomeStackParamList } from '../../App';
+import TopHeader from '../components/TopHeader';
+import { useWorkSession } from '../context/WorkSessionContext';
 import {
   getSasToken,
   uploadToBlob,
   requestDetection,
   fetchCheckUpdate,
+  requestManualCheck,
 } from '../api/equipment';
+import LargeCheckIcon from '../components/LargeCheckIcon';
+
+const NO_HELMET = require('../assets/no_helmet.png');
+const NO_VEST = require('../assets/no_vest.png');
+const NO_GLOVE = require('../assets/no_glove.png');
 
 type Props = {
   navigation: NativeStackNavigationProp<
-    RootStackParamList,
+    HomeStackParamList,
     'EquipmentCamera'
   >;
-  route: RouteProp<RootStackParamList, 'EquipmentCamera'>;
+  route: RouteProp<HomeStackParamList, 'EquipmentCamera'>;
 };
-
-type ScreenState = 'idle' | 'uploading' | 'analyzing' | 'success' | 'failed';
 
 const POLLING_INTERVAL = 2000;
 const POLLING_TIMEOUT = 60000; // 최대 60초
-
-/* ──────── Icon Components ──────── */
-
-function BackArrowIcon() {
-  return (
-    <View style={iconStyles.backContainer}>
-      <View style={iconStyles.arrowTop} />
-      <View style={iconStyles.arrowBottom} />
-    </View>
-  );
-}
-
-function CameraIcon() {
-  return (
-    <View style={iconStyles.cameraContainer}>
-      <View style={iconStyles.cameraBody}>
-        <View style={iconStyles.cameraLens} />
-      </View>
-      <View style={iconStyles.cameraTop} />
-    </View>
-  );
-}
-
-function LargeCheckIcon() {
-  return (
-    <View style={iconStyles.largeCheckContainer}>
-      <View style={iconStyles.largeCheckShort} />
-      <View style={iconStyles.largeCheckLong} />
-    </View>
-  );
-}
-
-function LargeXIcon() {
-  return (
-    <View style={iconStyles.largeCheckContainer}>
-      <View style={iconStyles.xLine1} />
-      <View style={iconStyles.xLine2} />
-    </View>
-  );
-}
 
 /* ──────── Main Component ──────── */
 
 export default function EquipmentCameraScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
-  const { title } = route.params;
+  const { title, worksession_id } = route.params;
+  const { markItemAsCompleted } = useWorkSession();
   const [photoPath, setPhotoPath] = useState<string | null>(null);
-  const [screenState, setScreenState] = useState<ScreenState>('idle');
+  const [isUploading, setIsUploading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [isFailed, setIsFailed] = useState(false);
 
   const cameraRef = useRef<Camera>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const device = useCameraDevice('back');
-  const { hasPermission, requestPermission } = useCameraPermission();
-
-  useEffect(() => {
-    if (!hasPermission) {
-      requestPermission();
-    }
-  }, [hasPermission, requestPermission]);
+  const isFocused = useIsFocused();
+  const isCameraReadyRef = useRef(false);
 
   // 화면 이탈 시 폴링 정리
   useEffect(() => {
@@ -111,12 +73,10 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
     const startTime = Date.now();
 
     pollingRef.current = setInterval(async () => {
-      // 타임아웃 체크
       if (Date.now() - startTime > POLLING_TIMEOUT) {
-        if (pollingRef.current) {
-          clearInterval(pollingRef.current);
-        }
-        setScreenState('failed');
+        if (pollingRef.current) clearInterval(pollingRef.current);
+        setIsUploading(false);
+        setIsFailed(true);
         return;
       }
 
@@ -124,212 +84,272 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
         const { isUpdated, isComplied } = await fetchCheckUpdate(complianceId);
 
         if (isUpdated) {
-          if (pollingRef.current) {
-            clearInterval(pollingRef.current);
+          if (pollingRef.current) clearInterval(pollingRef.current);
+          setIsUploading(false);
+          if (isComplied) {
+            setIsSuccess(true);
+            setTimeout(() => {
+              markItemAsCompleted(title);
+              navigation.goBack();
+            }, 1500);
+          } else {
+            setIsFailed(true);
           }
-          setScreenState(isComplied ? 'success' : 'failed');
         }
-        // isUpdated === false → 아직 분석 중, 계속 폴링
       } catch {
-        if (pollingRef.current) {
-          clearInterval(pollingRef.current);
-        }
-        setScreenState('failed');
+        if (pollingRef.current) clearInterval(pollingRef.current);
+        setIsUploading(false);
+        setIsFailed(true);
       }
     }, POLLING_INTERVAL);
-  }, []);
+  }, [markItemAsCompleted, navigation, title]);
 
+  // 촬영만 — 업로드는 선택 버튼 누를 때
   const handleCapture = useCallback(async () => {
-    if (!cameraRef.current) { return; }
-
-    // 1. 사진 촬영
+    if (!cameraRef.current || !isCameraReadyRef.current) return;
     const photo = await cameraRef.current.takePhoto();
-    const fileUri = `file://${photo.path}`;
-    setPhotoPath(fileUri);
-    setScreenState('uploading');
-
-    try {
-      // 2. SAS 토큰 발급 → Blob 업로드
-      const { upload_url, blob_name } = await getSasToken();
-      await uploadToBlob(upload_url, fileUri);
-
-      // 3. 탐지 요청 (DB에 Compliance 레코드 생성)
-      setScreenState('analyzing');
-      const complianceId = await requestDetection(blob_name, title);
-
-      // 4. 폴링 시작
-      startPolling(complianceId);
-    } catch (err) {
-      console.error('handleCapture error:', err);
-      setScreenState('failed');
-    }
-  }, [title, startPolling]);
+    setPhotoPath(`file://${photo.path}`);
+  }, []);
 
   const handleRetake = useCallback(() => {
-    if (pollingRef.current) {
-      clearInterval(pollingRef.current);
-    }
     setPhotoPath(null);
-    setScreenState('idle');
+    setIsUploading(false);
+    setIsSuccess(false);
+    setIsFailed(false);
   }, []);
 
-  const handleContinue = () => {
-    navigation.navigate('SafetyEquipmentCheck', { completedTitle: title });
+  // 선택 버튼 → 업로드 + 탐지 요청 + 폴링
+  const handleConfirm = useCallback(async () => {
+    if (!photoPath || isUploading) return;
+    try {
+      setIsUploading(true);
+      setIsFailed(false);
+      const { upload_url, blob_name } = await getSasToken();
+      await uploadToBlob(upload_url, photoPath);
+      const complianceId = await requestDetection(blob_name, title, worksession_id);
+      startPolling(complianceId);
+    } catch (err) {
+      console.error('handleConfirm error:', err);
+      setIsUploading(false);
+      setIsFailed(true);
+    }
+  }, [photoPath, isUploading, title, worksession_id, startPolling]);
+
+  const getFailureImage = () => {
+    if (title.includes('헬멧') || title.includes('안전모')) return NO_HELMET;
+    if (title.includes('조끼')) return NO_VEST;
+    if (title.includes('장갑')) return NO_GLOVE;
+    return NO_HELMET; // 기본값
   };
 
-  const isProcessing = screenState === 'uploading' || screenState === 'analyzing';
+  const getFailureMessage = () => {
+    if (title.includes('헬멧') || title.includes('안전모')) return '안전모 미착용 감지';
+    if (title.includes('조끼')) return '안전조끼 미착용 감지';
+    if (title.includes('장갑')) return '안전장갑 미착용 감지';
+    return '미착용 감지'; // 기본값
+  };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <BackArrowIcon />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{title}</Text>
-      </View>
+      <TopHeader title={title || '장비 점검 촬영'} />
 
       {/* Camera Preview Area */}
       <View style={styles.cameraPreview}>
         {photoPath ? (
-          <>
-            <Image source={{ uri: photoPath }} style={styles.capturedImage} />
-
-            {/* 로딩 상태: 업로드 중 / 분석 중 */}
-            {isProcessing && (
-              <View style={styles.resultCard}>
-                <ActivityIndicator size="large" color="#006FFD" />
-                <Text style={styles.resultText}>
-                  {screenState === 'uploading' ? '업로드 중...' : '분석 중...'}
-                </Text>
-              </View>
-            )}
-
-            {/* 성공 */}
-            {screenState === 'success' && (
-              <View style={styles.resultCard}>
+          <PhotoResultView
+            photoPath={photoPath}
+            onRetake={handleRetake}
+            onConfirm={handleConfirm}
+            confirmText={isUploading ? '분석 중...' : '선택'}
+            isConfirming={isUploading}
+          >
+            {isSuccess && (
+              <View style={styles.resultCardOverlay}>
                 <LargeCheckIcon />
-                <Text style={styles.resultText}>다음 단계로 이동</Text>
+                <Text style={styles.resultText}>착용 확인 완료 ✅</Text>
               </View>
             )}
-
-            {/* 실패 */}
-            {screenState === 'failed' && (
-              <View style={styles.resultCard}>
-                <LargeXIcon />
-                <Text style={styles.failedText}>재촬영 하세요</Text>
-                <TouchableOpacity
-                  style={styles.retakeButton}
-                  activeOpacity={0.8}
-                  onPress={handleRetake}>
-                  <Text style={styles.retakeButtonText}>다시 촬영</Text>
-                </TouchableOpacity>
+            {isUploading && !isSuccess && (
+              <View style={styles.resultCardOverlay}>
+                <ActivityIndicator size="large" color="#006FFD" />
+                <Text style={styles.resultText}>AI 분석 중...</Text>
               </View>
             )}
-          </>
-        ) : device && hasPermission ? (
-          <Camera
-            ref={cameraRef}
-            style={StyleSheet.absoluteFill}
-            device={device}
-            isActive={true}
-            photo={true}
-          />
+            {isFailed && !isUploading && (
+              <View style={styles.resultCardOverlay}>
+                <Image source={getFailureImage()} style={styles.failureImage} resizeMode="contain" />
+                <Text style={styles.resultText}>❌ {getFailureMessage()}{`\n`}다시 촬영해주세요</Text>
+              </View>
+            )}
+          </PhotoResultView>
         ) : (
-          <Text style={styles.noCameraText}>
-            {!hasPermission ? '카메라 권한이 필요합니다' : '카메라를 불러오는 중...'}
-          </Text>
-        )}
-
-        {/* Camera Capture Button */}
-        {screenState === 'idle' && !photoPath && (
-          <TouchableOpacity
-            style={styles.captureButton}
-            activeOpacity={0.7}
-            onPress={handleCapture}>
-            <CameraIcon />
-          </TouchableOpacity>
+          <BaseCamera
+            ref={cameraRef}
+            isActive={isFocused && !photoPath}
+            photo={true}
+            guideText={`${title} 사진을 촬영하세요`}
+            onCapture={handleCapture}
+            onInitialized={() => { isCameraReadyRef.current = true; }}
+          />
         )}
       </View>
 
-      {/* Continue Button */}
-      <View style={[styles.continueSection, {paddingBottom: insets.bottom + 16}]}>
-        <TouchableOpacity
+      {/* Bottom Spacer Section to match EquipmentCameraScreen Layout */}
+      {!photoPath && (
+        <View
           style={[
-            styles.continueButton,
-            screenState !== 'success' && { opacity: 0.4 },
+            styles.bottomSection,
+            { height: insets.bottom + 16 },
           ]}
-          activeOpacity={0.8}
-          disabled={screenState !== 'success'}
-          onPress={handleContinue}>
-          <Text style={styles.continueText}>Continue</Text>
-        </TouchableOpacity>
-      </View>
+        />
+      )}
     </View>
   );
 }
 
-/* ──────── Icon Styles ──────── */
+/* ──────── Main Styles ──────── */
 
-const iconStyles = StyleSheet.create({
-  backContainer: {
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F8F9FE',
+  },
+  header: {
+    height: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    backgroundColor: '#F8F9FE',
+    gap: 8,
+  },
+  backButton: {
     width: 28,
     height: 28,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  arrowTop: {
-    width: 14,
-    height: 2,
-    backgroundColor: '#006FFD',
-    borderRadius: 1,
-    position: 'absolute',
-    transform: [{ rotate: '-45deg' }, { translateY: -5.5 }],
+  headerTitle: {
+    fontFamily: 'Noto Sans KR',
+    fontWeight: '700',
+    fontSize: 18,
+    color: '#1F2024',
   },
-  arrowBottom: {
-    width: 14,
-    height: 2,
-    backgroundColor: '#006FFD',
-    borderRadius: 1,
-    position: 'absolute',
-    transform: [{ rotate: '45deg' }, { translateY: 5.5 }],
+  cameraPreview: {
+    flex: 1,
+    marginTop: 16,
+    marginHorizontal: 15,
+    justifyContent: 'center',
+    alignItems: 'stretch',
   },
-  cameraContainer: {
-    width: 28,
-    height: 28,
+  capturedImage: {
+    flex: 1,
+    borderRadius: 20,
+  },
+  noCameraText: {
+    fontFamily: 'Noto Sans KR',
+    fontSize: 14,
+    color: '#FFFFFF',
+  },
+  resultCardOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 20,
+  },
+  resultText: {
+    fontFamily: 'Noto Sans KR',
+    fontWeight: '700',
+    fontSize: 20,
+    color: '#1F2024',
+    textAlign: 'center',
+  },
+  failureImage: {
+    width: 140,
+    height: 140,
+    marginBottom: 8,
+  },
+  failedText: {
+    fontFamily: 'Noto Sans KR',
+    fontWeight: '700',     // Bold
+    fontSize: 20,
+    color: '#1F2024',      // Black text
+    textAlign: 'center',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  errorButton: {
+    width: 120,
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#006FFD',
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  cameraBody: {
-    width: 24,
-    height: 18,
-    borderWidth: 2,
-    borderColor: '#F8F8F8',
-    borderRadius: 4,
+  errorButtonText: {
+    fontFamily: 'Noto Sans KR',
+    fontWeight: '600',
+    fontSize: 16,
+    color: '#006FFD',
+  },
+  retakeButton: {
+    width: 120,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#006FFD',
     justifyContent: 'center',
     alignItems: 'center',
-    position: 'absolute',
-    bottom: 2,
   },
-  cameraLens: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    borderWidth: 2,
-    borderColor: '#F8F8F8',
+  retakeButtonText: {
+    fontFamily: 'Noto Sans KR',
+    fontWeight: '600',
+    fontSize: 16,
+    color: '#FFFFFF',
   },
-  cameraTop: {
-    width: 10,
-    height: 4,
-    borderTopLeftRadius: 2,
-    borderTopRightRadius: 2,
-    backgroundColor: '#F8F8F8',
+  guideOverlay: {
     position: 'absolute',
-    top: 2,
+    bottom: 110,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  guideOverlayText: {
+    fontFamily: 'Noto Sans KR',
+    fontWeight: '500',
+    fontSize: 14,
+    color: '#FFFFFF',
+  },
+  continueSection: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  continueButton: {
+    width: 153,
+    height: 38,
+    borderRadius: 15,
+    backgroundColor: '#006FFD',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  continueText: {
+    fontFamily: 'Noto Sans KR',
+    fontWeight: '400',
+    fontSize: 14,
+    color: '#F6F6F6',
+  },
+  bottomSection: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    backgroundColor: '#F8F9FE',
   },
   largeCheckContainer: {
     width: 112,
@@ -360,7 +380,7 @@ const iconStyles = StyleSheet.create({
   xLine1: {
     width: 80,
     height: 8,
-    backgroundColor: '#FF3B30',
+    backgroundColor: '#006FFD',
     borderRadius: 4,
     position: 'absolute',
     transform: [{ rotate: '45deg' }],
@@ -368,118 +388,9 @@ const iconStyles = StyleSheet.create({
   xLine2: {
     width: 80,
     height: 8,
-    backgroundColor: '#FF3B30',
+    backgroundColor: '#006FFD',
     borderRadius: 4,
     position: 'absolute',
     transform: [{ rotate: '-45deg' }],
-  },
-});
-
-/* ──────── Main Styles ──────── */
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  header: {
-    height: 64,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    backgroundColor: '#FFFFFF',
-    gap: 8,
-  },
-  backButton: {
-    width: 28,
-    height: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontFamily: 'Inter',
-    fontWeight: '700',
-    fontSize: 18,
-    color: '#1F2024',
-  },
-  cameraPreview: {
-    flex: 1,
-    marginHorizontal: 15,
-    backgroundColor: '#000000',
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  capturedImage: {
-    ...StyleSheet.absoluteFillObject,
-    resizeMode: 'cover',
-  },
-  noCameraText: {
-    fontFamily: 'Inter',
-    fontSize: 14,
-    color: '#FFFFFF',
-  },
-  resultCard: {
-    width: 229,
-    height: 169,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-    zIndex: 1,
-  },
-  resultText: {
-    fontFamily: 'Roboto',
-    fontWeight: '400',
-    fontSize: 20,
-    color: '#000000',
-  },
-  failedText: {
-    fontFamily: 'Roboto',
-    fontWeight: '400',
-    fontSize: 20,
-    color: '#FF3B30',
-  },
-  retakeButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    backgroundColor: '#FF3B30',
-    borderRadius: 10,
-    marginTop: 4,
-  },
-  retakeButtonText: {
-    fontFamily: 'Roboto',
-    fontWeight: '600',
-    fontSize: 14,
-    color: '#FFFFFF',
-  },
-  captureButton: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: '#006FFD',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'absolute',
-    bottom: 24,
-  },
-  continueSection: {
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  continueButton: {
-    width: 153,
-    height: 38,
-    borderRadius: 15,
-    backgroundColor: '#006FFD',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  continueText: {
-    fontFamily: 'Roboto',
-    fontWeight: '400',
-    fontSize: 14,
-    color: '#F6F6F6',
   },
 });
