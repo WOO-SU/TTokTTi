@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -245,14 +245,36 @@ function MainTabs() {
       <Tab.Screen
         name="Home"
         component={HomeStackNavigator}
-        options={{
-          tabBarIcon: ({ focused }) => <HomeTabIcon focused={focused} />,
-          tabBarLabelStyle: {
-            fontFamily: 'Inter',
-            fontWeight: '600',
-            fontSize: 10,
-            marginTop: 4,
-          },
+        options={({ route }) => {
+          const routeName = getFocusedRouteNameFromRoute(route) ?? 'MainHome';
+          const hiddenRoutes = [
+            'EquipmentCamera',
+            'RiskCamera',
+            'CaptureWork',
+            'EndWork',
+          ];
+          const display = hiddenRoutes.includes(routeName) ? 'none' : 'flex';
+
+          return {
+            tabBarStyle: {
+              display,
+              height: 60 + insets.bottom,
+              paddingTop: 8,
+              paddingBottom: insets.bottom,
+              paddingHorizontal: 16,
+              backgroundColor: '#FFFFFF',
+              borderTopWidth: 0,
+              elevation: 0,
+              shadowOpacity: 0,
+            },
+            tabBarIcon: ({ focused }) => <HomeTabIcon focused={focused} />,
+            tabBarLabelStyle: {
+              fontFamily: 'Inter',
+              fontWeight: '600',
+              fontSize: 10,
+              marginTop: 4,
+            },
+          };
         }}
       />
       <Tab.Screen

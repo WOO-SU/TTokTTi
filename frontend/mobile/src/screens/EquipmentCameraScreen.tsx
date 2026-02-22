@@ -40,37 +40,6 @@ type ScreenState = 'idle' | 'uploading' | 'analyzing' | 'success' | 'failed';
 const POLLING_INTERVAL = 2000;
 const POLLING_TIMEOUT = 60000; // 최대 60초
 
-/* ──────── Icon Components ──────── */
-
-function CameraIcon() {
-  return (
-    <View style={iconStyles.cameraContainer}>
-      <View style={iconStyles.cameraBody}>
-        <View style={iconStyles.cameraLens} />
-      </View>
-      <View style={iconStyles.cameraTop} />
-    </View>
-  );
-}
-
-function LargeCheckIcon() {
-  return (
-    <View style={iconStyles.largeCheckContainer}>
-      <View style={iconStyles.largeCheckShort} />
-      <View style={iconStyles.largeCheckLong} />
-    </View>
-  );
-}
-
-function LargeXIcon() {
-  return (
-    <View style={iconStyles.largeCheckContainer}>
-      <View style={iconStyles.xLine1} />
-      <View style={iconStyles.xLine2} />
-    </View>
-  );
-}
-
 /* ──────── Main Component ──────── */
 
 export default function EquipmentCameraScreen({ navigation, route }: Props) {
@@ -215,7 +184,10 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
             {/* 성공 */}
             {screenState === 'success' && (
               <View style={styles.resultCard}>
-                <LargeCheckIcon />
+                <View style={styles.largeCheckContainer}>
+                  <View style={styles.largeCheckShort} />
+                  <View style={styles.largeCheckLong} />
+                </View>
                 <Text style={styles.failedText}>다음 단계로 이동</Text>
 
                 <View style={styles.buttonRow}>
@@ -232,7 +204,10 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
             {/* 실패 */}
             {screenState === 'failed' && (
               <View style={styles.resultCard}>
-                <LargeXIcon />
+                <View style={styles.largeCheckContainer}>
+                  <View style={styles.xLine1} />
+                  <View style={styles.xLine2} />
+                </View>
                 <Text style={styles.failedText}>다시 촬영해 주세요.</Text>
 
                 <View style={styles.buttonRow}>
@@ -258,103 +233,23 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
             ref={cameraRef}
             isActive={isFocused && screenState === 'idle' && !photoPath}
             photo={true}
+            guideText={`${title} 사진을 촬영하세요`}
+            onCapture={handleCapture}
             onInitialized={() => { isCameraReadyRef.current = true; }}
           />
         )}
-
-        {/* Camera Capture Button */}
-        {screenState === 'idle' && !photoPath && (
-          <TouchableOpacity
-            style={styles.captureButton}
-            activeOpacity={0.7}
-            onPress={handleCapture}>
-            <CameraIcon />
-          </TouchableOpacity>
-        )}
       </View>
+
+      {/* Empty Bottom Section for matching RiskCameraScreen Layout */}
+      <View
+        style={[
+          styles.bottomSection,
+          { height: 16 + insets.bottom + 16 },
+        ]}
+      />
     </View>
   );
 }
-
-/* ──────── Icon Styles ──────── */
-
-const iconStyles = StyleSheet.create({
-  cameraContainer: {
-    width: 28,
-    height: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cameraBody: {
-    width: 24,
-    height: 18,
-    borderWidth: 2,
-    borderColor: '#F8F8F8',
-    borderRadius: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'absolute',
-    bottom: 2,
-  },
-  cameraLens: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    borderWidth: 2,
-    borderColor: '#F8F8F8',
-  },
-  cameraTop: {
-    width: 10,
-    height: 4,
-    borderTopLeftRadius: 2,
-    borderTopRightRadius: 2,
-    backgroundColor: '#F8F8F8',
-    position: 'absolute',
-    top: 2,
-  },
-  largeCheckContainer: {
-    width: 112,
-    height: 112,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  largeCheckShort: {
-    width: 36,
-    height: 8,
-    backgroundColor: '#006FFD',
-    borderRadius: 4,
-    position: 'absolute',
-    left: 16,
-    bottom: 24,
-    transform: [{ rotate: '45deg' }],
-  },
-  largeCheckLong: {
-    width: 72,
-    height: 8,
-    backgroundColor: '#006FFD',
-    borderRadius: 4,
-    position: 'absolute',
-    right: 8,
-    bottom: 36,
-    transform: [{ rotate: '-45deg' }],
-  },
-  xLine1: {
-    width: 80,
-    height: 8,
-    backgroundColor: '#006FFD', // Changed to Blue
-    borderRadius: 4,
-    position: 'absolute',
-    transform: [{ rotate: '45deg' }],
-  },
-  xLine2: {
-    width: 80,
-    height: 8,
-    backgroundColor: '#006FFD', // Changed to Blue
-    borderRadius: 4,
-    position: 'absolute',
-    transform: [{ rotate: '-45deg' }],
-  },
-});
 
 /* ──────── Main Styles ──────── */
 
@@ -385,8 +280,10 @@ const styles = StyleSheet.create({
   },
   cameraPreview: {
     flex: 1,
+    marginTop: 16,
     marginHorizontal: 15,
     backgroundColor: '#000000',
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
@@ -458,15 +355,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#FFFFFF',
   },
-  captureButton: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: '#006FFD',
-    justifyContent: 'center',
-    alignItems: 'center',
+  guideOverlay: {
     position: 'absolute',
-    bottom: 24,
+    bottom: 110,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  guideOverlayText: {
+    fontFamily: 'Noto Sans KR',
+    fontWeight: '500',
+    fontSize: 14,
+    color: '#FFFFFF',
   },
   continueSection: {
     alignItems: 'center',
@@ -485,5 +386,52 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     fontSize: 14,
     color: '#F6F6F6',
+  },
+  bottomSection: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    backgroundColor: '#FFFFFF',
+  },
+  largeCheckContainer: {
+    width: 112,
+    height: 112,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  largeCheckShort: {
+    width: 36,
+    height: 8,
+    backgroundColor: '#006FFD',
+    borderRadius: 4,
+    position: 'absolute',
+    left: 16,
+    bottom: 24,
+    transform: [{ rotate: '45deg' }],
+  },
+  largeCheckLong: {
+    width: 72,
+    height: 8,
+    backgroundColor: '#006FFD',
+    borderRadius: 4,
+    position: 'absolute',
+    right: 8,
+    bottom: 36,
+    transform: [{ rotate: '-45deg' }],
+  },
+  xLine1: {
+    width: 80,
+    height: 8,
+    backgroundColor: '#006FFD',
+    borderRadius: 4,
+    position: 'absolute',
+    transform: [{ rotate: '45deg' }],
+  },
+  xLine2: {
+    width: 80,
+    height: 8,
+    backgroundColor: '#006FFD',
+    borderRadius: 4,
+    position: 'absolute',
+    transform: [{ rotate: '-45deg' }],
   },
 });

@@ -24,19 +24,6 @@ type Props = {
   route: RouteProp<HomeStackParamList, 'RiskCamera'>;
 };
 
-/* ──────── Icon Components ──────── */
-
-function CameraIcon() {
-  return (
-    <View style={iconStyles.cameraContainer}>
-      <View style={iconStyles.cameraBody}>
-        <View style={iconStyles.cameraLens} />
-      </View>
-      <View style={iconStyles.cameraTop} />
-    </View>
-  );
-}
-
 /* ──────── Main Component ──────── */
 
 export default function RiskCameraScreen({ navigation, route }: Props) {
@@ -113,24 +100,16 @@ export default function RiskCameraScreen({ navigation, route }: Props) {
             ref={cameraRef}
             isActive={isFocused && !photoPath}
             photo={true}
+            guideText={`${title} 사진을 촬영하세요`}
+            onCapture={handleCapture}
             onInitialized={() => { isCameraReadyRef.current = true; }}
           />
-        )}
-
-        {/* Capture Button */}
-        {!photoPath && (
-          <TouchableOpacity
-            style={styles.captureButton}
-            activeOpacity={0.7}
-            onPress={handleCapture}>
-            <CameraIcon />
-          </TouchableOpacity>
         )}
       </View>
 
       {/* Bottom Buttons */}
       <View style={[styles.bottomSection, { paddingBottom: insets.bottom + 16 }]}>
-        {photoPath ? (
+        {photoPath && (
           <View style={styles.buttonRow}>
             <TouchableOpacity
               style={styles.retakeButton}
@@ -151,51 +130,11 @@ export default function RiskCameraScreen({ navigation, route }: Props) {
               )}
             </TouchableOpacity>
           </View>
-        ) : (
-          <Text style={styles.guideText}>{title} 사진을 촬영하세요</Text>
         )}
       </View>
     </View>
   );
 }
-
-/* ──────── Icon Styles ──────── */
-
-const iconStyles = StyleSheet.create({
-  cameraContainer: {
-    width: 28,
-    height: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cameraBody: {
-    width: 24,
-    height: 18,
-    borderWidth: 2,
-    borderColor: '#F8F8F8',
-    borderRadius: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'absolute',
-    bottom: 2,
-  },
-  cameraLens: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    borderWidth: 2,
-    borderColor: '#F8F8F8',
-  },
-  cameraTop: {
-    width: 10,
-    height: 4,
-    borderTopLeftRadius: 2,
-    borderTopRightRadius: 2,
-    backgroundColor: '#F8F8F8',
-    position: 'absolute',
-    top: 2,
-  },
-});
 
 /* ──────── Main Styles ──────── */
 
@@ -207,8 +146,10 @@ const styles = StyleSheet.create({
 
   cameraPreview: {
     flex: 1,
+    marginTop: 16,
     marginHorizontal: 15,
     backgroundColor: '#000000',
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
@@ -221,16 +162,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Noto Sans KR',
     fontSize: 14,
     color: '#FFFFFF',
-  },
-  captureButton: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: '#006FFD',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'absolute',
-    bottom: 24,
   },
   bottomSection: {
     alignItems: 'center',

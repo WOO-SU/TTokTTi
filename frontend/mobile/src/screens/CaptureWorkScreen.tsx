@@ -20,19 +20,6 @@ import { getSasToken, uploadToBlob } from '../api/equipment';
 
 type ScreenState = 'idle' | 'camera' | 'preview' | 'sending' | 'sent';
 
-/* ──────── Icon Components ──────── */
-
-function CameraIcon() {
-    return (
-        <View style={iconStyles.cameraContainer}>
-            <View style={iconStyles.cameraBody}>
-                <View style={iconStyles.cameraLens} />
-            </View>
-            <View style={iconStyles.cameraTop} />
-        </View>
-    );
-}
-
 function LargeCheckIcon() {
     return (
         <View style={iconStyles.largeCheckContainer}>
@@ -113,81 +100,74 @@ export default function CaptureWorkScreen() {
                 </View>
             )}
 
-            {/* Camera State */}
-            {screenState === 'camera' && (
-                <View style={styles.cameraPreview}>
-                    <BaseCamera
-                        ref={cameraRef}
-                        isActive={true}
-                        photo={true}
-                    />
-                    <TouchableOpacity
-                        style={styles.captureButton}
-                        activeOpacity={0.7}
-                        onPress={handleCapture}>
-                        <CameraIcon />
-                    </TouchableOpacity>
-                </View>
-            )}
-
-            {/* Preview / Sending / Sent States */}
-            {(screenState === 'preview' ||
-                screenState === 'sending' ||
-                screenState === 'sent') && (
-                    <>
-                        <View style={styles.cameraPreview}>
-                            <Image
-                                source={{ uri: photoPath! }}
-                                style={styles.capturedImage}
+            {/* Camera & Preview States */}
+            {screenState !== 'idle' && (
+                <>
+                    <View style={styles.cameraPreview}>
+                        {screenState === 'camera' ? (
+                            <BaseCamera
+                                ref={cameraRef}
+                                isActive={true}
+                                photo={true}
+                                guideText="작업물 상태를 촬영하세요"
+                                onCapture={handleCapture}
                             />
+                        ) : (
+                            <>
+                                <Image
+                                    source={{ uri: photoPath! }}
+                                    style={styles.capturedImage}
+                                />
 
-                            {screenState === 'sending' && (
-                                <View style={styles.resultCard}>
-                                    <ActivityIndicator size="large" color="#006FFD" />
-                                    <Text style={styles.resultText}>업로드 중...</Text>
-                                </View>
-                            )}
+                                {screenState === 'sending' && (
+                                    <View style={styles.resultCard}>
+                                        <ActivityIndicator size="large" color="#006FFD" />
+                                        <Text style={styles.resultText}>업로드 중...</Text>
+                                    </View>
+                                )}
 
-                            {screenState === 'sent' && (
-                                <View style={styles.resultCard}>
-                                    <LargeCheckIcon />
-                                    <Text style={styles.resultText}>전송 완료</Text>
-                                </View>
-                            )}
-                        </View>
+                                {screenState === 'sent' && (
+                                    <View style={styles.resultCard}>
+                                        <LargeCheckIcon />
+                                        <Text style={styles.resultText}>전송 완료</Text>
+                                    </View>
+                                )}
+                            </>
+                        )}
+                    </View>
 
-                        <View
-                            style={[
-                                styles.bottomSection,
-                                { paddingBottom: insets.bottom + 16 },
-                            ]}>
-                            {screenState === 'preview' && (
-                                <View style={styles.buttonRow}>
-                                    <TouchableOpacity
-                                        style={styles.retakeButton}
-                                        activeOpacity={0.8}
-                                        onPress={handleRetake}>
-                                        <Text style={styles.retakeButtonText}>다시 찍기</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                        style={styles.sendButton}
-                                        activeOpacity={0.8}
-                                        onPress={handleSend}>
-                                        <Text style={styles.sendButtonText}>사진 보내기</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            )}
-                            {screenState === 'sent' && (
+                    <View
+                        style={[
+                            styles.bottomSection,
+                            { paddingBottom: insets.bottom + 16 },
+                        ]}>
+                        {screenState === 'preview' && (
+                            <View style={styles.buttonRow}>
                                 <TouchableOpacity
-                                    style={styles.doneButton}
+                                    style={styles.retakeButton}
                                     activeOpacity={0.8}
-                                    onPress={handleDone}>
-                                    <Text style={styles.doneButtonText}>확인</Text>
+                                    onPress={handleRetake}>
+                                    <Text style={styles.retakeButtonText}>다시 찍기</Text>
                                 </TouchableOpacity>
-                            )}
-                        </View>
-                    </>
-                )}
+                                <TouchableOpacity
+                                    style={styles.sendButton}
+                                    activeOpacity={0.8}
+                                    onPress={handleSend}>
+                                    <Text style={styles.sendButtonText}>사진 보내기</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                        {screenState === 'sent' && (
+                            <TouchableOpacity
+                                style={styles.doneButton}
+                                activeOpacity={0.8}
+                                onPress={handleDone}>
+                                <Text style={styles.doneButtonText}>확인</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                </>
+            )}
         </View>
     );
 }
@@ -195,39 +175,6 @@ export default function CaptureWorkScreen() {
 /* ──────── Icon Styles ──────── */
 
 const iconStyles = StyleSheet.create({
-    cameraContainer: {
-        width: 28,
-        height: 28,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    cameraBody: {
-        width: 24,
-        height: 18,
-        borderWidth: 2,
-        borderColor: '#F8F8F8',
-        borderRadius: 4,
-        justifyContent: 'center',
-        alignItems: 'center',
-        position: 'absolute',
-        bottom: 2,
-    },
-    cameraLens: {
-        width: 10,
-        height: 10,
-        borderRadius: 5,
-        borderWidth: 2,
-        borderColor: '#F8F8F8',
-    },
-    cameraTop: {
-        width: 10,
-        height: 4,
-        borderTopLeftRadius: 2,
-        borderTopRightRadius: 2,
-        backgroundColor: '#F8F8F8',
-        position: 'absolute',
-        top: 2,
-    },
     largeCheckContainer: {
         width: 112,
         height: 112,
@@ -302,8 +249,10 @@ const styles = StyleSheet.create({
     /* Camera */
     cameraPreview: {
         flex: 1,
+        marginTop: 16,
         marginHorizontal: 15,
         backgroundColor: '#000000',
+        borderRadius: 20,
         justifyContent: 'center',
         alignItems: 'center',
         overflow: 'hidden',
@@ -316,16 +265,6 @@ const styles = StyleSheet.create({
         fontFamily: 'Noto Sans KR',
         fontSize: 14,
         color: '#FFFFFF',
-    },
-    captureButton: {
-        width: 58,
-        height: 58,
-        borderRadius: 29,
-        backgroundColor: '#006FFD',
-        justifyContent: 'center',
-        alignItems: 'center',
-        position: 'absolute',
-        bottom: 24,
     },
 
     /* Result Card */
