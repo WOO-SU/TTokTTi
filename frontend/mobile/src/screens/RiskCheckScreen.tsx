@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -57,29 +57,20 @@ const INITIAL_ITEMS: CheckItem[] = [
 export default function RiskCheckScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { worksession_id } = route.params;
-  const { photos } = useRiskPhotos();
+  const { photos, assessmentId } = useRiskPhotos();
   const [isRequesting, setIsRequesting] = useState(false);
+  const isComponentMounted = useRef(true);
 
-  // assessment_id는 RiskCamera에서 첫 사진 업로드 후 params로 전달됨
-  const assessmentIdRef = useRef<number | undefined>(
-    route.params.assessmentId,
-  );
-
-  // RiskCamera에서 goBack() 후 assessmentId 업데이트 반영
-  useFocusEffect(
-    useCallback(() => {
-      const newId = route.params.assessmentId;
-      if (newId !== undefined) {
-        assessmentIdRef.current = newId;
-      }
-    }, [route.params.assessmentId]),
-  );
+  useEffect(() => {
+    isComponentMounted.current = true;
+    return () => { isComponentMounted.current = false; };
+  }, []);
 
   const handleCardPress = (title: string) => {
     navigation.navigate('RiskCamera', {
       title,
       worksession_id,
-      assessmentId: assessmentIdRef.current,
+      assessmentId: assessmentId,
     });
   };
 
@@ -91,11 +82,11 @@ export default function RiskCheckScreen({ navigation, route }: Props) {
   const hasAnyPhoto = displayItems.some(item => item.hasPhoto);
 
   const handleRequest = async () => {
-    const assessmentId = assessmentIdRef.current;
     if (!assessmentId) { return; }
     setIsRequesting(true);
     try {
       await requestRiskAssess(assessmentId);
+      if (!isComponentMounted.current || !navigation.isFocused()) return;
       navigation.replace('RiskResult', {
         assessment_id: assessmentId,
         worksession_id,

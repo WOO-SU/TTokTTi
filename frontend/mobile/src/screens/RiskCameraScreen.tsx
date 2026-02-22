@@ -35,7 +35,7 @@ export default function RiskCameraScreen({ navigation, route }: Props) {
   const { title, worksession_id, assessmentId } = route.params;
   const [photoPath, setPhotoPath] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const { addPhoto } = useRiskPhotos();
+  const { addPhoto, setAssessmentId } = useRiskPhotos();
 
   const cameraRef = useRef<Camera>(null);
   const isCameraReadyRef = useRef(false);
@@ -78,13 +78,11 @@ export default function RiskCameraScreen({ navigation, route }: Props) {
       await uploadRiskPhoto(finalAssessmentId, blob_name);
 
       // 4. 전역 컨텍스트에 기록
+      setAssessmentId(finalAssessmentId);
       addPhoto(title, photoPath);
 
-      // 5. RiskCheck로 돌아감 — assessmentId 전달
-      navigation.navigate('RiskCheck', {
-        worksession_id,
-        assessmentId: finalAssessmentId,
-      });
+      // 5. 이전 화면으로 돌아감
+      navigation.goBack();
     } catch (err) {
       console.error('[RiskCamera] 업로드 실패:', err);
     } finally {

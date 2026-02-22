@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -36,29 +36,36 @@ function BackArrowIcon() {
 export default function RiskAssessmentScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { worksession_id } = route.params;
-  const { clearPhotos } = useRiskPhotos();
+  const { setAssessmentId } = useRiskPhotos();
+  const isComponentMounted = useRef(true);
 
   useEffect(() => {
+    isComponentMounted.current = true;
     async function checkAndNavigate() {
       try {
         const result = await checkLatestRisk(worksession_id);
+        if (!isComponentMounted.current || !navigation.isFocused()) return;
+
         if (result.exists && result.assessment_id) {
+          setAssessmentId(result.assessment_id);
           navigation.replace('RiskResult', {
             assessment_id: result.assessment_id,
             worksession_id,
           });
         } else {
-          clearPhotos();
           navigation.replace('RiskCheck', { worksession_id });
         }
       } catch (err) {
         console.error('[RiskAssessment] checkLatestRisk 실패:', err);
-        clearPhotos();
+        if (!isComponentMounted.current || !navigation.isFocused()) return;
         navigation.replace('RiskCheck', { worksession_id });
       }
     }
 
     checkAndNavigate();
+    return () => {
+      isComponentMounted.current = false;
+    };
   }, [worksession_id, navigation]);
 
   return (

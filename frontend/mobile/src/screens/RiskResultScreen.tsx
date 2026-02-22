@@ -17,6 +17,7 @@ import type { RouteProp } from '@react-navigation/native';
 import type { HomeStackParamList } from '../../App';
 import TopHeader from '../components/TopHeader';
 import { fetchWorkerReport, fetchSasUrl, type WorkerReport } from '../api/risk';
+import { useRiskPhotos } from '../context/RiskPhotoContext';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -42,6 +43,7 @@ const LEVEL_LABEL: Record<string, string> = {
 export default function RiskResultScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { assessment_id, worksession_id } = route.params;
+  const { clearPhotos } = useRiskPhotos();
   const [report, setReport] = useState<WorkerReport | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +72,7 @@ export default function RiskResultScreen({ navigation, route }: Props) {
   }, [assessment_id]);
 
   const handleRegenerate = () => {
+    clearPhotos();
     navigation.replace('RiskCheck', { worksession_id });
   };
 
