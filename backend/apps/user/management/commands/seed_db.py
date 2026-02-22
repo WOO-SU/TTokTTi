@@ -234,7 +234,7 @@ class Command(BaseCommand):
 
         # for Compliance.original_image, Compliance.detected_image
         original_paths = [f"compliance/original{i}.jpg" for i in range(1, 9)] # blob 업로드 후 index 확인
-        detected_paths = [f"compliance/detected{i}.jpg" for i in range(1, 9)]
+        detected_paths = [f"compliance/detected{i}.jpg" for i in range(1, 9)]  # category별 경로 이름으로 수정: /original1_HELMET.jpg
         original_idx = 0
         detected_idx = 0
 
@@ -306,3 +306,9 @@ class Command(BaseCommand):
                     detected_idx += 1
 
         self.stdout.write(self.style.SUCCESS("✅ apps.check seeding completed"))
+
+        # ------------------------------------------------------------------
+        # detect.RiskType, detect.VideoLog, detect.VideoLogRead
+        # ------------------------------------------------------------------
+        self.stdout.write("🚀 Seeding apps.detect data...")
+        
