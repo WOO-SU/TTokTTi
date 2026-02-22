@@ -1,6 +1,7 @@
 # backend/apps/user/management/commands/seed_db.py
 
 import random
+from typing import Dict, List
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from datetime import timedelta, datetime, time
@@ -15,9 +16,57 @@ from apps.check.models import *
 from apps.risk.models import *
 from apps.report.models import *
 
+from apps.risk.services import *
+
+def fake_llm_result() -> Dict:
+        hazards = [
+            {
+                "id": "FALL",
+                "title": "낙상 위험",
+                "risk_grade": random.choice(["Low", "Medium", "High"]),
+                "risk_R_1_25": random.randint(5, 20),
+                "expected_accident": "작업 중 균형 상실로 인한 낙상",
+                "evidence_from_image": "사다리 기울어짐",
+                "mitigations_before_work": ["사다리 고정", "안전모 착용"],
+                "residual_risk_grade": "Low",
+                "residual_risk_R_1_25": random.randint(1, 5),
+            },
+            {
+                "id": "LADDER",
+                "title": "사다리 사용 위험",
+                "risk_grade": random.choice(["Low", "Medium"]),
+                "risk_R_1_25": random.randint(3, 10),
+                "expected_accident": "사다리 전도",
+                "evidence_from_image": "아웃트리거 미전개",
+                "mitigations_before_work": ["아웃트리거 전개"],
+                "residual_risk_grade": "Low",
+                "residual_risk_R_1_25": random.randint(1, 4),
+            },
+        ]
+
+        overall_grade = random.choice(["Low", "Medium", "High"])
+        overall_max_R = max(h["risk_R_1_25"] for h in hazards)
+
+        return {
+            "scene_summary": {
+                "work_environment": "지하 역사 내부",
+                "work_height_or_location": "사다리 상부",
+                "observed_safety_facilities": ["안전모", "안전조끼"],
+                "needs_verification": ["사다리 고정 상태"],
+            },
+            "hazards": hazards,
+            "overall": {
+                "overall_grade": overall_grade,
+                "overall_max_R": overall_max_R,
+                "work_permission": overall_grade != "High",
+                "urgent_fix_before_work": ["사다리 고정"],
+            },
+        }
+
+
 class Command(BaseCommand):
     help = 'Idempotently seeds the database with a large volume of mock data for testing.'
-    
+
     def handle(self, *args, **kwargs):
         fake = Faker("ko_KR")
         self.stdout.write("🚀 Seeding apps.user data...")
@@ -420,3 +469,81 @@ class Command(BaseCommand):
                         }
                     )
         self.stdout.write(self.style.SUCCESS("✅ apps.detect seeding completed"))
+
+        # ------------------------------------------------------------------
+        # risk.RiskAssessment, risk.RiskAssessmentImage, risk.WorkerRecommendation, risk.RiskReport
+        # ------------------------------------------------------------------
+        self.stdout.write("🚀 Seeding apps.risk data...")
+
+        assessments: List[RiskAssessment] = []
+
+        for session in WorkSession.objects.all():
+
+            workers = list(
+                session.members.filter(
+                    role=WorkSessionMember.RoleChoices.WORKER
+                ).values_list("user", flat=True)
+            )
+            if not workers:
+                continue
+
+            if session.status == WorkSession.StatusChoices.DONE:
+                employee_id = random.choice(workers)
+                llm = fake_llm_result()
+
+                ra = RiskAssessment.objects.create(
+                    worksession=session,
+                    employee_id=employee_id,
+                    status=RiskAssessment.StatusChoices.COMPLETED,
+                    site_label=session.name,
+                    llm_result=llm,
+                    overall_grade=llm["overall"]["overall_grade"],
+                    overall_max_R=llm["overall"]["overall_max_R"],
+                    work_permission=llm["overall"]["work_permission"],
+                )
+                assessments.append(ra)
+
+            elif session.status == WorkSession.StatusChoices.IN_PROGRESS:
+                if random.random() < 0.4:  # 일부만
+                    employee_id = random.choice(workers)
+                    ra = RiskAssessment.objects.create(
+                        worksession=session,
+                        employee_id=employee_id,
+                        status=RiskAssessment.StatusChoices.PENDING,
+                        site_label=session.name,
+                    )
+                    assessments.append(ra)
+        
+        image_idx = 1
+
+        for ra in assessments:
+            for i in range(3):
+                RiskAssessmentImage.objects.create(
+                    assessment=ra,
+                    blob_name=f"assessment/image{image_idx}.jpg"
+                )
+                image_idx += 1
+        
+        for ra in assessments:
+            if ra.llm_result is None:
+                continue
+
+            views = generate_all_views(ra.llm_result)
+
+            # 관리자 보고서
+            RiskReport.objects.create(
+                assessment=ra,
+                report_version=random.choice(["v1", "v2"]),
+                scene_summary=views["admin_report"]["scene_summary"],
+                hazards=views["admin_report"]["hazards"],
+                overall=views["admin_report"]["overall"],
+            )
+
+            # 근로자 권고
+            wr = views["worker_recommendation"]
+            WorkerRecommendation.objects.create(
+                assessment=ra,
+                top_risks=wr["top_risks"],
+                immediate_actions=wr["immediate_actions"],
+                short_message=wr["short_message"],
+            )
