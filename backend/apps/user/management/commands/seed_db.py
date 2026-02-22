@@ -219,3 +219,90 @@ class Command(BaseCommand):
                             role=WorkSessionMember.RoleChoices.WORKER,
                         )
         self.stdout.write(self.style.SUCCESS(f"✅ apps.worksession seeding completed"))
+
+
+        # ------------------------------------------------------------------
+        # check.Compliance, check.Photo
+        # ------------------------------------------------------------------
+        self.stdout.write("🚀 Seeding apps.check data...")
+
+        # for Photo.image_path
+        target_before_paths = [f"target/before{i}.jpg" for i in range(1, 9)]
+        target_after_paths = [f"target/after{i}.jpg" for i in range(1, 9)]
+        target_before_idx = 0
+        target_after_idx = 0
+
+        # for Compliance.original_image, Compliance.detected_image
+        original_paths = [f"compliance/original{i}.jpg" for i in range(1, 9)] # blob 업로드 후 index 확인
+        detected_paths = [f"compliance/detected{i}.jpg" for i in range(1, 9)]
+        original_idx = 0
+        detected_idx = 0
+
+        for session in WorkSession.objects.all():
+            workers = list(
+                session.members.filter(
+                    role=WorkSessionMember.RoleChoices.WORKER
+                ).values_list("user", flat=True)
+            ) # 2 workers for every session
+
+            if not workers:
+                raise Exception(f"❌ No workers found for session {session.id}")
+            
+            if session.status == WorkSession.StatusChoices.IN_PROGRESS: # BEFORE 사진만 업로드 상태
+                employee_id = random.choice(workers) # 1명이 타겟 포토 업로드
+
+                Photo.objects.create(
+                    employee_id=employee_id,
+                    worksession=session,
+                    status=Photo.StatusChoices.BEFORE,
+                    image_path=target_before_paths[photo_before_idx]
+                )
+                photo_before_idx += 1
+
+            elif session.status == WorkSession.StatusChoices.DONE: # BEFORE/AFTER 사진 모두 업로드 상태
+                for employee_id in workers: # 1명이 BEFROE 업로드, 1명이 AFTER 업로드 가정
+                    Photo.objects.create(
+                        employee_id=employee_id,
+                        worksession=session,
+                        status=Photo.StatusChoices.BEFORE,
+                        image_path=target_before_paths[photo_before_idx % len(target_before_paths)]
+                    )
+                    photo_before_idx += 1
+
+                    Photo.objects.create(
+                        employee_id=employee_id,
+                        worksession=session,
+                        status=Photo.StatusChoices.AFTER,
+                        image_path=target_after_paths[photo_after_idx % len(target_after_paths)]
+                    )
+                    photo_after_idx += 1
+
+            categories = [
+                Compliance.CategoryChoices.HELMET,
+                Compliance.CategoryChoices.VEST,
+                Compliance.CategoryChoices.SHOES,
+            ]
+
+            if session.status == WorkSession.StatusChoices.DONE:
+                target_workers = workers  # 두 명 모두
+
+            elif session.status == WorkSession.StatusChoices.IN_PROGRESS:
+                target_workers = [random.choice(workers)]  # 한 명만
+
+            else:
+                target_workers = []
+
+            for employee_id in target_workers:
+                for category in categories:
+                    Compliance.objects.create(
+                        employee_id=employee_id,
+                        worksession=session,
+                        category=category,
+                        is_complied=True,
+                        original_image=original_paths[original_idx % len(original_paths)],
+                        detected_image=detected_paths[detected_idx % len(detected_paths)],
+                    )
+                    original_idx += 1
+                    detected_idx += 1
+
+        self.stdout.write(self.style.SUCCESS("✅ apps.check seeding completed"))
