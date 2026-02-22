@@ -11,7 +11,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Camera } from 'react-native-vision-camera';
+import RNFS from 'react-native-fs';
 import BaseCamera from '../components/BaseCamera';
+import PhotoResultView from '../components/PhotoResultView';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { HomeStackParamList } from '../../App';
@@ -104,7 +106,7 @@ export default function CaptureWorkScreen() {
             {screenState !== 'idle' && (
                 <>
                     <View style={styles.cameraPreview}>
-                        {screenState === 'camera' ? (
+                        {screenState === 'camera' && (
                             <BaseCamera
                                 ref={cameraRef}
                                 isActive={true}
@@ -112,60 +114,53 @@ export default function CaptureWorkScreen() {
                                 guideText="작업물 상태를 촬영하세요"
                                 onCapture={handleCapture}
                             />
-                        ) : (
-                            <>
-                                <Image
-                                    source={{ uri: photoPath! }}
-                                    style={styles.capturedImage}
-                                />
-
-                                {screenState === 'sending' && (
-                                    <View style={styles.resultCard}>
-                                        <ActivityIndicator size="large" color="#006FFD" />
-                                        <Text style={styles.resultText}>업로드 중...</Text>
-                                    </View>
-                                )}
-
-                                {screenState === 'sent' && (
-                                    <View style={styles.resultCard}>
-                                        <LargeCheckIcon />
-                                        <Text style={styles.resultText}>전송 완료</Text>
-                                    </View>
-                                )}
-                            </>
+                        )}
+                        {screenState === 'preview' && photoPath && (
+                            <PhotoResultView
+                                photoPath={photoPath}
+                                onRetake={handleRetake}
+                                onConfirm={handleSend}
+                                confirmText="사진 보내기"
+                            />
+                        )}
+                        {screenState === 'sending' && photoPath && (
+                            <PhotoResultView
+                                photoPath={photoPath}
+                                onRetake={handleRetake}
+                                onConfirm={handleSend}
+                                confirmText="사진 보내기"
+                                showControls={false}
+                            >
+                                <View style={styles.resultOverlay}>
+                                    <ActivityIndicator size="large" color="#006FFD" />
+                                    <Text style={styles.resultOverlayText}>업로드 중...</Text>
+                                </View>
+                            </PhotoResultView>
+                        )}
+                        {screenState === 'sent' && photoPath && (
+                            <PhotoResultView
+                                photoPath={photoPath}
+                                onRetake={handleRetake}
+                                onConfirm={handleDone}
+                                confirmText="확인"
+                            >
+                                <View style={styles.resultOverlay}>
+                                    <LargeCheckIcon />
+                                    <Text style={styles.resultOverlayText}>전송 완료</Text>
+                                </View>
+                            </PhotoResultView>
                         )}
                     </View>
 
-                    <View
-                        style={[
-                            styles.bottomSection,
-                            { paddingBottom: insets.bottom + 16 },
-                        ]}>
-                        {screenState === 'preview' && (
-                            <View style={styles.buttonRow}>
-                                <TouchableOpacity
-                                    style={styles.retakeButton}
-                                    activeOpacity={0.8}
-                                    onPress={handleRetake}>
-                                    <Text style={styles.retakeButtonText}>다시 찍기</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={styles.sendButton}
-                                    activeOpacity={0.8}
-                                    onPress={handleSend}>
-                                    <Text style={styles.sendButtonText}>사진 보내기</Text>
-                                </TouchableOpacity>
-                            </View>
-                        )}
-                        {screenState === 'sent' && (
-                            <TouchableOpacity
-                                style={styles.doneButton}
-                                activeOpacity={0.8}
-                                onPress={handleDone}>
-                                <Text style={styles.doneButtonText}>확인</Text>
-                            </TouchableOpacity>
-                        )}
-                    </View>
+                    {/* Bottom Spacer Section to match EquipmentCameraScreen Layout */}
+                    {screenState === 'camera' && (
+                        <View
+                            style={[
+                                styles.bottomSection,
+                                { height: insets.bottom + 16 },
+                            ]}
+                        />
+                    )}
                 </>
             )}
         </View>
@@ -251,15 +246,21 @@ const styles = StyleSheet.create({
         flex: 1,
         marginTop: 16,
         marginHorizontal: 15,
-        backgroundColor: '#000000',
-        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'stretch',
+    },
+    resultOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(255, 255, 255, 0.8)',
         justifyContent: 'center',
         alignItems: 'center',
-        overflow: 'hidden',
+        gap: 8,
     },
-    capturedImage: {
-        ...StyleSheet.absoluteFillObject,
-        resizeMode: 'cover',
+    resultOverlayText: {
+        fontFamily: 'Noto Sans KR',
+        fontWeight: '700',
+        fontSize: 20,
+        color: '#1F2024',
     },
     noCameraText: {
         fontFamily: 'Noto Sans KR',
@@ -288,8 +289,8 @@ const styles = StyleSheet.create({
     /* Bottom Buttons */
     bottomSection: {
         alignItems: 'center',
-        paddingTop: 16,
         paddingHorizontal: 20,
+        backgroundColor: '#FFFFFF',
     },
     buttonRow: {
         flexDirection: 'row',

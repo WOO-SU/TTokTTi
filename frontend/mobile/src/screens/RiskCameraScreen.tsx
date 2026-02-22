@@ -10,8 +10,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Camera } from 'react-native-vision-camera';
+import RNFS from 'react-native-fs';
 import BaseCamera from '../components/BaseCamera';
+import PhotoResultView from '../components/PhotoResultView';
 import { useIsFocused } from '@react-navigation/native';
+
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import type { HomeStackParamList } from '../../App';
@@ -88,13 +91,18 @@ export default function RiskCameraScreen({ navigation, route }: Props) {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-
-      <TopHeader title={title} />
+      <TopHeader title={title || '위험 요인 촬영'} />
 
       {/* Camera Preview */}
       <View style={styles.cameraPreview}>
         {photoPath ? (
-          <Image source={{ uri: photoPath }} style={styles.capturedImage} />
+          <PhotoResultView
+            photoPath={photoPath}
+            onRetake={handleRetake}
+            onConfirm={handleConfirm}
+            confirmText="사용하기"
+            isConfirming={isUploading}
+          />
         ) : (
           <BaseCamera
             ref={cameraRef}
@@ -107,31 +115,14 @@ export default function RiskCameraScreen({ navigation, route }: Props) {
         )}
       </View>
 
-      {/* Bottom Buttons */}
-      <View style={[styles.bottomSection, { paddingBottom: insets.bottom + 16 }]}>
-        {photoPath && (
-          <View style={styles.buttonRow}>
-            <TouchableOpacity
-              style={styles.retakeButton}
-              activeOpacity={0.8}
-              disabled={isUploading}
-              onPress={handleRetake}>
-              <Text style={styles.retakeButtonText}>다시 촬영</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.confirmButton}
-              activeOpacity={0.8}
-              disabled={isUploading}
-              onPress={handleConfirm}>
-              {isUploading ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.confirmButtonText}>사용하기</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
+      {!photoPath && (
+        <View
+          style={[
+            styles.bottomSection,
+            { height: insets.bottom + 16 },
+          ]}
+        />
+      )}
     </View>
   );
 }
@@ -148,65 +139,23 @@ const styles = StyleSheet.create({
     flex: 1,
     marginTop: 16,
     marginHorizontal: 15,
-    backgroundColor: '#000000',
-    borderRadius: 20,
     justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  capturedImage: {
-    ...StyleSheet.absoluteFillObject,
-    resizeMode: 'cover',
+    alignItems: 'stretch',
   },
   noCameraText: {
     fontFamily: 'Noto Sans KR',
     fontSize: 14,
-    color: '#FFFFFF',
-  },
-  bottomSection: {
-    alignItems: 'center',
-    paddingTop: 16,
-    paddingHorizontal: 20,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-  },
-  retakeButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: 10,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 2,
-    borderColor: '#006FFD',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  retakeButtonText: {
-    fontFamily: 'Noto Sans KR',
-    fontWeight: '500',
-    fontSize: 16,
-    color: '#006FFD',
-  },
-  confirmButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: 10,
-    backgroundColor: '#006FFD',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  confirmButtonText: {
-    fontFamily: 'Noto Sans KR',
-    fontWeight: '500',
-    fontSize: 16,
-    color: '#FFFFFF',
+    color: '#333333',
   },
   guideText: {
     fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 14,
     color: '#71727A',
+  },
+  bottomSection: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    backgroundColor: '#FFFFFF',
   },
 });

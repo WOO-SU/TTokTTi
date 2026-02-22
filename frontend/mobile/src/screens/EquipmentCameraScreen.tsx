@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Camera } from 'react-native-vision-camera';
 import BaseCamera from '../components/BaseCamera';
+import PhotoResultView from '../components/PhotoResultView';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { useIsFocused } from '@react-navigation/native';
@@ -26,6 +27,7 @@ import {
   fetchCheckUpdate,
   requestManualCheck,
 } from '../api/equipment';
+import LargeCheckIcon from '../components/LargeCheckIcon';
 
 type Props = {
   navigation: NativeStackNavigationProp<
@@ -34,8 +36,6 @@ type Props = {
   >;
   route: RouteProp<HomeStackParamList, 'EquipmentCamera'>;
 };
-
-type ScreenState = 'idle' | 'uploading' | 'analyzing' | 'success' | 'failed';
 
 const POLLING_INTERVAL = 2000;
 const POLLING_TIMEOUT = 60000; // 최대 60초
@@ -47,13 +47,13 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
   const { title, worksession_id } = route.params;
   const { markItemAsCompleted } = useWorkSession();
   const [photoPath, setPhotoPath] = useState<string | null>(null);
-  const [screenState, setScreenState] = useState<ScreenState>('idle');
+  const [isUploading, setIsUploading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const cameraRef = useRef<Camera>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isFocused = useIsFocused();
   const isCameraReadyRef = useRef(false);
-  const complianceIdRef = useRef<number | null>(null);
 
   // 화면 이탈 시 폴링 정리
   useEffect(() => {
@@ -73,7 +73,7 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
         if (pollingRef.current) {
           clearInterval(pollingRef.current);
         }
-        setScreenState('failed');
+        setIsSuccess(false);
         return;
       }
 
@@ -84,14 +84,13 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
           if (pollingRef.current) {
             clearInterval(pollingRef.current);
           }
-          setScreenState(isComplied ? 'success' : 'failed');
+          setIsSuccess(isComplied ?? false);
         }
-        // isUpdated === false → 아직 분석 중, 계속 폴링
       } catch {
         if (pollingRef.current) {
           clearInterval(pollingRef.current);
         }
-        setScreenState('failed');
+        setIsSuccess(false);
       }
     }, POLLING_INTERVAL);
   }, []);
@@ -104,60 +103,40 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
     }
 
     try {
+      setIsUploading(true);
       // 1. 사진 촬영
       const photo = await cameraRef.current.takePhoto();
       const fileUri = `file://${photo.path}`;
       setPhotoPath(fileUri);
-      setScreenState('uploading');
 
       // 2. SAS 토큰 발급 → Blob 업로드
       const { upload_url, blob_name } = await getSasToken();
       await uploadToBlob(upload_url, fileUri);
 
       // 3. 탐지 요청 (DB에 Compliance 레코드 생성)
-      setScreenState('analyzing');
+      setIsUploading(true);
       const complianceId = await requestDetection(blob_name, title, worksession_id);
-      complianceIdRef.current = complianceId;
 
       // 4. 폴링 시작
       startPolling(complianceId);
     } catch (err) {
       console.error('handleCapture error:', err);
-      if (!photoPath) {
-        setScreenState('failed');
-      }
+      setIsSuccess(false);
+    } finally {
+      setIsUploading(false);
     }
-  }, [title, worksession_id, startPolling, photoPath]);
+  }, [title, worksession_id, startPolling]);
 
   const handleRetake = useCallback(() => {
-    if (pollingRef.current) {
-      clearInterval(pollingRef.current);
-    }
     setPhotoPath(null);
-    setScreenState('idle');
+    setIsUploading(false);
+    setIsSuccess(false);
   }, []);
 
-  const handleContinue = () => {
+  const handleConfirm = useCallback(() => {
     markItemAsCompleted(title);
     navigation.goBack();
-  };
-
-  const handleManualRequest = useCallback(async () => {
-    const complianceId = complianceIdRef.current;
-    if (!complianceId) {
-      console.warn('No compliance ID available for manual request');
-      return;
-    }
-    try {
-      await requestManualCheck(worksession_id, complianceId);
-      console.log('[ManualRequest] 수동 점검 요청 완료');
-      navigation.goBack();
-    } catch (err) {
-      console.error('[ManualRequest] 요청 실패:', err);
-    }
-  }, [worksession_id, navigation]);
-
-  const isProcessing = screenState === 'uploading' || screenState === 'analyzing';
+  }, [markItemAsCompleted, navigation, title]);
 
   return (
     <View style={styles.container}>
@@ -168,70 +147,24 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
       {/* Camera Preview Area */}
       <View style={styles.cameraPreview}>
         {photoPath ? (
-          <>
-            <Image source={{ uri: photoPath }} style={styles.capturedImage} />
-
-            {/* 로딩 상태: 업로드 중 / 분석 중 */}
-            {isProcessing && (
-              <View style={styles.resultCard}>
-                <ActivityIndicator size="large" color="#006FFD" />
-                <Text style={styles.resultText}>
-                  {screenState === 'uploading' ? '업로드 중...' : '분석 중...'}
-                </Text>
+          <PhotoResultView
+            photoPath={photoPath}
+            onRetake={handleRetake}
+            onConfirm={handleConfirm}
+            confirmText="선택"
+            isConfirming={isUploading}
+          >
+            {isSuccess && (
+              <View style={styles.resultCardOverlay}>
+                <LargeCheckIcon />
+                <Text style={styles.resultText}>전송 완료</Text>
               </View>
             )}
-
-            {/* 성공 */}
-            {screenState === 'success' && (
-              <View style={styles.resultCard}>
-                <View style={styles.largeCheckContainer}>
-                  <View style={styles.largeCheckShort} />
-                  <View style={styles.largeCheckLong} />
-                </View>
-                <Text style={styles.failedText}>다음 단계로 이동</Text>
-
-                <View style={styles.buttonRow}>
-                  <TouchableOpacity
-                    style={[styles.retakeButton, { width: 250 }]} // Full width button
-                    activeOpacity={0.8}
-                    onPress={handleContinue}>
-                    <Text style={styles.retakeButtonText}>확인</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-
-            {/* 실패 */}
-            {screenState === 'failed' && (
-              <View style={styles.resultCard}>
-                <View style={styles.largeCheckContainer}>
-                  <View style={styles.xLine1} />
-                  <View style={styles.xLine2} />
-                </View>
-                <Text style={styles.failedText}>다시 촬영해 주세요.</Text>
-
-                <View style={styles.buttonRow}>
-                  <TouchableOpacity
-                    style={styles.errorButton}
-                    activeOpacity={0.8}
-                    onPress={handleManualRequest}>
-                    <Text style={styles.errorButtonText}>오류 전송</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.retakeButton}
-                    activeOpacity={0.8}
-                    onPress={handleRetake}>
-                    <Text style={styles.retakeButtonText}>재촬영</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-          </>
+          </PhotoResultView>
         ) : (
           <BaseCamera
             ref={cameraRef}
-            isActive={isFocused && screenState === 'idle' && !photoPath}
+            isActive={isFocused && !photoPath}
             photo={true}
             guideText={`${title} 사진을 촬영하세요`}
             onCapture={handleCapture}
@@ -240,13 +173,15 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
         )}
       </View>
 
-      {/* Empty Bottom Section for matching RiskCameraScreen Layout */}
-      <View
-        style={[
-          styles.bottomSection,
-          { height: 16 + insets.bottom + 16 },
-        ]}
-      />
+      {/* Bottom Spacer Section to match EquipmentCameraScreen Layout */}
+      {!photoPath && (
+        <View
+          style={[
+            styles.bottomSection,
+            { height: insets.bottom + 16 },
+          ]}
+        />
+      )}
     </View>
   );
 }
@@ -282,30 +217,25 @@ const styles = StyleSheet.create({
     flex: 1,
     marginTop: 16,
     marginHorizontal: 15,
-    backgroundColor: '#000000',
-    borderRadius: 20,
     justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
+    alignItems: 'stretch',
   },
   capturedImage: {
-    ...StyleSheet.absoluteFillObject,
-    resizeMode: 'cover',
+    flex: 1,
+    borderRadius: 20,
   },
   noCameraText: {
     fontFamily: 'Noto Sans KR',
     fontSize: 14,
     color: '#FFFFFF',
   },
-  resultCard: {
-    width: 300,            // Increased width for button row
-    paddingVertical: 32,   // Added vertical padding
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+  resultCardOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 24,               // Increased gap
-    zIndex: 1,
+    gap: 8,
+    borderRadius: 20,
   },
   resultText: {
     fontFamily: 'Noto Sans KR',

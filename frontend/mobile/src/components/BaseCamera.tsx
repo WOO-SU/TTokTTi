@@ -14,6 +14,7 @@ export interface BaseCameraProps {
     audio?: boolean;
     guideText?: string;
     showControls?: boolean;
+    isRecording?: boolean;
     onCapture?: () => void;
     onInitialized?: () => void;
     children?: React.ReactNode;
@@ -28,6 +29,7 @@ const BaseCamera = forwardRef<Camera, BaseCameraProps>(
             audio = false,
             guideText,
             showControls = true,
+            isRecording = false,
             onCapture,
             onInitialized,
             children,
@@ -72,7 +74,7 @@ const BaseCamera = forwardRef<Camera, BaseCameraProps>(
             <View style={[StyleSheet.absoluteFill, styles.container]}>
                 <Camera
                     ref={ref}
-                    style={StyleSheet.absoluteFill}
+                    style={[StyleSheet.absoluteFill, { borderRadius: 20, overflow: 'hidden' }]}
                     device={device}
                     isActive={isActive}
                     photo={photo}
@@ -92,15 +94,22 @@ const BaseCamera = forwardRef<Camera, BaseCameraProps>(
 
                         {onCapture && (
                             <TouchableOpacity
-                                style={styles.captureButton}
+                                style={[
+                                    styles.captureButton,
+                                    isRecording && styles.captureButtonRecording
+                                ]}
                                 activeOpacity={0.7}
                                 onPress={onCapture}>
-                                <View style={styles.cameraContainer}>
-                                    <View style={styles.cameraBody}>
-                                        <View style={styles.cameraLens} />
+                                {isRecording ? (
+                                    <View style={styles.stopIcon} />
+                                ) : (
+                                    <View style={styles.cameraContainer}>
+                                        <View style={styles.cameraBody}>
+                                            <View style={styles.cameraLens} />
+                                        </View>
+                                        <View style={styles.cameraTop} />
                                     </View>
-                                    <View style={styles.cameraTop} />
-                                </View>
+                                )}
                             </TouchableOpacity>
                         )}
 
@@ -132,6 +141,8 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         width: '100%',
+        borderRadius: 20,
+        overflow: 'hidden',
     },
     fallbackContainer: {
         flex: 1,
@@ -155,6 +166,9 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 24,
         alignSelf: 'center',
+    },
+    captureButtonRecording: {
+        backgroundColor: '#FF3B30',
     },
     flipButton: {
         width: 44,
@@ -213,6 +227,12 @@ const styles = StyleSheet.create({
         height: 10,
         borderRadius: 5,
         backgroundColor: '#006FFD',
+    },
+    stopIcon: {
+        width: 20,
+        height: 20,
+        borderRadius: 4,
+        backgroundColor: '#FFFFFF',
     },
     /* Sync Icon (Flip Button) - Single Arrow Refresh Style */
     syncIconContainer: {

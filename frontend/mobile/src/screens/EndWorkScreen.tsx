@@ -13,10 +13,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Camera, useCameraPermission } from 'react-native-vision-camera';
+import RNFS from 'react-native-fs';
 import BaseCamera from '../components/BaseCamera';
+import PhotoResultView from '../components/PhotoResultView';
+import { useAuth } from '../context/AuthContext';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { HomeStackParamList } from '../../App';
 import TopHeader from '../components/TopHeader';
+import LargeCheckIcon from '../components/LargeCheckIcon';
 import { getSasToken, uploadToBlob } from '../api/equipment';
 
 type Props = {
@@ -26,15 +30,6 @@ type Props = {
 type ScreenState = 'idle' | 'camera' | 'preview' | 'sending' | 'sent';
 
 /* ──────── Icon Components ──────── */
-
-function LargeCheckIcon() {
-  return (
-    <View style={iconStyles.largeCheckContainer}>
-      <View style={iconStyles.largeCheckShort} />
-      <View style={iconStyles.largeCheckLong} />
-    </View>
-  );
-}
 
 export default function EndWorkScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
@@ -88,6 +83,10 @@ export default function EndWorkScreen({ navigation }: Props) {
     }
   }, [photoPath]);
 
+  const handleConfirm = useCallback(() => {
+    handleSend();
+  }, [handleSend]);
+
   const handleDone = useCallback(() => {
     navigation.navigate('MainHome');
   }, [navigation]);
@@ -114,71 +113,62 @@ export default function EndWorkScreen({ navigation }: Props) {
 
       {/* Camera & Preview States */}
       {screenState !== 'idle' && (
-        <>
-          <View style={styles.cameraPreview}>
-            {screenState === 'camera' ? (
-              <BaseCamera
-                ref={cameraRef}
-                isActive={true}
-                photo={true}
-                guideText="마무리 현장을 촬영하세요"
-                onCapture={handleCapture}
-              />
-            ) : (
-              <>
-                <Image
-                  source={{ uri: photoPath! }}
-                  style={styles.capturedImage}
-                />
+        <View style={styles.cameraPreview}>
+          {screenState === 'camera' && (
+            <BaseCamera
+              ref={cameraRef}
+              isActive={true}
+              photo={true}
+              guideText="마무리 현장을 촬영하세요"
+              onCapture={handleCapture}
+            />
+          )}
 
-                {screenState === 'sending' && (
-                  <View style={styles.resultCard}>
-                    <ActivityIndicator size="large" color="#006FFD" />
-                    <Text style={styles.resultText}>업로드 중...</Text>
-                  </View>
-                )}
-
-                {screenState === 'sent' && (
-                  <View style={styles.resultCard}>
-                    <LargeCheckIcon />
-                    <Text style={styles.resultText}>전송 완료</Text>
-                  </View>
-                )}
-              </>
-            )}
-          </View>
-
-          <View
-            style={[
-              styles.bottomSection,
-              { paddingBottom: insets.bottom + 16 },
-            ]}>
-            {screenState === 'preview' && (
-              <View style={styles.buttonRow}>
-                <TouchableOpacity
-                  style={styles.retakeButton}
-                  activeOpacity={0.8}
-                  onPress={handleRetake}>
-                  <Text style={styles.retakeButtonText}>다시 찍기</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.sendButton}
-                  activeOpacity={0.8}
-                  onPress={handleSend}>
-                  <Text style={styles.sendButtonText}>사진 보내기</Text>
-                </TouchableOpacity>
+          {screenState === 'preview' && photoPath && (
+            <PhotoResultView
+              photoPath={photoPath}
+              onRetake={handleRetake}
+              onConfirm={handleConfirm}
+              confirmText="전송"
+            />
+          )}
+          {screenState === 'sending' && photoPath && (
+            <PhotoResultView
+              photoPath={photoPath}
+              onRetake={handleRetake}
+              onConfirm={handleConfirm}
+              confirmText="전송"
+              isConfirming={true}
+            >
+              <View style={styles.resultCardOverlay}>
+                <ActivityIndicator size="large" color="#006FFD" />
+                <Text style={styles.resultText}>업로드 중...</Text>
               </View>
-            )}
-            {screenState === 'sent' && (
-              <TouchableOpacity
-                style={styles.doneButton}
-                activeOpacity={0.8}
-                onPress={handleDone}>
-                <Text style={styles.doneButtonText}>확인</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </>
+            </PhotoResultView>
+          )}
+          {screenState === 'sent' && photoPath && (
+            <PhotoResultView
+              photoPath={photoPath}
+              onRetake={handleRetake}
+              onConfirm={handleDone}
+              confirmText="완료"
+            >
+              <View style={styles.resultCardOverlay}>
+                <LargeCheckIcon />
+                <Text style={styles.resultText}>전송 완료</Text>
+              </View>
+            </PhotoResultView>
+          )}
+        </View>
+      )}
+
+      {screenState === 'camera' && (
+        <View
+          style={[
+            styles.bottomSection,
+            { height: insets.bottom + 16 },
+          ]}
+        />
       )}
     </View>
   );
@@ -305,93 +295,33 @@ const styles = StyleSheet.create({
     flex: 1,
     marginTop: 16,
     marginHorizontal: 15,
-    backgroundColor: '#000000',
-    borderRadius: 20,
     justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  capturedImage: {
-    ...StyleSheet.absoluteFillObject,
-    resizeMode: 'cover',
+    alignItems: 'stretch',
   },
   noCameraText: {
     fontFamily: 'Noto Sans KR',
     fontSize: 14,
-    color: '#FFFFFF',
+    color: '#333333',
   },
 
   /* Result Card */
-  resultCard: {
-    width: 229,
-    height: 169,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+  resultCardOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
-    zIndex: 1,
+    borderRadius: 20,
   },
   resultText: {
     fontFamily: 'Noto Sans KR',
-    fontWeight: '400',
+    fontWeight: '700',
     fontSize: 20,
-    color: '#000000',
+    color: '#1F2024',
   },
-
-  /* Bottom Buttons */
   bottomSection: {
     alignItems: 'center',
-    paddingTop: 16,
     paddingHorizontal: 20,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-  },
-  retakeButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: 10,
     backgroundColor: '#FFFFFF',
-    borderWidth: 2,
-    borderColor: '#006FFD',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  retakeButtonText: {
-    fontFamily: 'Noto Sans KR',
-    fontWeight: '500',
-    fontSize: 16,
-    color: '#006FFD',
-  },
-  sendButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: 10,
-    backgroundColor: '#006FFD',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sendButtonText: {
-    fontFamily: 'Noto Sans KR',
-    fontWeight: '500',
-    fontSize: 16,
-    color: '#FFFFFF',
-  },
-  doneButton: {
-    width: '100%',
-    height: 48,
-    borderRadius: 10,
-    backgroundColor: '#006FFD',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  doneButtonText: {
-    fontFamily: 'Noto Sans KR',
-    fontWeight: '500',
-    fontSize: 16,
-    color: '#FFFFFF',
   },
 });

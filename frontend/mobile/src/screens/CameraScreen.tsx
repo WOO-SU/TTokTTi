@@ -28,27 +28,6 @@ type Props = {
   route: RouteProp<RootStackParamList, 'Camera'>;
 };
 
-/* ──────── Icon Components ──────── */
-
-function CameraIcon() {
-  return (
-    <View style={iconStyles.cameraContainer}>
-      <View style={iconStyles.cameraBody}>
-        <View style={iconStyles.cameraLens} />
-      </View>
-      <View style={iconStyles.cameraTop} />
-    </View>
-  );
-}
-
-function StopIcon() {
-  return (
-    <View style={iconStyles.stopContainer}>
-      <View style={iconStyles.stopSquare} />
-    </View>
-  );
-}
-
 /* ──────── Main Component ──────── */
 
 export default function CameraScreen({ navigation, route }: Props) {
@@ -140,30 +119,18 @@ export default function CameraScreen({ navigation, route }: Props) {
           isActive={true}
           video={true}
           audio={true}
-        >
-          {/* Record / Stop Button */}
-          <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', paddingBottom: 24 }}>
-            <TouchableOpacity
-              style={[
-                styles.captureButton,
-                isRecording && styles.captureButtonRecording,
-              ]}
-              activeOpacity={0.7}
-              onPress={handleToggleRecording}>
-              {isRecording ? <StopIcon /> : <CameraIcon />}
-            </TouchableOpacity>
-          </View>
-        </BaseCamera>
+          isRecording={isRecording}
+          onCapture={handleToggleRecording}
+        />
       </View>
 
-      {/* Continue Button */}
+      {/* Bottom Spacer Section to match EquipmentCameraScreen Layout */}
       <View
-        style={[styles.continueSection, { paddingBottom: insets.bottom + 16 }]}>
-        <TouchableOpacity style={styles.continueButton} activeOpacity={0.8}>
-          <Text style={styles.continueText}>Continue</Text>
-        </TouchableOpacity>
-      </View>
-
+        style={[
+          styles.bottomSection,
+          { height: insets.bottom + 16 },
+        ]}
+      />
       {/* Alert Modal */}
       <Modal
         visible={alertVisible}
@@ -192,56 +159,6 @@ export default function CameraScreen({ navigation, route }: Props) {
   );
 }
 
-/* ──────── Icon Styles ──────── */
-
-const iconStyles = StyleSheet.create({
-  cameraContainer: {
-    width: 28,
-    height: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cameraBody: {
-    width: 24,
-    height: 18,
-    borderWidth: 2,
-    borderColor: '#F8F8F8',
-    borderRadius: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'absolute',
-    bottom: 2,
-  },
-  cameraLens: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    borderWidth: 2,
-    borderColor: '#F8F8F8',
-  },
-  cameraTop: {
-    width: 10,
-    height: 4,
-    borderTopLeftRadius: 2,
-    borderTopRightRadius: 2,
-    backgroundColor: '#F8F8F8',
-    position: 'absolute',
-    top: 2,
-  },
-  stopContainer: {
-    width: 28,
-    height: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  stopSquare: {
-    width: 16,
-    height: 16,
-    borderRadius: 3,
-    backgroundColor: '#FFFFFF',
-  },
-});
-
 /* ──────── Main Styles ──────── */
 
 const styles = StyleSheet.create({
@@ -253,40 +170,13 @@ const styles = StyleSheet.create({
   /* Camera Preview */
   cameraPreview: {
     flex: 1,
+    marginTop: 16,
     marginHorizontal: 15,
-    backgroundColor: '#000000',
-    overflow: 'hidden',
   },
-  captureButton: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: '#006FFD',
-    justifyContent: 'center',
+  bottomSection: {
     alignItems: 'center',
-  },
-  captureButtonRecording: {
-    backgroundColor: '#FF3B30',
-  },
-
-  /* Continue Button */
-  continueSection: {
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  continueButton: {
-    width: 153,
-    height: 38,
-    borderRadius: 15,
-    backgroundColor: '#006FFD',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  continueText: {
-    fontFamily: 'Noto Sans KR',
-    fontWeight: '400',
-    fontSize: 14,
-    color: '#F6F6F6',
+    paddingHorizontal: 20,
+    backgroundColor: '#FFFFFF',
   },
 
   // Modal Styles
