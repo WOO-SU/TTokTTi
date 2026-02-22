@@ -14,6 +14,7 @@ import type { RouteProp } from '@react-navigation/native';
 import type { HomeStackParamList } from '../../App';
 import TopHeader from '../components/TopHeader';
 import { useWorkSession } from '../context/WorkSessionContext';
+import CheckCard from '../components/CheckCard';
 
 type Props = {
   navigation: NativeStackNavigationProp<
@@ -62,15 +63,6 @@ function BackArrowIcon() {
   );
 }
 
-function CheckIcon() {
-  return (
-    <View style={iconStyles.checkContainer}>
-      <View style={iconStyles.checkShort} />
-      <View style={iconStyles.checkLong} />
-    </View>
-  );
-}
-
 /* ──────── Main Component ──────── */
 
 export default function SafetyEquipmentCheckScreen({
@@ -105,36 +97,19 @@ export default function SafetyEquipmentCheckScreen({
           {rows.map((row, rowIndex) => (
             <View key={rowIndex} style={styles.gridRow}>
               {row.map(item => (
-                <TouchableOpacity
+                <CheckCard
                   key={item.id}
-                  style={styles.equipmentCard}
-                  activeOpacity={0.8}
+                  title={item.title}
+                  image={item.image}
+                  isChecked={item.checked}
                   onPress={() => {
                     if (item.checked) return;
                     navigation.navigate('EquipmentCamera', {
                       title: item.title,
                       worksession_id,
                     });
-                  }}>
-                  <View style={styles.cardBorder} />
-                  <Image
-                    source={item.image}
-                    style={styles.cardImage}
-                    resizeMode="contain"
-                  />
-                  <View style={styles.cardBottom}>
-                    <Text style={styles.cardLabel}>{item.title}</Text>
-                    <View
-                      style={[
-                        styles.checkbox,
-                        item.checked
-                          ? styles.checkboxChecked
-                          : styles.checkboxUnchecked,
-                      ]}>
-                      {item.checked && <CheckIcon />}
-                    </View>
-                  </View>
-                </TouchableOpacity>
+                  }}
+                />
               ))}
             </View>
           ))}
@@ -172,32 +147,6 @@ const iconStyles = StyleSheet.create({
     position: 'absolute',
     transform: [{ rotate: '45deg' }, { translateY: 5.5 }],
   },
-  checkContainer: {
-    width: 10,
-    height: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkShort: {
-    width: 5,
-    height: 1.5,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 1,
-    position: 'absolute',
-    left: 0,
-    bottom: 1,
-    transform: [{ rotate: '45deg' }],
-  },
-  checkLong: {
-    width: 9,
-    height: 1.5,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 1,
-    position: 'absolute',
-    right: 0,
-    bottom: 2.5,
-    transform: [{ rotate: '-45deg' }],
-  },
 });
 
 /* ──────── Main Styles ──────── */
@@ -222,70 +171,4 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     gap: 20,
   },
-
-  /* Equipment Card */
-  equipmentCard: {
-    width: 154.5,
-    height: 154.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: [
-      {
-        offsetX: 0,
-        offsetY: 4,
-        blurRadius: 4,
-        spreadDistance: 0,
-        color: 'rgba(0, 0, 0, 0.25)',
-      },
-    ],
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  cardBorder: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 20,
-    borderWidth: 5,
-    borderColor: '#EAF2FF',
-  },
-  cardImage: {
-    width: 100,
-    height: 100,
-  },
-  cardBottom: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 4,
-  },
-  cardLabel: {
-    fontFamily: 'Noto Sans KR',
-    fontWeight: '400',
-    fontSize: 15,
-    color: '#000000',
-  },
-
-  /* Checkbox */
-  checkbox: {
-    width: 16,
-    height: 16,
-    borderRadius: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: '#006FFD',
-    borderWidth: 1.5,
-    borderColor: '#006FFD',
-  },
-  checkboxUnchecked: {
-    backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: '#C5C6CC',
-  },
-
-  /* Button */
 });
