@@ -1,14 +1,25 @@
 # RiskPulse
 
-## Now working (`2/19` 17:30) 
+## Now working (`2/21` 12:50)
+- images: `riskpulse_db`, `riskpulse_redis`, `riskpulse_be`, `riskpulse_fe_web`
 ```bash
 cd RiskPulse # at project root, 
-docker compose up
+docker compose up -d
 ```
 - After running docker compose up, check Docker Desktop
 - Make sure the backend container is running
-- In some cases, the backend container does not start automatically
+- In some cases, the backend and fe-web container does not start automatically
 → If so, start it manually using the Run button in Docker Desktop
+```bash
+docker compose exec backend python manage.py migrate
+docker compose exec backend python manage.py createsuperuser
+# then, enter your information for temporal login
+```
+- You can enter web by `http://localhost:3000/`
+- If you ran container detached, view logs with
+```bash
+docker logs -f riskpulse-backend # same for other images
+```
 
 ## Full Reset (Including DB Volume)
 - This will remove all data, including the database volume. Use this when you’ve changed .env or need a full clean slate.
@@ -16,19 +27,6 @@ docker compose up
 docker compose down -v
 docker compose up --build
 ```
-
-## Start Web
-```
-docker compose up -d
-docker compose exec backend python manage.py migrate
-docker compose exec backend python manage.py createsuperuser
-# then, enter your information for temporal login
-
-cd frontend/web
-npm install # just for the first time
-npm run dev
-```
-- Then, you can check on `http://localhost:3000/` 
 
 ## Start App (Android Studio)
 1. Open `/frontend/mobile/android` project at Android Studio
@@ -62,40 +60,6 @@ npm run android
 ```
 ---
 
-```bash
-docker compose --env-file .env up -d --build
-```
-
-## First time setup
-```bash
-python3.11 -m venv .venv
-. .venv/bin/activate
-chmod +x backend/entrypoint.sh
-pip install -r requirements.txt
-```
-
-## Backend docker build (build from backend root)
-```bash
-docker build -t riskpulse-backend -f ./Dockerfile ./
-```
-
-after that, test by
-```bash
-docker run --rm -it --env-file .env  -p 8000:8000 riskpulse-backend web
-```
-
-If you ran container detached, view logs with
-```bash
-docker logs -f riskpulse-backend
-```
-
-If you modified backend code, then to apply that change, 
-```bash
-docker rmi riskpulse-backend
-```
-then re-build it.
-
-## Frontend docker build (build from frontend root)
 
 ## todos
 TODO 1 : nvidia-container-toolkit installed on your Linux host for this to work. (worker)
