@@ -21,6 +21,7 @@ import type { HomeStackParamList } from '../../App';
 import TopHeader from '../components/TopHeader';
 import { getSasToken, uploadToBlob } from '../api/equipment';
 import { startRiskAssessment, uploadRiskPhoto } from '../api/risk';
+import { useRiskPhotos } from '../context/RiskPhotoContext';
 
 type Props = {
   navigation: NativeStackNavigationProp<HomeStackParamList, 'RiskCamera'>;
@@ -34,6 +35,7 @@ export default function RiskCameraScreen({ navigation, route }: Props) {
   const { title, worksession_id, assessmentId } = route.params;
   const [photoPath, setPhotoPath] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const { addPhoto } = useRiskPhotos();
 
   const cameraRef = useRef<Camera>(null);
   const isCameraReadyRef = useRef(false);
@@ -75,11 +77,13 @@ export default function RiskCameraScreen({ navigation, route }: Props) {
       // 3. blob path DB 저장
       await uploadRiskPhoto(finalAssessmentId, blob_name);
 
-      // 4. RiskCheck로 돌아감 — assessmentId 및 completedTitle 전달
+      // 4. 전역 컨텍스트에 기록
+      addPhoto(title, photoPath);
+
+      // 5. RiskCheck로 돌아감 — assessmentId 전달
       navigation.navigate('RiskCheck', {
         worksession_id,
         assessmentId: finalAssessmentId,
-        completedTitle: title,
       });
     } catch (err) {
       console.error('[RiskCamera] 업로드 실패:', err);

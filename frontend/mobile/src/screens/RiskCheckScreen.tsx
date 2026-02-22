@@ -17,6 +17,7 @@ import type { HomeStackParamList } from '../../App';
 import TopHeader from '../components/TopHeader';
 import { requestRiskAssess } from '../api/risk';
 import CheckCard from '../components/CheckCard';
+import { useRiskPhotos } from '../context/RiskPhotoContext';
 
 type Props = {
   navigation: NativeStackNavigationProp<HomeStackParamList, 'RiskCheck'>;
@@ -56,7 +57,7 @@ const INITIAL_ITEMS: CheckItem[] = [
 export default function RiskCheckScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { worksession_id } = route.params;
-  const [items, setItems] = useState<CheckItem[]>(INITIAL_ITEMS);
+  const { photos } = useRiskPhotos();
   const [isRequesting, setIsRequesting] = useState(false);
 
   // assessment_id는 RiskCamera에서 첫 사진 업로드 후 params로 전달됨
@@ -82,25 +83,12 @@ export default function RiskCheckScreen({ navigation, route }: Props) {
     });
   };
 
-  // 카드를 촬영 완료된 것으로 표시 (RiskCamera가 navigate back할 때 처리 필요)
-  // 현재는 간단히 navigate 후 focus 시 업데이트
-  useFocusEffect(
-    useCallback(() => {
-      // assessmentId가 생기면 촬영된 항목 표시는 RiskCamera가 params로 completedTitle 전달
-      const completedTitle = (route.params as any).completedTitle;
-      if (completedTitle) {
-        setItems(prev =>
-          prev.map(item =>
-            item.title === completedTitle
-              ? { ...item, hasPhoto: true }
-              : item,
-          ),
-        );
-      }
-    }, [(route.params as any).completedTitle]),
-  );
+  const displayItems = INITIAL_ITEMS.map(item => ({
+    ...item,
+    hasPhoto: photos.some(p => p.title === item.title),
+  }));
 
-  const hasAnyPhoto = items.some(item => item.hasPhoto);
+  const hasAnyPhoto = displayItems.some(item => item.hasPhoto);
 
   const handleRequest = async () => {
     const assessmentId = assessmentIdRef.current;
@@ -120,8 +108,8 @@ export default function RiskCheckScreen({ navigation, route }: Props) {
   };
 
   const rows: CheckItem[][] = [];
-  for (let i = 0; i < items.length; i += 2) {
-    rows.push(items.slice(i, i + 2));
+  for (let i = 0; i < displayItems.length; i += 2) {
+    rows.push(displayItems.slice(i, i + 2));
   }
 
   return (

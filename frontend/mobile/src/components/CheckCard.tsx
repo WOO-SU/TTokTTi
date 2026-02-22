@@ -87,17 +87,18 @@ const styles = StyleSheet.create({
         height: 154.5,
         alignItems: 'center',
         justifyContent: 'center',
-        borderRadius: 20,
+        backgroundColor: '#F8F9FE',
+        borderRadius: 16,
         overflow: 'hidden',
-        boxShadow: [
-            {
-                offsetX: 0,
-                offsetY: 4,
-                blurRadius: 4,
-                spreadDistance: 0,
-                color: 'rgba(0, 0, 0, 0.25)',
-            },
-        ],
+        // MenuBanner shadow style
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.05,
+        shadowRadius: 3.84,
+        elevation: 2,
     },
     cardDone: {
         opacity: 0.85,
@@ -108,9 +109,9 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
-        borderRadius: 20,
+        borderRadius: 16,
         borderWidth: 5,
-        borderColor: '#EAF2FF',
+        borderColor: 'transparent',
     },
     cardBorderDone: {
         borderColor: '#006FFD',

@@ -13,6 +13,7 @@ import type { RouteProp } from '@react-navigation/native';
 import type { HomeStackParamList } from '../../App';
 import TopHeader from '../components/TopHeader';
 import { checkLatestRisk } from '../api/risk';
+import { useRiskPhotos } from '../context/RiskPhotoContext';
 
 type Props = {
   navigation: NativeStackNavigationProp<HomeStackParamList, 'RiskAssessment'>;
@@ -35,6 +36,7 @@ function BackArrowIcon() {
 export default function RiskAssessmentScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { worksession_id } = route.params;
+  const { clearPhotos } = useRiskPhotos();
 
   useEffect(() => {
     async function checkAndNavigate() {
@@ -46,11 +48,12 @@ export default function RiskAssessmentScreen({ navigation, route }: Props) {
             worksession_id,
           });
         } else {
+          clearPhotos();
           navigation.replace('RiskCheck', { worksession_id });
         }
       } catch (err) {
         console.error('[RiskAssessment] checkLatestRisk 실패:', err);
-        // 에러 시 촬영 화면으로 이동
+        clearPhotos();
         navigation.replace('RiskCheck', { worksession_id });
       }
     }
