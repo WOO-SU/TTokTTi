@@ -7,4 +7,6 @@ urlpatterns = [
     path("check/", include("apps.check.urls")),
     path("detect/", include("apps.detect.urls")),
     path("incident/", include("apps.incident.urls")),
+    path("report/", include("apps.report.urls")),
+    path("worksession/", include("apps.worksession.urls")),
 ]

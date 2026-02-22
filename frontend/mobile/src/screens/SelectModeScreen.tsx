@@ -10,25 +10,20 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../App';
+import type { CompositeNavigationProp } from '@react-navigation/native';
+import { HomeStackParamList, RootStackParamList } from '../../App';
+import TopHeader from '../components/TopHeader';
+import MenuBanner from '../components/MenuBanner';
 
 const tripodImage = require('../assets/tripod-character.png');
 const ladderImage = require('../assets/ladder-character.png');
 
 type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'SelectMode'>;
+  navigation: CompositeNavigationProp<
+    NativeStackNavigationProp<HomeStackParamList, 'SelectMode'>,
+    NativeStackNavigationProp<RootStackParamList>
+  >;
 };
-
-/* ──────── Back Arrow Icon ──────── */
-
-function BackArrowIcon() {
-  return (
-    <View style={iconStyles.backContainer}>
-      <View style={iconStyles.backArrowTop} />
-      <View style={iconStyles.backArrowBottom} />
-    </View>
-  );
-}
 
 /* ──────── Main Component ──────── */
 
@@ -39,53 +34,30 @@ export default function SelectModeScreen({ navigation }: Props) {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Nav Bar */}
-      <View style={[styles.navBar, { paddingTop: insets.top }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <BackArrowIcon />
-        </TouchableOpacity>
-        <Text style={styles.pageTitle}>사용 방식 선택</Text>
-        <View style={styles.backButton} />
-      </View>
+      <TopHeader title="사용 방식 선택" />
 
       {/* Content */}
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 24 }]}
         bounces={false}
         showsVerticalScrollIndicator={false}>
         <View style={styles.cardsContainer}>
           {/* Card 1: 전체 */}
-          <TouchableOpacity
-            style={styles.card}
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate('Camera', { mode: 'all' })}>
-            <View style={styles.cardBackground}>
-              <Image
-                source={tripodImage}
-                style={styles.cardImage1}
-                resizeMode="contain"
-              />
-              <Text style={styles.cardText}>전체</Text>
-            </View>
-          </TouchableOpacity>
+          <MenuBanner
+            title="전체"
+            imageSource={tripodImage}
+            imageStyle={styles.cardImage1}
+            onPress={() => navigation.navigate('Camera', { mode: 'all' })}
+          />
 
           {/* Card 2: 작업자 */}
-          <TouchableOpacity
-            style={styles.card}
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate('Camera', { mode: 'worker' })}>
-            <View style={styles.cardBackground}>
-              <Image
-                source={ladderImage}
-                style={styles.cardImage2}
-                resizeMode="contain"
-              />
-              <Text style={styles.cardText}>작업자</Text>
-            </View>
-          </TouchableOpacity>
+          <MenuBanner
+            title="작업자"
+            imageSource={ladderImage}
+            imageStyle={styles.cardImage2}
+            onPress={() => navigation.navigate('Camera', { mode: 'worker' })}
+          />
         </View>
       </ScrollView>
     </View>
@@ -96,26 +68,26 @@ export default function SelectModeScreen({ navigation }: Props) {
 
 const iconStyles = StyleSheet.create({
   backContainer: {
-    width: 20,
-    height: 20,
+    width: 28,
+    height: 28,
     justifyContent: 'center',
     alignItems: 'center',
   },
   backArrowTop: {
-    width: 12,
+    width: 14,
     height: 2,
     backgroundColor: '#006FFD',
     borderRadius: 1,
     position: 'absolute',
-    transform: [{ rotate: '-45deg' }, { translateY: -3.5 }],
+    transform: [{ rotate: '-45deg' }, { translateY: -5.5 }],
   },
   backArrowBottom: {
-    width: 12,
+    width: 14,
     height: 2,
     backgroundColor: '#006FFD',
     borderRadius: 1,
     position: 'absolute',
-    transform: [{ rotate: '45deg' }, { translateY: 3.5 }],
+    transform: [{ rotate: '45deg' }, { translateY: 5.5 }],
   },
 });
 
@@ -124,30 +96,29 @@ const iconStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8F9FE',
   },
 
-  /* Nav Bar */
-  navBar: {
-    height: 56,
+  /* Header */
+  header: {
+    height: 64,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 24,
     backgroundColor: '#FFFFFF',
+    gap: 8,
   },
   backButton: {
-    width: 20,
-    height: 20,
+    width: 28,
+    height: 28,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  pageTitle: {
-    fontFamily: 'Inter',
+  headerTitle: {
+    fontFamily: 'Noto Sans KR',
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: 18,
     color: '#1F2024',
-    textAlign: 'center',
   },
 
   /* Content */
@@ -161,34 +132,18 @@ const styles = StyleSheet.create({
     gap: 20,
   },
 
-  /* Card */
-  card: {
-    paddingHorizontal: 20,
-  },
-  cardBackground: {
-    width: '100%',
-    height: 214,
-    backgroundColor: '#EAF2FF',
-    borderRadius: 50,
-    flexDirection: 'row',
-    alignItems: 'center',
-    overflow: 'hidden',
-    paddingHorizontal: 16,
-  },
   cardImage1: {
-    width: 181,
-    height: 181,
+    width: 120,
+    height: 120,
+    position: 'absolute',
+    right: 5,
+    bottom: -10,
   },
   cardImage2: {
-    width: 195,
-    height: 195,
-  },
-  cardText: {
-    fontFamily: 'Actor',
-    fontWeight: '400',
-    fontSize: 36,
-    color: '#000000',
-    flex: 1,
-    textAlign: 'center',
+    width: 130,
+    height: 130,
+    position: 'absolute',
+    right: 5,
+    bottom: -10,
   },
 });
