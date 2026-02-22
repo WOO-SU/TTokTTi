@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../api/client';
-import logoImg from '../assets/logo.png';
+import managerImg from '../assets/manager.jpg';
 import useUnreadAlertCount from '../hooks/useUnreadAlertCount';
 
 // ── Types ──
@@ -444,7 +444,7 @@ export default function WorkerRiskScreen() {
       {/* ── Sidebar ── */}
       <aside style={styles.sidebar}>
         <button type="button" style={styles.sidebarLogo} onClick={() => navigate('/home')}>
-          <img src={logoImg} alt="TTokTTi" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+          <img src={managerImg} alt="TTokTTi" style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: '50%' }} />
           <span style={styles.logoText}>TTokTTi</span>
         </button>
         <div style={styles.sidebarIcons}>

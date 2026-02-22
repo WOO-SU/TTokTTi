@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../api/client';
 import useUnreadAlertCount from '../hooks/useUnreadAlertCount';
-import logoImg from '../assets/logo.png';
+import managerImg from '../assets/manager.jpg';
 import ladderCharImg from '../assets/ladder-character.png';
 
 // ── Types ──
@@ -606,7 +606,7 @@ export default function HomeScreen() {
       {/* ── Sidebar ── */}
       <aside style={styles.sidebar}>
         <button type="button" style={styles.sidebarLogo} onClick={() => navigate('/home')}>
-          <img src={logoImg} alt="TTokTTi" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+          <img src={managerImg} alt="TTokTTi" style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: '50%' }} />
           <span style={styles.logoText}>TTokTTi</span>
         </button>
 
