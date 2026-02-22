@@ -152,35 +152,6 @@ export default function LoginScreen({ navigation }: Props) {
             </View>
           </View>
 
-          {/* Divider */}
-          <View style={styles.divider} />
-
-          {/* Social Login */}
-          <View style={styles.socialSection}>
-            <Text style={styles.socialText}>Or continue with</Text>
-            <View style={styles.socialButtons}>
-              {/* Google */}
-              <TouchableOpacity
-                style={[styles.socialButton, { backgroundColor: '#ED3241' }]}
-                activeOpacity={0.8}>
-                <GoogleIcon />
-              </TouchableOpacity>
-
-              {/* Apple */}
-              <TouchableOpacity
-                style={[styles.socialButton, { backgroundColor: '#1F2024' }]}
-                activeOpacity={0.8}>
-                <AppleIcon />
-              </TouchableOpacity>
-
-              {/* Facebook */}
-              <TouchableOpacity
-                style={[styles.socialButton, { backgroundColor: '#006FFD' }]}
-                activeOpacity={0.8}>
-                <FacebookIcon />
-              </TouchableOpacity>
-            </View>
-          </View>
         </View>
       </ScrollView>
     </View>
@@ -208,18 +179,6 @@ function EyeIcon({ color }: { color: string }) {
   );
 }
 
-function GoogleIcon() {
-  return <Text style={iconStyles.socialIconText}>G</Text>;
-}
-
-function AppleIcon() {
-  return <Text style={iconStyles.socialIconText}>{'\uF8FF'}</Text>;
-}
-
-function FacebookIcon() {
-  return <Text style={iconStyles.socialIconText}>f</Text>;
-}
-
 const iconStyles = StyleSheet.create({
   eyeContainer: {
     width: 16,
@@ -239,11 +198,7 @@ const iconStyles = StyleSheet.create({
     borderRadius: 2.5,
     position: 'absolute',
   },
-  socialIconText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
+
 });
 
 const styles = StyleSheet.create({
@@ -346,31 +301,5 @@ const styles = StyleSheet.create({
   registerLink: {
     fontWeight: '600',
     color: '#006FFD',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#D3D5DD',
-  },
-  socialSection: {
-    gap: 16,
-  },
-  socialText: {
-    fontFamily: 'Noto Sans KR',
-    fontWeight: '400',
-    fontSize: 12,
-    color: '#71727A',
-    textAlign: 'center',
-  },
-  socialButtons: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  socialButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 63,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 });
