@@ -19,7 +19,7 @@ import { useAuth } from '../context/AuthContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const heroImage = require('../assets/mascot-logo.png');
+const heroImage = require('../assets/mainlogo.png');
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Login'>;
@@ -72,14 +72,16 @@ export default function LoginScreen({ navigation }: Props) {
         bounces={false}
         keyboardShouldPersistTaps="handled">
         {/* Hero Image */}
-        <Image
-          source={heroImage}
-          style={[styles.heroImage, { marginTop: insets.top }]}
-          resizeMode="cover"
-        />
+        <View style={[styles.heroImageWrapper, { marginTop: insets.top + 24 }]}>
+          <Image
+            source={heroImage}
+            style={styles.heroImage}
+            resizeMode="contain"
+          />
+        </View>
 
         {/* Login Options */}
-        <View style={[styles.loginOptions, {paddingBottom: insets.bottom + 40}]}>
+        <View style={[styles.loginOptions, { paddingBottom: insets.bottom + 40 }]}>
           {/* Welcome Title */}
           <Text style={styles.welcomeTitle}>Welcome!</Text>
 
@@ -129,7 +131,7 @@ export default function LoginScreen({ navigation }: Props) {
             <View style={styles.buttonsSection}>
               {/* Login Button */}
               <TouchableOpacity
-                style={[styles.loginButton, isLoading && {opacity: 0.6}]}
+                style={[styles.loginButton, isLoading && { opacity: 0.6 }]}
                 activeOpacity={0.8}
                 disabled={isLoading}
                 onPress={handleLogin}>
@@ -252,9 +254,16 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
   },
-  heroImage: {
+  heroImageWrapper: {
     width: SCREEN_WIDTH,
     height: 251,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
   },
   loginOptions: {
     paddingHorizontal: 24,

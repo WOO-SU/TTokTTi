@@ -49,12 +49,10 @@ export default function TopHeader({ title, showBackButton = true, rightComponent
 
     return (
         <View style={[styles.header, { paddingTop: insets.top, height: 60 + insets.top }]}>
-            {showBackButton ? (
+            {showBackButton && (
                 <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
                     <BackArrowIcon />
                 </TouchableOpacity>
-            ) : (
-                <View style={styles.backButton} />
             )}
             <Text style={styles.headerTitle}>{title}</Text>
             <View style={styles.rightContainer}>

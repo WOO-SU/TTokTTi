@@ -58,6 +58,13 @@ function formatTime(datetime: string | null): string {
   return `${h}:${m}`;
 }
 
+/** 오늘 날짜를 'M월 D일 (요일)' 형식으로 반환 */
+function formatToday(): string {
+  const days = ['일', '월', '화', '수', '목', '금', '토'];
+  const now = new Date();
+  return `${now.getMonth() + 1}월 ${now.getDate()}일 (${days[now.getDay()]})`;
+}
+
 /* ──────── Icon Components ──────── */
 
 function ClockIcon() {
@@ -137,7 +144,15 @@ export default function MainHomeScreen() {
         bounces={false}
         showsVerticalScrollIndicator={false}>
 
-        <TopHeader title="작업 리스트" showBackButton={false} />
+        <TopHeader
+          title="작업 리스트"
+          showBackButton={false}
+          rightComponent={
+            <Text style={styles.headerMeta}>
+              {formatToday()}{!loading && sessions.length > 0 ? ` · ${sessions.length}건` : ''}
+            </Text>
+          }
+        />
 
         {/* Title */}
         <View style={styles.titleSection}>
@@ -410,6 +425,14 @@ const styles = StyleSheet.create({
     fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 13,
+    color: '#71727A',
+  },
+
+  /* Header Meta (날짜 · 건수) */
+  headerMeta: {
+    fontFamily: 'Noto Sans KR',
+    fontWeight: '500',
+    fontSize: 12,
     color: '#71727A',
   },
 
