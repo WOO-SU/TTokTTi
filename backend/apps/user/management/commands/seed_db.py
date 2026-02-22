@@ -176,17 +176,20 @@ class Command(BaseCommand):
 
                     task_name = random.choice(task_templates)
 
+                    if ends_at < now:
+                        status = WorkSession.StatusChoices.DONE
+                    elif starts_at <= now <= ends_at:
+                        status = WorkSession.StatusChoices.IN_PROGRESS
+                    else:
+                        status = WorkSession.StatusChoices.READY
+
                     session = WorkSession.objects.create(
                         worksite=worksite,
                         name=f"{worksite.name} {task_name}",
                         starts_at=starts_at,
                         ends_at=ends_at,
-                        status=random.choice([
-                            WorkSession.StatusChoices.READY,
-                            WorkSession.StatusChoices.IN_PROGRESS,
-                            WorkSession.StatusChoices.DONE,
-                        ]),
-                        # fullcam, bodycam: 실제 blob path 필요 (몇개만)
+                        status=status,
+                        # fullcam, bodycam: 실제 blob path 필요 (status == done 에 대해서만 = 3*7 < n <3*8)
                     )
 
                     # 각 세션당 1명의 HEAD (is_manager=True), 4명의 RELATED (is_manager=True, but not HEAD), 2명의 WORKER (is_manager=False) 배정
@@ -216,54 +219,3 @@ class Command(BaseCommand):
                             role=WorkSessionMember.RoleChoices.WORKER,
                         )
         self.stdout.write(self.style.SUCCESS(f"✅ apps.worksession seeding completed"))
-
-        for i in range(20):  # Let's create 20 full Work Session "Cards"
-            start_time = now - timedelta(days=random.randint(0, 10), hours=random.randint(1, 12))
-            
-            # Create the Session
-            session = WorkSession.objects.create(
-                worksite=random.choice(sites),
-                name=f"Shift {i+1}: {fake.job()}",
-                starts_at=start_time,
-                ends_at=start_time + timedelta(hours=8),
-                status=random.choice(["READY", "IN_PROGRESS", "DONE"])
-            )
-
-            # A. Seed workers_detail (WorkSessionMember + Compliance)
-            assigned_workers = random.sample(workers, k=random.randint(2, 5))
-            for worker in assigned_workers:
-                WorkSessionMember.objects.create(
-                    worksession=session,
-                    user=worker,
-                    role="WORKER"
-                )
-                # Seed equipment_check (via Compliance model)
-                Compliance.objects.create(
-                    worksession=session,
-                    user=worker,
-                    # This maps to 'equipment_check' in your JSON
-                    status=random.choice([True, False]) 
-                )
-
-            # B. Seed risk_assessment (Text/Status)
-            assessment = RiskAssessment.objects.create(
-                worksession=session,
-                employee=assigned_workers[0], # Lead worker
-                status="COMPLETED",
-                site_label=session.name,
-                overall_grade=random.choice(["A", "B", "C"]),
-                work_permission=True
-            )
-
-            # C. Seed report (Boolean indicator)
-            # Create a RiskReport object so the frontend 'report' field is true
-            if random.choice([True, False]):
-                RiskReport.objects.create(
-                    worksession=session,
-                    summary=fake.paragraph(),
-                    is_published=True
-                )
-
-        self.stdout.write(self.style.SUCCESS(f"Successfully created 20 WorkSession cards."))
-        
-       
