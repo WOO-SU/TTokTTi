@@ -66,6 +66,8 @@ INSTALLED_APPS = [
     'apps.check',
     'apps.detect',
     'apps.incident',
+    'apps.worksession',
+    'apps.report',
 ]
 
 AUTH_USER_MODEL='user.User'

@@ -1,12 +1,12 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = 'http://10.0.2.2:8000/api';
 
 const client = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
-  headers: {'Content-Type': 'application/json'},
+  headers: { 'Content-Type': 'application/json' },
 });
 
 // 요청 인터셉터: 매 요청마다 access 토큰 헤더에 추가
@@ -38,7 +38,7 @@ client.interceptors.response.use(
           refresh: refreshToken,
         });
 
-        const {access, refresh} = res.data;
+        const { access, refresh } = res.data;
         await AsyncStorage.setItem('access_token', access);
         if (refresh) {
           await AsyncStorage.setItem('refresh_token', refresh);

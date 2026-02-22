@@ -42,5 +42,21 @@ frontend/mobile/node_modules/
 .env.production.local
 frontend/mobile/android/app/*.keystore
 !frontend/mobile/android/app/debug.keystore # 디버그용만 허용하고 싶을 때
+**/local.properties
 
-vision_fullcam/data/
+vision_fullcam/data/frontend/mobile/android/app/debug.keystore
+frontend/mobile/android/app/debug.keystore
+frontend/mobile/vendor/
+
+# Vite / Frontend Build
+.vite/
+dist/
+coverage/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/

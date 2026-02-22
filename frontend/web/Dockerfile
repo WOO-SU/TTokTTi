@@ -1,15 +1,17 @@
 # Stage 1: Build
-FROM node:18-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Copy package.json from ROOT (workspace) and APP
 # (Assuming you use workspaces, if not, adjust paths)
-COPY package.json package-lock.json ./
-COPY ./web/package.json ./web/
+COPY web/package.json web/package-lock.json ./web/
+
+WORKDIR /app/web
 
 # Install dependencies (from root so shared deps work)
-RUN npm ci
+RUN npm install
 
+WORKDIR /app
 # Copy Source Code
 COPY shared ./shared
 COPY ./web ./web

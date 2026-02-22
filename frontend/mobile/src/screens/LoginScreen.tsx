@@ -19,7 +19,7 @@ import { useAuth } from '../context/AuthContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const heroImage = require('../assets/mascot-logo.png');
+const heroImage = require('../assets/mainlogo.png');
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Login'>;
@@ -44,11 +44,20 @@ export default function LoginScreen({ navigation }: Props) {
       await login(userName.trim(), password);
       navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
     } catch (error: any) {
+      console.error('LOGIN ERROR:', JSON.stringify({
+        message: error?.message,
+        code: error?.code,
+        status: error?.response?.status,
+        data: error?.response?.data,
+      }));
       const status = error?.response?.status;
       if (status === 401) {
         Alert.alert('로그인 실패', '아이디 혹은 비밀번호가 틀렸습니다.');
       } else {
-        Alert.alert('연결 오류', '서버에 연결할 수 없습니다. 네트워크를 확인해주세요.');
+        Alert.alert(
+          '연결 오류',
+          `서버에 연결할 수 없습니다.\n${error?.message || ''}`,
+        );
       }
     } finally {
       setIsLoading(false);
@@ -63,14 +72,16 @@ export default function LoginScreen({ navigation }: Props) {
         bounces={false}
         keyboardShouldPersistTaps="handled">
         {/* Hero Image */}
-        <Image
-          source={heroImage}
-          style={[styles.heroImage, { marginTop: insets.top }]}
-          resizeMode="cover"
-        />
+        <View style={[styles.heroImageWrapper, { marginTop: insets.top + 24 }]}>
+          <Image
+            source={heroImage}
+            style={styles.heroImage}
+            resizeMode="contain"
+          />
+        </View>
 
         {/* Login Options */}
-        <View style={styles.loginOptions}>
+        <View style={[styles.loginOptions, { paddingBottom: insets.bottom + 40 }]}>
           {/* Welcome Title */}
           <Text style={styles.welcomeTitle}>Welcome!</Text>
 
@@ -120,7 +131,7 @@ export default function LoginScreen({ navigation }: Props) {
             <View style={styles.buttonsSection}>
               {/* Login Button */}
               <TouchableOpacity
-                style={[styles.loginButton, isLoading && {opacity: 0.6}]}
+                style={[styles.loginButton, isLoading && { opacity: 0.6 }]}
                 activeOpacity={0.8}
                 disabled={isLoading}
                 onPress={handleLogin}>
@@ -141,35 +152,6 @@ export default function LoginScreen({ navigation }: Props) {
             </View>
           </View>
 
-          {/* Divider */}
-          <View style={styles.divider} />
-
-          {/* Social Login */}
-          <View style={styles.socialSection}>
-            <Text style={styles.socialText}>Or continue with</Text>
-            <View style={styles.socialButtons}>
-              {/* Google */}
-              <TouchableOpacity
-                style={[styles.socialButton, { backgroundColor: '#ED3241' }]}
-                activeOpacity={0.8}>
-                <GoogleIcon />
-              </TouchableOpacity>
-
-              {/* Apple */}
-              <TouchableOpacity
-                style={[styles.socialButton, { backgroundColor: '#1F2024' }]}
-                activeOpacity={0.8}>
-                <AppleIcon />
-              </TouchableOpacity>
-
-              {/* Facebook */}
-              <TouchableOpacity
-                style={[styles.socialButton, { backgroundColor: '#006FFD' }]}
-                activeOpacity={0.8}>
-                <FacebookIcon />
-              </TouchableOpacity>
-            </View>
-          </View>
         </View>
       </ScrollView>
     </View>
@@ -197,18 +179,6 @@ function EyeIcon({ color }: { color: string }) {
   );
 }
 
-function GoogleIcon() {
-  return <Text style={iconStyles.socialIconText}>G</Text>;
-}
-
-function AppleIcon() {
-  return <Text style={iconStyles.socialIconText}>{'\uF8FF'}</Text>;
-}
-
-function FacebookIcon() {
-  return <Text style={iconStyles.socialIconText}>f</Text>;
-}
-
 const iconStyles = StyleSheet.create({
   eyeContainer: {
     width: 16,
@@ -228,11 +198,7 @@ const iconStyles = StyleSheet.create({
     borderRadius: 2.5,
     position: 'absolute',
   },
-  socialIconText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
+
 });
 
 const styles = StyleSheet.create({
@@ -243,18 +209,24 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
   },
-  heroImage: {
+  heroImageWrapper: {
     width: SCREEN_WIDTH,
     height: 251,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
   },
   loginOptions: {
     paddingHorizontal: 24,
     paddingTop: 40,
-    paddingBottom: 40,
     gap: 24,
   },
   welcomeTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '800',
     fontSize: 24,
     letterSpacing: 0.24,
@@ -280,7 +252,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 14,
     color: '#000000',
@@ -297,7 +269,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   forgotPassword: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '600',
     fontSize: 12,
     color: '#006FFD',
@@ -314,13 +286,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loginButtonText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '600',
     fontSize: 12,
     color: '#FFFFFF',
   },
   registerText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 12,
     color: '#71727A',
@@ -329,31 +301,5 @@ const styles = StyleSheet.create({
   registerLink: {
     fontWeight: '600',
     color: '#006FFD',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#D3D5DD',
-  },
-  socialSection: {
-    gap: 16,
-  },
-  socialText: {
-    fontFamily: 'Inter',
-    fontWeight: '400',
-    fontSize: 12,
-    color: '#71727A',
-    textAlign: 'center',
-  },
-  socialButtons: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  socialButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 63,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 });

@@ -6,15 +6,13 @@ from .views import (
     LoginView,
     logout,
     change_password,
-    coworker,
-    search_user_by_birth,
     UserManageViewSet,
 )
 
 app_name = "user"
 
 router = DefaultRouter()
-router.register(r"user", UserManageViewSet, basename="users")
+router.register(r"", UserManageViewSet, basename="users")
 
 urlpatterns = [
     path("login/", LoginView.as_view(), name="login"),
@@ -22,7 +20,5 @@ urlpatterns = [
     path("logout/", logout, name="logout"),
     path("password/change/", change_password, name="password_change"),
     path("storage/", include("apps.user.storage.urls")),
-    path("coworker/", coworker, name="coworker"),
-    path("search/", search_user_by_birth, name="search_user_by_birth"),
     path("", include(router.urls)),
 ]
