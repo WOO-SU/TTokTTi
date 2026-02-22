@@ -42,6 +42,7 @@ frontend/mobile/node_modules/
 .env.production.local
 frontend/mobile/android/app/*.keystore
 !frontend/mobile/android/app/debug.keystore # 디버그용만 허용하고 싶을 때
+**/local.properties
 
 vision_fullcam/data/frontend/mobile/android/app/debug.keystore
 frontend/mobile/android/app/debug.keystore
