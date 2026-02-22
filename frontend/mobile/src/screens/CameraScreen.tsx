@@ -13,6 +13,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Camera,
   PhotoFile,
+  useCameraDevice,
+  useCameraFormat,
 } from 'react-native-vision-camera';
 import BaseCamera from '../components/BaseCamera';
 import RNFS from 'react-native-fs';
@@ -28,11 +30,25 @@ type Props = {
   route: RouteProp<RootStackParamList, 'Camera'>;
 };
 
+/* ──────── Configuration ──────── */
+
+const STREAM_CONFIG = {
+  WIDTH: 360,
+  HEIGHT: 360,
+  INTERVAL_MS: 250, // 4 fps (1000/250)
+};
+
 /* ──────── Main Component ──────── */
 
 export default function CameraScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { mode } = route.params;
+
+  // 스트리밍 설정 기반 포맷 선택
+  const device = useCameraDevice('back');
+  const streamFormat = useCameraFormat(device, [
+    { videoResolution: { width: STREAM_CONFIG.WIDTH, height: STREAM_CONFIG.HEIGHT } },
+  ]);
 
   // State
   const [isRecording, setIsRecording] = useState(false);
@@ -66,14 +82,14 @@ export default function CameraScreen({ navigation, route }: Props) {
             enableShutterSound: false,
           });
 
-          const base64 = await RNFS.readFile(photo.path, 'base64')
+          const base64 = await RNFS.readFile(photo.path, 'base64');
 
-          streamRef.current.sendFrame(base64)
+          streamRef.current.sendFrame(base64);
         } catch (err) {
-          console.log('Frame capture error (expected if camera')
+          console.log('Frame capture error (expected if camera not ready)');
         }
       }
-    }, 250);
+    }, STREAM_CONFIG.INTERVAL_MS);
 
     return () => {
 
@@ -119,6 +135,7 @@ export default function CameraScreen({ navigation, route }: Props) {
           isActive={true}
           video={true}
           audio={true}
+          format={streamFormat || undefined}
           isRecording={isRecording}
           onCapture={handleToggleRecording}
         />
