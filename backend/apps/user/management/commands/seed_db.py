@@ -422,8 +422,10 @@ class Command(BaseCommand):
         ]
 
         BODY_RISK_TYPES = [
-            ("body_dummy_1", "바디캠 위험 유형 예시 1", None), # JS 유형 전달 필요
-            ("body_dummy_2", "바디캠 위험 유형 예시 2", None),
+            ("hands_off_ladder_while_moving", "사다리 이동 중 손 미접촉", None),
+            ("ac_power_proximity", "전원부 근접 위험", None),
+            ("conditional_gloves_not_worn", "보호장갑 미착용", None),
+            ("trip_hazard_in_path", "이동 경로 걸림 위험", None),
         ]
 
         for code, name, desc in FULL_RISK_TYPES:
@@ -591,7 +593,7 @@ class Command(BaseCommand):
                 short_message=wr["short_message"],
             )
             
-            self.stdout.write(self.style.SUCCESS("✅ apps.risk seeding completed"))
+        self.stdout.write(self.style.SUCCESS("✅ apps.risk seeding completed"))
         
         # ------------------------------------------------------------------
         # report.PostWorkReport
