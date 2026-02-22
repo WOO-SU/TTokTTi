@@ -19,7 +19,6 @@ import RiskCameraScreen from './src/screens/RiskCameraScreen';
 import PersonalScreen from './src/screens/PersonalScreen';
 import SettingScreen from './src/screens/SettingScreen';
 import EndWorkScreen from './src/screens/EndWorkScreen';
-import FavoriteScreen from './src/screens/FavoriteScreen';
 import { AuthProvider } from './src/context/AuthContext';
 import { RiskPhotoProvider } from './src/context/RiskPhotoContext';
 import { WorkSessionProvider } from './src/context/WorkSessionContext';
@@ -49,14 +48,9 @@ export type SettingStackParamList = {
   SettingHome: undefined;
 };
 
-export type FavoriteStackParamList = {
-  FavoriteHome: undefined;
-};
-
 export type TabParamList = {
-  Home: undefined;
   Personal: undefined;
-  Favorite: undefined;
+  Home: undefined;
   Setting: undefined;
 };
 
@@ -70,7 +64,6 @@ export type RootStackParamList = {
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const HomeStack = createNativeStackNavigator<HomeStackParamList>();
 const PersonalStack = createNativeStackNavigator<PersonalStackParamList>();
-const FavoriteStack = createNativeStackNavigator<FavoriteStackParamList>();
 const SettingStack = createNativeStackNavigator<SettingStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
 
@@ -106,14 +99,6 @@ function PersonalStackNavigator() {
   );
 }
 
-function FavoriteStackNavigator() {
-  return (
-    <FavoriteStack.Navigator screenOptions={{ headerShown: false }}>
-      <FavoriteStack.Screen name="FavoriteHome" component={FavoriteScreen} />
-    </FavoriteStack.Navigator>
-  );
-}
-
 function SettingStackNavigator() {
   return (
     <SettingStack.Navigator screenOptions={{ headerShown: false }}>
@@ -124,51 +109,70 @@ function SettingStackNavigator() {
 
 // --- Bottom Tab Navigator ---
 
+/* ──────── Custom Tab Icons ──────── */
+
+function ActiveDot() {
+  return <View style={tabIconStyles.activeDot} />;
+}
+
 function HomeTabIcon({ focused }: { focused: boolean }) {
-  const color = focused ? '#1F2024' : '#71727A';
+  const color = focused ? '#006FFD' : '#71727A';
   return (
-    <View style={tabIconStyles.container}>
-      <View style={[tabIconStyles.homeRoof, { borderBottomColor: color }]} />
-      <View style={[tabIconStyles.homeBase, { borderColor: color }]} />
+    <View style={tabIconStyles.iconWrapper}>
+      <View style={tabIconStyles.container}>
+        <View style={[tabIconStyles.homeRoof, { borderBottomColor: color }]} />
+        <View style={[tabIconStyles.homeBase, { borderColor: color }]} />
+      </View>
     </View>
   );
 }
 
 function PersonTabIcon({ focused }: { focused: boolean }) {
-  const color = focused ? '#1F2024' : '#71727A';
+  const color = focused ? '#006FFD' : '#71727A';
   return (
-    <View style={tabIconStyles.container}>
-      <View style={[tabIconStyles.personHead, { borderColor: color }]} />
-      <View style={[tabIconStyles.personBody, { borderColor: color }]} />
-    </View>
-  );
-}
-
-function StarTabIcon({ focused }: { focused: boolean }) {
-  const color = focused ? '#1F2024' : '#71727A';
-  return (
-    <View style={tabIconStyles.container}>
-      <Text style={[tabIconStyles.starText, { color }]}>☆</Text>
+    <View style={tabIconStyles.iconWrapper}>
+      <View style={tabIconStyles.container}>
+        <View style={[tabIconStyles.personHead, { borderColor: color }]} />
+        <View style={[tabIconStyles.personBody, { borderColor: color }]} />
+      </View>
     </View>
   );
 }
 
 function SettingTabIcon({ focused }: { focused: boolean }) {
-  const color = focused ? '#1F2024' : '#71727A';
+  const color = focused ? '#006FFD' : '#71727A';
   return (
-    <View style={tabIconStyles.container}>
-      <Text style={[tabIconStyles.gearText, { color }]}>⚙</Text>
+    <View style={tabIconStyles.iconWrapper}>
+      <View style={tabIconStyles.container}>
+        <View style={[tabIconStyles.gearCircle, { borderColor: color }]}>
+          {[0, 45, 90, 135, 180, 225, 270, 315].map(deg => (
+            <View key={deg} style={[tabIconStyles.gearTooth, { backgroundColor: color, transform: [{ rotate: `${deg}deg` }, { translateY: -8 }] }]} />
+          ))}
+          <View style={[tabIconStyles.gearInner, { backgroundColor: color }]} />
+        </View>
+      </View>
     </View>
   );
 }
 
 const tabIconStyles = StyleSheet.create({
+  iconWrapper: {
+    alignItems: 'center',
+    gap: 4,
+  },
   container: {
-    width: 20,
-    height: 20,
+    width: 24,
+    height: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  activeDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#006FFD',
+  },
+  /* Home icon */
   homeRoof: {
     width: 0,
     height: 0,
@@ -178,70 +182,109 @@ const tabIconStyles = StyleSheet.create({
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
     position: 'absolute',
-    top: 0,
+    top: 2,
   },
   homeBase: {
-    width: 14,
-    height: 10,
+    width: 15,
+    height: 11,
     borderWidth: 2,
     borderTopWidth: 0,
-    borderBottomLeftRadius: 2,
-    borderBottomRightRadius: 2,
+    borderBottomLeftRadius: 3,
+    borderBottomRightRadius: 3,
     position: 'absolute',
-    bottom: 0,
+    bottom: 3,
   },
+  /* Person icon */
   personHead: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    borderWidth: 1.5,
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+    borderWidth: 2,
     position: 'absolute',
-    top: 0,
+    top: 2,
   },
   personBody: {
-    width: 14,
-    height: 8,
-    borderTopLeftRadius: 7,
-    borderTopRightRadius: 7,
-    borderWidth: 1.5,
+    width: 16,
+    height: 9,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    borderWidth: 2,
     borderBottomWidth: 0,
     position: 'absolute',
-    bottom: 0,
+    bottom: 2,
   },
-  starText: {
-    fontSize: 20,
-    lineHeight: 22,
+  /* Gear icon (simplified custom) */
+  gearCircle: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 2.2,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  gearText: {
-    fontSize: 18,
-    lineHeight: 20,
+  gearTooth: {
+    width: 3.5,
+    height: 4,
+    borderRadius: 1,
+    position: 'absolute',
+  },
+  gearInner: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
   },
 });
 
 function MainTabs() {
   const insets = useSafeAreaInsets();
+
+  const baseTabBarStyle: any = {
+    position: 'absolute',
+    bottom: insets.bottom + 4,
+    left: 80,
+    right: 80,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 0,
+    // iOS Shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    // Android Elevation
+    elevation: 8,
+    paddingHorizontal: 12,
+  };
+
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarStyle: {
-          height: 60 + insets.bottom,
-          paddingTop: 8,
-          paddingBottom: insets.bottom,
-          paddingHorizontal: 16,
-          backgroundColor: '#FFFFFF',
-          borderTopWidth: 0,
-          elevation: 0,
-          shadowOpacity: 0,
-        },
+        tabBarStyle: baseTabBarStyle,
         tabBarLabelStyle: {
-          fontFamily: 'Inter',
+          fontFamily: 'Noto Sans KR',
+          fontWeight: '600',
           fontSize: 10,
-          marginTop: 4,
         },
-        tabBarActiveTintColor: '#1F2024',
+        tabBarItemStyle: {
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingTop: 8,
+        },
+        tabBarIconStyle: {
+          marginBottom: 4,
+        },
+        tabBarActiveTintColor: '#006FFD',
         tabBarInactiveTintColor: '#71727A',
       }}>
+      <Tab.Screen
+        name="Personal"
+        component={PersonalStackNavigator}
+        options={{
+          tabBarIcon: ({ focused }) => <PersonTabIcon focused={focused} />,
+        }}
+      />
       <Tab.Screen
         name="Home"
         component={HomeStackNavigator}
@@ -257,39 +300,11 @@ function MainTabs() {
 
           return {
             tabBarStyle: {
+              ...baseTabBarStyle,
               display,
-              height: 60 + insets.bottom,
-              paddingTop: 8,
-              paddingBottom: insets.bottom,
-              paddingHorizontal: 16,
-              backgroundColor: '#FFFFFF',
-              borderTopWidth: 0,
-              elevation: 0,
-              shadowOpacity: 0,
             },
             tabBarIcon: ({ focused }) => <HomeTabIcon focused={focused} />,
-            tabBarLabelStyle: {
-              fontFamily: 'Inter',
-              fontWeight: '600',
-              fontSize: 10,
-              marginTop: 4,
-            },
           };
-        }}
-      />
-      <Tab.Screen
-        name="Personal"
-        component={PersonalStackNavigator}
-        options={{
-          tabBarIcon: ({ focused }) => <PersonTabIcon focused={focused} />,
-        }}
-      />
-      <Tab.Screen
-        name="Favorite"
-        component={FavoriteStackNavigator}
-        options={{
-          tabBarLabel: 'favorite',
-          tabBarIcon: ({ focused }) => <StarTabIcon focused={focused} />,
         }}
       />
       <Tab.Screen
