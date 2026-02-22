@@ -33,6 +33,7 @@ from vision_fullcam.rules.posture_rules import (
     ExcessiveBodyTiltRule,
     TopStepUsageRule,
 )
+from vision_fullcam.rules.vehicle_rules import VehicleProximityRule
 
 # events
 from vision_fullcam.events.clip_buffer import ClipBuffer
@@ -81,6 +82,7 @@ def _handle_keys(detector, task: TaskState, key: int):
         ord("6"): ("tilted_ladder",      "tilted_ladder(1s -> ladder_tilt)"),
         ord("7"): ("outtrigger_missing", "outtrigger_missing(2.5s -> outtrigger_not_deployed, task required=True)"),
         ord("8"): ("outtrigger_deployed","outtrigger_deployed(정상 상태)"),
+        ord("9"): ("vehicle_proximity",  "vehicle_proximity(0.6s -> vehicle_proximity)"),
     }
 
     if key in mapping:
@@ -160,6 +162,8 @@ def main():
         # posture (pose 붙이면 활성)
         ExcessiveBodyTiltRule(cfg),
         TopStepUsageRule(cfg),
+        # vehicle
+        VehicleProximityRule(cfg),
     ]
 
     if isinstance(detector, FakeDetector):
@@ -173,6 +177,7 @@ def main():
         print("6: tilted_ladder (1s -> ladder_tilt)")
         print("7: outtrigger_missing (2.5s -> outtrigger_not_deployed, task required=True)")
         print("8: outtrigger_deployed (정상 상태)")
+        print("9: vehicle_proximity (0.6s -> vehicle_proximity)")
         print("t: toggle outtrigger_required")
         print("h: toggle expected_height_m (2.0 <-> 4.0)")
         print("ESC: quit")
@@ -185,9 +190,13 @@ def main():
     try:
         while True:
             t0 = time.time()
-            frame = reader.read()
+            # frame = reader.read()
+            # if frame is None:
+            #     break
+            frame = reader.read() # test
             if frame is None:
-                break
+                import numpy as np
+                frame = np.zeros((720, 1280, 3), dtype=np.uint8)
 
             clip_buffer.push(frame)
 
