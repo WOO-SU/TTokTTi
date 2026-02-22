@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
     View,
     Text,
@@ -6,6 +6,7 @@ import {
     StyleSheet,
     Image,
     ImageSourcePropType,
+    Animated,
 } from 'react-native';
 
 type Props = {
@@ -58,24 +59,40 @@ const iconStyles = StyleSheet.create({
 /* ──────── Main Component ──────── */
 
 export default function CheckCard({ title, image, isChecked, onPress }: Props) {
+    const scaleAnim = useRef(new Animated.Value(1)).current;
+
+    useEffect(() => {
+        Animated.spring(scaleAnim, {
+            toValue: isChecked ? 1.05 : 1,
+            useNativeDriver: true,
+            friction: 8,
+            tension: 40,
+        }).start();
+    }, [isChecked, scaleAnim]);
+
     return (
-        <TouchableOpacity
-            style={[styles.card, isChecked && styles.cardDone]}
-            activeOpacity={0.8}
-            onPress={onPress}>
-            <View style={[styles.cardBorder, isChecked && styles.cardBorderDone]} />
-            <Image source={image} style={styles.cardImage} resizeMode="contain" />
-            <View style={styles.cardBottom}>
-                <Text style={styles.cardLabel}>{title}</Text>
-                <View
-                    style={[
-                        styles.checkbox,
-                        isChecked ? styles.checkboxChecked : styles.checkboxUnchecked,
-                    ]}>
-                    {isChecked && <CheckIcon />}
+        <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+            <TouchableOpacity
+                style={[
+                    styles.card,
+                    isChecked && styles.cardDone
+                ]}
+                activeOpacity={0.8}
+                onPress={onPress}>
+                <View style={[styles.cardBorder, isChecked && styles.cardBorderDone]} />
+                <Image source={image} style={styles.cardImage} resizeMode="contain" />
+                <View style={styles.cardBottom}>
+                    <Text style={[styles.cardLabel, isChecked && styles.cardLabelDone]}>{title}</Text>
+                    <View
+                        style={[
+                            styles.checkbox,
+                            isChecked ? styles.checkboxChecked : styles.checkboxUnchecked,
+                        ]}>
+                        {isChecked && <CheckIcon />}
+                    </View>
                 </View>
-            </View>
-        </TouchableOpacity>
+            </TouchableOpacity>
+        </Animated.View>
     );
 }
 
@@ -87,21 +104,24 @@ const styles = StyleSheet.create({
         height: 154.5,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#F8F9FE',
-        borderRadius: 16,
-        overflow: 'hidden',
-        // MenuBanner shadow style
+        backgroundColor: '#FFFFFF',
+        borderRadius: 20,
+        overflow: 'visible', // To show the glow
+        // Default subtle shadow
         shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.05,
-        shadowRadius: 3.84,
-        elevation: 2,
+        shadowRadius: 8,
+        elevation: 3,
     },
     cardDone: {
-        opacity: 0.85,
+        backgroundColor: '#F8F9FE',
+        // Premium Blue Glow
+        shadowColor: '#006FFD',
+        shadowOpacity: 0.2,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 6 },
+        elevation: 8,
     },
     cardBorder: {
         position: 'absolute',
@@ -109,44 +129,49 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
-        borderRadius: 16,
-        borderWidth: 5,
-        borderColor: 'transparent',
+        borderRadius: 20,
+        borderWidth: 1.5,
+        borderColor: '#E8E9F1',
     },
     cardBorderDone: {
         borderColor: '#006FFD',
+        borderWidth: 2,
     },
     cardImage: {
-        width: 100,
-        height: 100,
+        width: 90,
+        height: 90,
+        marginBottom: 4,
     },
     cardBottom: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
-        marginTop: 4,
+        paddingHorizontal: 12,
     },
     cardLabel: {
         fontFamily: 'Noto Sans KR',
-        fontWeight: '400',
-        fontSize: 15,
-        color: '#000000',
+        fontWeight: '500',
+        fontSize: 14,
+        color: '#1F2024',
+    },
+    cardLabelDone: {
+        fontWeight: '700',
+        color: '#006FFD',
     },
     checkbox: {
-        width: 16,
-        height: 16,
-        borderRadius: 4,
+        width: 20,
+        height: 20,
+        borderRadius: 6,
         justifyContent: 'center',
         alignItems: 'center',
     },
     checkboxChecked: {
         backgroundColor: '#006FFD',
-        borderWidth: 1.5,
-        borderColor: '#006FFD',
+        borderWidth: 0,
     },
     checkboxUnchecked: {
-        backgroundColor: 'transparent',
-        borderWidth: 1.5,
+        backgroundColor: '#F8F9FE',
+        borderWidth: 1,
         borderColor: '#C5C6CC',
     },
 });
