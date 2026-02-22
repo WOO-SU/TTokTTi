@@ -311,4 +311,112 @@ class Command(BaseCommand):
         # detect.RiskType, detect.VideoLog, detect.VideoLogRead
         # ------------------------------------------------------------------
         self.stdout.write("🚀 Seeding apps.detect data...")
-        
+
+        FULL_RISK_TYPES = [
+            ("helmet_not_worn", "헬멧 미착용", None),
+            ("safety_vest_not_worn", "안전조끼 미착용", None),
+            ("ladder_movement_with_person", "사다리 움직임 감지",
+            "사람이 사다리 위에 있는 상태에서 사다리 움직임 감지"),
+            ("height_ladder_violation", "사다리 높이 초과",
+            "3.5m 이상 높이의 사다리 사용 금지"),
+            ("ladder_tilt", "사다리 기울임 감지",
+            "수직 대비 기울기 15도 이상 경고, 20도 이상 고위험"),
+            ("top_step_usage", "최상단 작업 금지", None),
+            ("outtrigger_not_deployed", "아웃트리거 미전개 감지", None),
+            ("excessive_body_tilt", "작업자 몸 기울임 감지", None),
+            ("insufficient_worker_count", "단독 작업 감지", "2인 1조 작업 원칙"),
+            ("vehicle_proximity", "차량 근접 감지", None),
+            ("fall_detected", "낙상 사고 감지", None),
+        ]
+
+        BODY_RISK_TYPES = [
+            ("body_dummy_1", "바디캠 위험 유형 예시 1", None), # JS 유형 전달 필요
+            ("body_dummy_2", "바디캠 위험 유형 예시 2", None),
+        ]
+
+        for code, name, desc in FULL_RISK_TYPES:
+            RiskType.objects.get_or_create(
+                code=code,
+                defaults={
+                    "name": name,
+                    "description": desc,
+                    "camera_type": RiskType.CameraType.FULL,
+                }
+            )
+
+        for code, name, desc in BODY_RISK_TYPES:
+            RiskType.objects.get_or_create(
+                code=code,
+                defaults={
+                    "name": name,
+                    "description": desc,
+                    "camera_type": RiskType.CameraType.BODY,
+                }
+            )
+
+        full_risks = list(RiskType.objects.filter(camera_type=RiskType.CameraType.FULL))
+        body_risks = list(RiskType.objects.filter(camera_type=RiskType.CameraType.BODY))
+        all_risks = full_risks + body_risks
+
+        for session in WorkSession.objects.all():
+
+            if session.status == WorkSession.StatusChoices.DONE:
+                count = 5
+            elif session.status == WorkSession.StatusChoices.IN_PROGRESS:
+                count = 3
+            else:
+                continue
+
+            for i in range(count):
+                risk = random.choice(all_risks)
+
+                VideoLog.objects.create(
+                    worksession=session,
+                    source=VideoLog.SourceChoices.AUTO,
+                    risk_type=risk,
+                    original_video=f"videolog/{risk.code}_videolog{i+1}.mp4", # 아직 blob 업로드 안된 상태
+                )
+
+        managers = list(User.objects.filter(is_manager=True))
+
+        for session in WorkSession.objects.all():
+
+            session_managers = list(
+                User.objects.filter(
+                    work_sessions__worksession=session,
+                    work_sessions__role__in=[
+                        WorkSessionMember.RoleChoices.HEAD,
+                        WorkSessionMember.RoleChoices.RELATED,
+                    ]
+                ).distinct()
+            )
+
+            if not session_managers:
+                continue
+
+            logs = list(session.video_logs.order_by("-created_at"))
+            if not logs:
+                continue
+
+            if session.status == WorkSession.StatusChoices.DONE:
+                target_logs = logs
+            elif session.status == WorkSession.StatusChoices.IN_PROGRESS:
+                target_logs = logs[1:]  # 최신 1개는 안 읽음
+                target_logs = random.sample(
+                    target_logs,
+                    k=max(0, len(target_logs) // 2)
+                )
+            else:
+                continue
+
+            for log in target_logs:
+                for manager in session_managers:
+                    VideoLogRead.objects.get_or_create(
+                        videolog=log,
+                        manager=manager,
+                        defaults={
+                            "is_read": True,
+                            "read_at": log.created_at + timedelta(minutes=random.randint(1, 60)),
+                        }
+                    )
+        self.stdout.write(self.style.SUCCESS("✅ apps.detect seeding completed"))
