@@ -30,6 +30,35 @@ npm run dev
 ```
 - Then, you can check on `http://localhost:3000/` 
 
+## Start App (Android Studio)
+1. Open `/frontend/mobile/android` project at Android Studio 
+2. (First Time Only) Install Dependencies and Generate Keystore
+```bash
+# at /frontend/mobile
+npm install
+cd android/app
+keytool -genkeypair \
+  -alias androiddebugkey \
+  -keyalg RSA \
+  -keysize 2048 \
+  -validity 10000 \
+  -keystore debug.keystore \
+  -storepass android \
+  -keypass android \
+  -dname "CN=Android Debug,O=Android,C=US"
+```
+3. (Terminal 1) Run Metro Server
+```bash
+# at frontend/mobile/android
+npm start
+```
+4. Add Android Device
+- Start an Android Emulator from Android Studio or Connect a physical Android device with USB debugging enabled
+5. (Terminal 2) Build and Run the App
+```bash
+# at frontend/mobile/android
+npm run android
+```
 ---
 
 ```bash
