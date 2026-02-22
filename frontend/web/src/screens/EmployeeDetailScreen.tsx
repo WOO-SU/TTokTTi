@@ -76,13 +76,11 @@ export default function EmployeeDetailScreen() {
       if (body.birth_date === '') delete body.birth_date;
 
       const res = await apiFetch(`/user/user/${id}/`, {
-        method: 'PUT',
+        method: 'PATCH',
         body: JSON.stringify(body),
       });
       if (res.ok) {
-        const data: EmployeeInfo = await res.json();
-        setEmployee(data);
-        setIsEditing(false);
+        navigate('/employees');
       }
     } catch {
       // ignore
