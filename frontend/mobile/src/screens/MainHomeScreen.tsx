@@ -1,6 +1,6 @@
 /* 메인 홈 화면 - 오늘의 작업 목록 */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { HomeStackParamList } from '../../App';
 import { useAuth } from '../context/AuthContext';
+import TopHeader from '../components/TopHeader';
 import {
   getTodayWorkSessions,
   activateWorkSession,
@@ -40,12 +41,12 @@ const STATUS_CONFIG: Record<
 > = {
   completed: { label: '작업 완료', bg: '#00FFAE', text: '#000000', icon: '✓' },
   in_progress: {
-    label: '작업 시작하기',
+    label: '작업 중',
     bg: '#006FFD',
     text: '#FFFFFF',
     icon: '▷',
   },
-  pending: { label: '작업 전', bg: '#0F62FE', text: '#FFFFFF', icon: '◷' },
+  pending: { label: '작업 전', bg: '#8F9098', text: '#FFFFFF', icon: '◷' },
 };
 
 /** datetime 문자열에서 HH:MM 추출 */
@@ -58,33 +59,6 @@ function formatTime(datetime: string | null): string {
 }
 
 /* ──────── Icon Components ──────── */
-
-function SearchIcon() {
-  return (
-    <View style={iconStyles.searchContainer}>
-      <View style={iconStyles.searchCircle} />
-      <View style={iconStyles.searchHandle} />
-    </View>
-  );
-}
-
-function HeartIcon() {
-  return (
-    <View style={iconStyles.heartContainer}>
-      <Text style={iconStyles.heartText}>♡</Text>
-    </View>
-  );
-}
-
-function MenuIcon() {
-  return (
-    <View style={iconStyles.menuContainer}>
-      <View style={iconStyles.menuLine} />
-      <View style={[iconStyles.menuLine, { width: 16 }]} />
-      <View style={iconStyles.menuLine} />
-    </View>
-  );
-}
 
 function ClockIcon() {
   return (
@@ -162,31 +136,12 @@ export default function MainHomeScreen() {
         ]}
         bounces={false}
         showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + 24 }]}>
-          <TouchableOpacity style={styles.headerIcon}>
-            <SearchIcon />
-          </TouchableOpacity>
-          <View style={styles.rightOptions}>
-            <TouchableOpacity style={styles.headerIcon}>
-              <HeartIcon />
-            </TouchableOpacity>
-            <TouchableOpacity>
-              <View style={styles.menuIconWrapper}>
-                <MenuIcon />
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>9</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
+
+        <TopHeader title="작업 리스트" showBackButton={false} />
 
         {/* Title */}
         <View style={styles.titleSection}>
-          <Text style={styles.titleText}>
-            오늘 {userName ?? '사용자'}님의 작업
-          </Text>
+          <Text style={styles.titleText}>{userName ?? '사용자'}님의 오늘 작업</Text>
           <Text style={styles.subtitleText}>화이팅하세요!</Text>
         </View>
 
@@ -308,55 +263,6 @@ export default function MainHomeScreen() {
 /* ──────── Icon Styles ──────── */
 
 const iconStyles = StyleSheet.create({
-  searchContainer: {
-    width: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  searchCircle: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    borderWidth: 2,
-    borderColor: '#1F2024',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-  },
-  searchHandle: {
-    width: 2,
-    height: 6,
-    backgroundColor: '#1F2024',
-    position: 'absolute',
-    bottom: 0,
-    right: 1,
-    transform: [{ rotate: '-45deg' }],
-    borderRadius: 1,
-  },
-  heartContainer: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  heartText: {
-    fontSize: 22,
-    color: '#1F2024',
-    lineHeight: 24,
-  },
-  menuContainer: {
-    width: 24,
-    height: 18,
-    justifyContent: 'space-between',
-  },
-  menuLine: {
-    width: 20,
-    height: 2,
-    backgroundColor: '#1F2024',
-    borderRadius: 1,
-    alignSelf: 'flex-end',
-  },
   clockContainer: {
     width: 16,
     height: 16,
@@ -398,51 +304,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    gap: 16,
-  },
-
-  /* Header */
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingBottom: 8,
-    backgroundColor: '#FFFFFF',
-  },
-  headerIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  rightOptions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  menuIconWrapper: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  badge: {
-    position: 'absolute',
-    top: -6,
-    right: -6,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#006FFD',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  badgeText: {
-    fontFamily: 'Noto Sans KR',
-    fontWeight: '600',
-    fontSize: 10,
-    color: '#FFFFFF',
+    gap: 15,
+    paddingBottom: 24,
   },
 
   /* Title */
@@ -450,12 +313,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     paddingHorizontal: 24,
+    marginTop: -4,
   },
   titleText: {
     fontFamily: 'Noto Sans KR',
     fontWeight: '700',
     fontSize: 18,
-    color: '#000000',
+    color: '#1F2024',
   },
   subtitleText: {
     fontFamily: 'Noto Sans KR',
@@ -466,27 +330,32 @@ const styles = StyleSheet.create({
 
   /* Task List */
   taskList: {
-    paddingHorizontal: 12,
-    gap: 12,
+    paddingHorizontal: 20,
+    gap: 10,
   },
 
   /* Task Card */
   taskCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#EAF2FF',
-    borderRadius: 20,
-    paddingHorizontal: 16,
+    backgroundColor: '#F8F9FE',
+    borderRadius: 16,
+    paddingHorizontal: 20,
     paddingVertical: 16,
     gap: 12,
     position: 'relative',
-    minHeight: 96,
+    minHeight: 100,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3.84,
+    elevation: 2,
   },
   taskImageWrapper: {
     width: 65,
     height: 65,
     borderRadius: 33,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#EAF2FF',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
@@ -506,14 +375,14 @@ const styles = StyleSheet.create({
   },
   taskTitle: {
     fontFamily: 'Noto Sans KR',
-    fontWeight: '600',
+    fontWeight: '700',
     fontSize: 16,
-    color: '#000000',
+    color: '#1F2024',
   },
   statusBadgeContainer: {
     position: 'absolute',
     bottom: 12,
-    right: 12,
+    right: 14,
   },
   statusBadge: {
     flexDirection: 'row',
@@ -540,7 +409,7 @@ const styles = StyleSheet.create({
   taskTimeText: {
     fontFamily: 'Noto Sans KR',
     fontWeight: '400',
-    fontSize: 14,
+    fontSize: 13,
     color: '#71727A',
   },
 
