@@ -48,7 +48,7 @@ export default function EmployeeDetailScreen() {
     setLoading(true);
     (async () => {
       try {
-        const res = await apiFetch(`/user/user/${id}/`);
+        const res = await apiFetch(`/user/${id}/`);
         if (res.ok) {
           const data: EmployeeInfo = await res.json();
           setEmployee(data);
@@ -75,7 +75,7 @@ export default function EmployeeDetailScreen() {
       const body: Record<string, unknown> = { ...form };
       if (body.birth_date === '') delete body.birth_date;
 
-      const res = await apiFetch(`/user/user/${id}/`, {
+      const res = await apiFetch(`/user/${id}/`, {
         method: 'PATCH',
         body: JSON.stringify(body),
       });
@@ -93,7 +93,7 @@ export default function EmployeeDetailScreen() {
     if (!id || !employee) return;
     if (!window.confirm(`"${employee.name}" 직원을 삭제하시겠습니까?`)) return;
     try {
-      const res = await apiFetch(`/user/user/${id}/`, { method: 'DELETE' });
+      const res = await apiFetch(`/user/${id}/`, { method: 'DELETE' });
       if (res.ok) {
         navigate('/employees');
       }

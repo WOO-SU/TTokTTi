@@ -48,7 +48,7 @@ export default function ProfileScreen() {
     if (!user?.userId) return;
     (async () => {
       try {
-        const res = await apiFetch(`/user/user/${user.userId}/`);
+        const res = await apiFetch(`/user/${user.userId}/`);
         if (res.ok) {
           const data: UserProfile = await res.json();
           setProfile(data);
@@ -74,10 +74,9 @@ export default function ProfileScreen() {
     try {
       const body: Record<string, unknown> = { ...form };
       if (body.birth_date === '') delete body.birth_date;
-      else body.birth_date = `${body.birth_date}T00:00:00Z`;
 
-      const res = await apiFetch(`/user/user/${user.userId}/`, {
-        method: 'PUT',
+      const res = await apiFetch(`/user/${user.userId}/`, {
+        method: 'PATCH',
         body: JSON.stringify(body),
       });
       if (res.ok) {

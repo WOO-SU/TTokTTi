@@ -62,7 +62,7 @@ export default function EmployeeListScreen() {
 
   const fetchEmployees = useCallback(async () => {
     try {
-      const res = await apiFetch('/user/user/');
+      const res = await apiFetch('/user/');
       if (res.ok) {
         const data: EmployeeInfo[] = await res.json();
         setEmployees(data);
@@ -81,7 +81,7 @@ export default function EmployeeListScreen() {
   const handleDelete = async (id: number, name: string) => {
     if (!window.confirm(`"${name}" 직원을 삭제하시겠습니까?`)) return;
     try {
-      const res = await apiFetch(`/user/user/${id}/`, { method: 'DELETE' });
+      const res = await apiFetch(`/user/${id}/`, { method: 'DELETE' });
       if (res.ok) {
         setEmployees(prev => prev.filter(e => e.id !== id));
       }
@@ -103,7 +103,7 @@ export default function EmployeeListScreen() {
       if (!body.phone) delete body.phone;
       if (!body.address) delete body.address;
 
-      const res = await apiFetch('/user/user/', {
+      const res = await apiFetch('/user/', {
         method: 'POST',
         body: JSON.stringify(body),
       });

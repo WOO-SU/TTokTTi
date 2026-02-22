@@ -39,14 +39,12 @@ type AdminReport = {
     work_permission: string;
     urgent_fix_before_work: string[];
   };
+  version: string;
 };
 
-type PhotoCategory = 'workspace' | 'ladder' | 'commbox';
-
-type WorkspacePhotos = {
-  workspace: string | null;
-  ladder: string | null;
-  commbox: string | null;
+type PhotoItem = {
+  blobName: string;
+  url: string;
 };
 
 type WorkerDetail = {
@@ -73,8 +71,7 @@ type WorkspaceRisk = {
   workStatus: '작업 전' | '작업 중' | '작업 끝';
   members: { id: number; name: string }[];
   assessmentId: number | null;
-  photos: WorkspacePhotos;
-  photoUrls: WorkspacePhotos;
+  photos: PhotoItem[];
   adminReport: AdminReport | null;
 };
 
@@ -89,17 +86,6 @@ const sidebarItems = [
   { label: '알림 로그 확인', icon: '🔔', path: '/alert-logs' },
 ];
 
-const PHOTO_LABELS: Record<PhotoCategory, string> = {
-  workspace: '작업 공간',
-  ladder: '사다리',
-  commbox: '통신함',
-};
-
-const PHOTO_ICONS: Record<PhotoCategory, string> = {
-  workspace: '🏗️',
-  ladder: '🪜',
-  commbox: '📦',
-};
 
 const GRADE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   Low: { bg: '#ECFDF5', text: '#059669', border: '#A7F3D0' },
@@ -126,7 +112,6 @@ const STATUS_MAP: Record<string, '작업 전' | '작업 중' | '작업 끝'> = {
   DONE: '작업 끝',
 };
 
-const emptyPhotos: WorkspacePhotos = { workspace: null, ladder: null, commbox: null };
 
 // ── Helpers ──
 
@@ -160,29 +145,21 @@ function convertSession(session: WorkSessionCard): WorkspaceRisk {
     workStatus: STATUS_MAP[session.status] ?? '작업 전',
     members: (session.workers_detail ?? []).map(w => ({ id: w.employee_id, name: w.name })),
     assessmentId: null,
-    photos: { ...emptyPhotos },
-    photoUrls: { ...emptyPhotos },
+    photos: [],
     adminReport: null,
   };
 }
 
 // ── Sub Components ──
 
-function PhotoCard({ label, icon, url }: { label: string; icon: string; url: string | null }) {
+function PhotoCard({ index, url }: { index: number; url: string }) {
   return (
     <div style={styles.photoCard}>
       <div style={styles.photoCardHeader}>
-        <span style={{ fontSize: 16 }}>{icon}</span>
-        <span style={styles.photoCardLabel}>{label}</span>
+        <span style={{ fontSize: 16 }}>📷</span>
+        <span style={styles.photoCardLabel}>사진 {index + 1}</span>
       </div>
-      {url ? (
-        <img src={url} alt={label} style={styles.photoImage} />
-      ) : (
-        <div style={styles.photoPlaceholder}>
-          <span style={{ fontSize: 28, color: '#C5C6CC' }}>📷</span>
-          <span style={styles.photoPlaceholderText}>사진 미등록</span>
-        </div>
-      )}
+      <img src={url} alt={`현장 사진 ${index + 1}`} style={styles.photoImage} />
     </div>
   );
 }
@@ -194,67 +171,128 @@ function IntegratedAssessmentView({ report }: { report: AdminReport }) {
   const gs = getGradeStyle(overall.overall_grade);
   const ps = getPermissionStyle(overall.work_permission);
 
-  const topHazards = [...hazards]
-    .sort((a, b) => b.risk_R_1_25 - a.risk_R_1_25)
-    .slice(0, 2);
-
-  const significantHazards = hazards.filter(h => h.risk_R_1_25 >= 5);
-  const allActions = hazards.flatMap(h => h.mitigations_before_work);
-
-  const summaryLine =
-    `위험성 평가 결과 '${overall.overall_grade}' 수준이며 작업 상태는 '${overall.work_permission}'입니다.`;
-
-  const envParagraph =
-    `본 작업 현장은 ${scene.work_environment} ` +
-    `작업 위치는 ${scene.work_height_or_location}입니다.` +
-    (scene.observed_safety_facilities.length > 0
-      ? ` 현장에서 ${scene.observed_safety_facilities.join(', ')} 등의 안전 시설이 확인되었습니다.`
-      : '') +
-    (scene.needs_verification.length > 0
-      ? ` 다만, ${scene.needs_verification.join(', ')} 등은 추가 확인이 필요합니다.`
-      : '');
-
-  const riskLines = topHazards.map(h =>
-    `${h.title}(${h.risk_grade})의 경우, ` +
-    `${h.evidence_from_image} ` +
-    `이로 인해 ${h.expected_accident}의 가능성이 있습니다.`
-  );
-  const riskParagraph = significantHazards.length > 0
-    ? `주요 위험 요소로는 ${topHazards.map(h => h.title).join('과 ')}이(가) 식별되었습니다. ` +
-      riskLines.join(' ')
-    : '현장에서 식별된 위험 요소는 모두 낮은 수준(Low)으로, 기본 안전 수칙을 준수하면 작업이 가능합니다.';
-
-  const mitigationParagraph = allActions.length > 0
-    ? `작업 전 필요한 조치사항으로는 ${allActions.slice(0, 5).join(', ')} 등이 있습니다.` +
-      (overall.urgent_fix_before_work.length > 0
-        ? ` 특히 긴급 조치가 필요한 사항은 다음과 같습니다: ${overall.urgent_fix_before_work.join('; ')}.`
-        : '')
-    : '현재 별도의 사전 조치사항 없이 작업이 가능합니다.';
-
-  const residualHigh = hazards.filter(h => h.residual_risk_R_1_25 >= 5);
-  const residualParagraph = residualHigh.length > 0
-    ? `조치 이후에도 ${residualHigh.map(h => `${h.title}(잔여 위험: ${h.residual_risk_grade})`).join(', ')}은(는) 주의가 필요합니다.`
-    : '제시된 조치사항을 이행하면 모든 위험 요소가 낮은 수준으로 관리됩니다.';
-
   return (
     <div style={styles.assessmentContainer}>
+      {/* 종합 등급 & 작업 허가 */}
       <div style={styles.assessmentHeader}>
         <span style={{ ...styles.overallGradeBadge, backgroundColor: gs.bg, color: gs.text, borderColor: gs.border }}>
-          {overall.overall_grade}
+          종합 등급: {overall.overall_grade} (R={overall.overall_max_R})
         </span>
         <span style={{ ...styles.permissionBadgeLarge, backgroundColor: ps.bg, color: ps.text }}>
           {overall.work_permission}
         </span>
       </div>
 
-      <div style={styles.passageBlock}>
-        <p style={styles.passageParagraph}>
-          <strong>{summaryLine}</strong>
-        </p>
-        <p style={styles.passageParagraph}>{envParagraph}</p>
-        <p style={styles.passageParagraph}>{riskParagraph}</p>
-        <p style={styles.passageParagraph}>{mitigationParagraph}</p>
-        <p style={styles.passageParagraph}>{residualParagraph}</p>
+      {/* 현장 요약 (scene_summary) */}
+      <div style={styles.reportSection}>
+        <h4 style={styles.reportSectionTitle}>현장 요약</h4>
+        <div style={styles.reportSectionBody}>
+          <div style={styles.reportRow}>
+            <span style={styles.reportLabel}>작업 환경</span>
+            <span style={styles.reportValue}>{scene.work_environment}</span>
+          </div>
+          <div style={styles.reportRow}>
+            <span style={styles.reportLabel}>작업 위치/높이</span>
+            <span style={styles.reportValue}>{scene.work_height_or_location}</span>
+          </div>
+          {scene.observed_safety_facilities.length > 0 && (
+            <div style={styles.reportRow}>
+              <span style={styles.reportLabel}>확인된 안전시설</span>
+              <span style={styles.reportValue}>{scene.observed_safety_facilities.join(', ')}</span>
+            </div>
+          )}
+          {scene.needs_verification.length > 0 && (
+            <div style={styles.reportRow}>
+              <span style={styles.reportLabel}>추가 확인 필요</span>
+              <span style={{ ...styles.reportValue, color: '#D97706' }}>{scene.needs_verification.join(', ')}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 위험 요소 (hazards) */}
+      {hazards.length > 0 && (
+        <div style={styles.reportSection}>
+          <h4 style={styles.reportSectionTitle}>위험 요소 ({hazards.length}건)</h4>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {hazards.map((h) => {
+              const hgs = getGradeStyle(h.risk_grade);
+              const rgs = getGradeStyle(h.residual_risk_grade);
+              return (
+                <div key={h.id} style={styles.hazardCard}>
+                  <div style={styles.hazardHeader}>
+                    <span style={styles.hazardTitle}>{h.title}</span>
+                    <span style={{ ...styles.hazardGradeBadge, backgroundColor: hgs.bg, color: hgs.text, borderColor: hgs.border }}>
+                      {h.risk_grade} (R={h.risk_R_1_25})
+                    </span>
+                  </div>
+                  <div style={styles.hazardBody}>
+                    <div style={styles.reportRow}>
+                      <span style={styles.reportLabel}>이미지 근거</span>
+                      <span style={styles.reportValue}>{h.evidence_from_image}</span>
+                    </div>
+                    <div style={styles.reportRow}>
+                      <span style={styles.reportLabel}>예상 사고</span>
+                      <span style={styles.reportValue}>{h.expected_accident}</span>
+                    </div>
+                    <div style={styles.reportRow}>
+                      <span style={styles.reportLabel}>위험도 (L x S)</span>
+                      <span style={styles.reportValue}>{h.likelihood_L_1_5} x {h.severity_S_1_5} = {h.risk_R_1_25}</span>
+                    </div>
+                    {h.mitigations_before_work.length > 0 && (
+                      <div style={styles.reportRow}>
+                        <span style={styles.reportLabel}>작업 전 조치</span>
+                        <ul style={styles.mitigationList}>
+                          {h.mitigations_before_work.map((m, i) => (
+                            <li key={i} style={styles.mitigationItem}>{m}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    <div style={styles.reportRow}>
+                      <span style={styles.reportLabel}>잔여 위험도</span>
+                      <span style={styles.reportValue}>
+                        {h.residual_likelihood_L_1_5} x {h.residual_severity_S_1_5} = {h.residual_risk_R_1_25}{' '}
+                        <span style={{ ...styles.hazardGradeBadgeInline, backgroundColor: rgs.bg, color: rgs.text }}>
+                          {h.residual_risk_grade}
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 종합 판단 (overall) */}
+      <div style={styles.reportSection}>
+        <h4 style={styles.reportSectionTitle}>종합 판단</h4>
+        <div style={styles.reportSectionBody}>
+          <div style={styles.reportRow}>
+            <span style={styles.reportLabel}>최대 위험 점수</span>
+            <span style={styles.reportValue}>{overall.overall_max_R}</span>
+          </div>
+          <div style={styles.reportRow}>
+            <span style={styles.reportLabel}>종합 등급</span>
+            <span style={{ ...styles.reportValue, fontWeight: 700, color: gs.text }}>{overall.overall_grade}</span>
+          </div>
+          <div style={styles.reportRow}>
+            <span style={styles.reportLabel}>작업 허가</span>
+            <span style={{ ...styles.reportValue, fontWeight: 700, color: ps.text }}>{overall.work_permission}</span>
+          </div>
+          {overall.urgent_fix_before_work.length > 0 && (
+            <div style={styles.reportRow}>
+              <span style={styles.reportLabel}>긴급 조치 사항</span>
+              <ul style={styles.mitigationList}>
+                {overall.urgent_fix_before_work.map((item, i) => (
+                  <li key={i} style={{ ...styles.mitigationItem, color: '#DC2626' }}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -314,16 +352,18 @@ function WorkspaceRiskCard({
         <div style={styles.workspaceCardBody}>
           <div style={styles.photosSection}>
             <span style={styles.sectionLabel}>현장 사진 (직원 촬영)</span>
-            <div style={styles.photosGrid}>
-              {(['workspace', 'ladder', 'commbox'] as PhotoCategory[]).map(cat => (
-                <PhotoCard
-                  key={cat}
-                  label={PHOTO_LABELS[cat]}
-                  icon={PHOTO_ICONS[cat]}
-                  url={workspace.photoUrls[cat]}
-                />
-              ))}
-            </div>
+            {workspace.photos.length > 0 ? (
+              <div style={styles.photosGrid}>
+                {workspace.photos.map((photo, i) => (
+                  <PhotoCard key={photo.blobName} index={i} url={photo.url} />
+                ))}
+              </div>
+            ) : (
+              <div style={styles.noAssessment}>
+                <span style={{ fontSize: 28, color: '#C5C6CC' }}>📷</span>
+                <span style={styles.noAssessmentText}>등록된 사진이 없습니다.</span>
+              </div>
+            )}
           </div>
 
           <div style={styles.riskSection}>
@@ -382,40 +422,61 @@ export default function WorkerRiskScreen() {
             // Get admin report detail
             const reportRes = await apiFetch(`/risk/admin/${assessmentId}`);
             if (!reportRes.ok) return { ...base, assessmentId };
-            const reportData = await reportRes.json();
+            let reportData: any;
+            try {
+              reportData = await reportRes.json();
+            } catch {
+              return { ...base, assessmentId };
+            }
+            if (!reportData?.report) return { ...base, assessmentId };
 
             const images: { id: number; blob_name: string; created_at: string }[] = reportData.images ?? [];
+            const rpt = reportData.report;
             const adminReport: AdminReport = {
-              scene_summary: reportData.report?.scene_summary ?? {
-                work_environment: '',
-                work_height_or_location: '',
-                observed_safety_facilities: [],
-                needs_verification: [],
+              scene_summary: {
+                work_environment: rpt.scene_summary?.work_environment ?? '',
+                work_height_or_location: rpt.scene_summary?.work_height_or_location ?? '',
+                observed_safety_facilities: rpt.scene_summary?.observed_safety_facilities ?? [],
+                needs_verification: rpt.scene_summary?.needs_verification ?? [],
               },
-              hazards: reportData.report?.hazards ?? [],
-              overall: reportData.report?.overall ?? {
-                overall_max_R: 0,
-                overall_grade: 'Low' as RiskGrade,
-                work_permission: '작업 가능',
-                urgent_fix_before_work: [],
+              hazards: (rpt.hazards ?? []).map((h: any) => ({
+                id: h.id ?? '',
+                title: h.title ?? '',
+                evidence_from_image: h.evidence_from_image ?? '',
+                expected_accident: h.expected_accident ?? '',
+                likelihood_L_1_5: h.likelihood_L_1_5 ?? 0,
+                severity_S_1_5: h.severity_S_1_5 ?? 0,
+                risk_R_1_25: h.risk_R_1_25 ?? 0,
+                risk_grade: h.risk_grade ?? 'Low',
+                mitigations_before_work: h.mitigations_before_work ?? [],
+                residual_likelihood_L_1_5: h.residual_likelihood_L_1_5 ?? 0,
+                residual_severity_S_1_5: h.residual_severity_S_1_5 ?? 0,
+                residual_risk_R_1_25: h.residual_risk_R_1_25 ?? 0,
+                residual_risk_grade: h.residual_risk_grade ?? 'Low',
+              })),
+              overall: {
+                overall_max_R: rpt.overall?.overall_max_R ?? 0,
+                overall_grade: rpt.overall?.overall_grade ?? 'Low',
+                work_permission: rpt.overall?.work_permission ?? '작업 가능',
+                urgent_fix_before_work: rpt.overall?.urgent_fix_before_work ?? [],
               },
+              version: rpt.version ?? '',
             };
 
-            // Map images to the 3 photo categories by order
-            const categories: PhotoCategory[] = ['workspace', 'ladder', 'commbox'];
-            const photos: WorkspacePhotos = { ...emptyPhotos };
-            const photoUrls: WorkspacePhotos = { ...emptyPhotos };
-            for (let i = 0; i < Math.min(images.length, categories.length); i++) {
-              photos[categories[i]] = images[i].blob_name;
+            // Fetch SAS URLs for all images
+            const photos: PhotoItem[] = [];
+            for (const img of images) {
               try {
-                photoUrls[categories[i]] = await fetchImageUrl(images[i].blob_name);
-              } catch (e) {
-                console.error('Failed to fetch image for ${categories[i]}:', e);
-                photoUrls[categories[i]] = '';
+                const url = await fetchImageUrl(img.blob_name);
+                if (url) {
+                  photos.push({ blobName: img.blob_name, url });
+                }
+              } catch {
+                // skip failed images
               }
             }
 
-            return { ...base, assessmentId, photos, photoUrls, adminReport };
+            return { ...base, assessmentId, photos, adminReport };
           } catch {
             return base;
           }
@@ -671,7 +732,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 15, color: '#1F2024',
   },
   photosGrid: {
-    display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16,
+    display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16,
   },
   photoCard: {
     backgroundColor: '#F8F9FA', borderRadius: 12, border: '1px solid #E8E9EB',
