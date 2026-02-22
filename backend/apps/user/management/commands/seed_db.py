@@ -255,6 +255,8 @@ class Command(BaseCommand):
             "환기설비 안전 점검",
         ]
 
+        has_in_progress = False
+
         for date in dates: # 하루 당 3개의 세션씩 랜덤으로 생성
             for worksite in worksites:
                 for i in range(3):
@@ -272,6 +274,7 @@ class Command(BaseCommand):
                         status = WorkSession.StatusChoices.DONE
                     elif starts_at <= now <= ends_at:
                         status = WorkSession.StatusChoices.IN_PROGRESS
+                        has_in_progress = True
                     else:
                         status = WorkSession.StatusChoices.READY
 
@@ -310,6 +313,20 @@ class Command(BaseCommand):
                             user=w,
                             role=WorkSessionMember.RoleChoices.WORKER,
                         )
+        if not has_in_progress:
+            session = (
+                WorkSession.objects
+                .filter(starts_at__date=now.date())
+                .order_by("?")
+                .first()
+            )
+
+            if session:
+                session.starts_at = now - timedelta(hours=1)
+                session.ends_at = now + timedelta(hours=1)
+                session.status = WorkSession.StatusChoices.IN_PROGRESS
+                session.save()        
+        
         self.stdout.write(self.style.SUCCESS(f"✅ apps.worksession seeding completed"))
 
 
