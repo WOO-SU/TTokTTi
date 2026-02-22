@@ -9,3 +9,5 @@ redis
 websockets
 httpx
 python-multipart
+pytest
+pytest-asyncio

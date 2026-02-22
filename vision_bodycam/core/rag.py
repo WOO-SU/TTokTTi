@@ -1,6 +1,10 @@
 # gpu-server/core/rag.py
+import logging
+from typing import List, Dict
 
-class ManualRetriever:
+logger = logging.getLogger(__name__)
+
+class DynamicRetriever:
     def __init__(self):
         # In reality, load your vector database here
         self.knowledge_base = {

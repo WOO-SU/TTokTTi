@@ -34,6 +34,8 @@ frontend/mobile/node_modules/
 *.log
 .metro/
 
+**/.vite
+
 # Security (절대 올라가면 안 되는 파일)
 .env
 .env.local
