@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { NavigationContainer, getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -235,46 +235,96 @@ const tabIconStyles = StyleSheet.create({
   },
 });
 
+/* ──────── Custom Floating Tab Bar ──────── */
+
+function FloatingTabBar({ state, descriptors, navigation, insets }: any) {
+  const MARGIN_H = 16;
+  const HEIGHT = 64;
+
+  // Check if tab bar should be hidden (e.g. on camera screens)
+  const focusedOptions = descriptors[state.routes[state.index].key].options;
+  const tabBarStyle = focusedOptions?.tabBarStyle;
+  if (tabBarStyle?.display === 'none') {
+    return null;
+  }
+
+  return (
+    <View
+      style={{
+        position: 'absolute',
+        bottom: insets.bottom + 8,
+        left: MARGIN_H,
+        right: MARGIN_H,
+        height: HEIGHT,
+        borderRadius: HEIGHT / 2,
+        backgroundColor: '#FFFFFF',
+        flexDirection: 'row',
+        // iOS Shadow
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.12,
+        shadowRadius: 12,
+        // Android
+        elevation: 10,
+        overflow: 'visible',
+      }}>
+      {state.routes.map((route: any, index: number) => {
+        const { options } = descriptors[route.key];
+        const label = options.tabBarLabel ?? options.title ?? route.name;
+        const isFocused = state.index === index;
+
+        const iconColor = isFocused ? '#006FFD' : '#71727A';
+        const labelColor = isFocused ? '#006FFD' : '#71727A';
+
+        const onPress = () => {
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          });
+          if (!isFocused && !event.defaultPrevented) {
+            navigation.navigate(route.name);
+          }
+        };
+
+        const IconComponent = options.tabBarIcon;
+
+        return (
+          <TouchableOpacity
+            key={route.key}
+            activeOpacity={0.7}
+            onPress={onPress}
+            style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
+          >
+            <View style={{ alignItems: 'center', gap: 3 }}>
+              {IconComponent ? <IconComponent focused={isFocused} color={iconColor} size={24} /> : null}
+              <Text style={{
+                fontSize: 10,
+                fontWeight: '600',
+                color: labelColor,
+                textAlign: 'center',
+              }}>
+                {label}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
 function MainTabs() {
   const insets = useSafeAreaInsets();
 
-  const baseTabBarStyle: any = {
-    position: 'absolute',
-    bottom: insets.bottom + 4,
-    left: 80,
-    right: 80,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 0,
-    // iOS Shadow
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    // Android Elevation
-    elevation: 8,
-    paddingHorizontal: 12,
-  };
+  const baseTabBarStyle: any = {};
 
   return (
     <Tab.Navigator
+      initialRouteName="Home"
+      tabBar={(props) => <FloatingTabBar {...props} insets={insets} />}
       screenOptions={{
         headerShown: false,
-        tabBarStyle: baseTabBarStyle,
-        tabBarLabelStyle: {
-          fontFamily: 'Noto Sans KR',
-          fontWeight: '600',
-          fontSize: 10,
-        },
-        tabBarItemStyle: {
-          justifyContent: 'center',
-          alignItems: 'center',
-          paddingTop: 8,
-        },
-        tabBarIconStyle: {
-          marginBottom: 4,
-        },
         tabBarActiveTintColor: '#006FFD',
         tabBarInactiveTintColor: '#71727A',
       }}>
@@ -283,6 +333,7 @@ function MainTabs() {
         component={PersonalStackNavigator}
         options={{
           tabBarIcon: ({ focused }) => <PersonTabIcon focused={focused} />,
+          tabBarLabel: '마이',
         }}
       />
       <Tab.Screen
@@ -296,14 +347,12 @@ function MainTabs() {
             'CaptureWork',
             'EndWork',
           ];
-          const display = hiddenRoutes.includes(routeName) ? 'none' : 'flex';
+          const isHidden = hiddenRoutes.includes(routeName);
 
           return {
-            tabBarStyle: {
-              ...baseTabBarStyle,
-              display,
-            },
+            tabBarStyle: isHidden ? { display: 'none' } : baseTabBarStyle,
             tabBarIcon: ({ focused }) => <HomeTabIcon focused={focused} />,
+            tabBarLabel: '홈',
           };
         }}
       />
@@ -312,6 +361,7 @@ function MainTabs() {
         component={SettingStackNavigator}
         options={{
           tabBarIcon: ({ focused }) => <SettingTabIcon focused={focused} />,
+          tabBarLabel: '설정',
         }}
       />
     </Tab.Navigator>
