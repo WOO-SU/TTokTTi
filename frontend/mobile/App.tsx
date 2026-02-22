@@ -46,6 +46,7 @@ export type PersonalStackParamList = {
 
 export type SettingStackParamList = {
   SettingHome: undefined;
+  ChangePassword: undefined;
 };
 
 export type TabParamList = {
@@ -103,6 +104,7 @@ function SettingStackNavigator() {
   return (
     <SettingStack.Navigator screenOptions={{ headerShown: false }}>
       <SettingStack.Screen name="SettingHome" component={SettingScreen} />
+      <SettingStack.Screen name="ChangePassword" component={ChangePasswordScreen} />
     </SettingStack.Navigator>
   );
 }

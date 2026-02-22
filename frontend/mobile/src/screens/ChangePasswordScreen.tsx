@@ -10,19 +10,15 @@ import {
     Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { PersonalStackParamList } from '../../App';
+import { useNavigation } from '@react-navigation/native';
 import TopHeader from '../components/TopHeader';
 import { changePassword } from '../api/user';
 
-type Props = {
-    navigation: NativeStackNavigationProp<PersonalStackParamList, 'ChangePassword'>;
-};
-
 /* ──────── Main Component ──────── */
 
-export default function ChangePasswordScreen({ navigation }: Props) {
+export default function ChangePasswordScreen() {
     const insets = useSafeAreaInsets();
+    const navigation = useNavigation();
 
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
