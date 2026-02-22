@@ -547,3 +547,11 @@ class Command(BaseCommand):
                 immediate_actions=wr["immediate_actions"],
                 short_message=wr["short_message"],
             )
+            
+            self.stdout.write(self.style.SUCCESS("✅ apps.risk seeding completed"))
+        
+        # ------------------------------------------------------------------
+        # report.PostWorkReport
+        # ------------------------------------------------------------------
+        self.stdout.write("🚀 Seeding apps.report data...")
+        
