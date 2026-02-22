@@ -3,8 +3,9 @@
 import random
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, datetime, time
 from faker import Faker
+
 
 # Import your models
 from apps.user.models import *
@@ -19,17 +20,13 @@ class Command(BaseCommand):
     
     def handle(self, *args, **kwargs):
         fake = Faker("ko_KR")
-        self.stdout.write("Starting high-volume database seeding...")
-
-        now = timezone.now()
-        days = [now - timedelta(days=i) for i in range(1, 7)] + [now + timedelta(days=i) for i in range(7)]
+        self.stdout.write("🚀 Seeding apps.user data...")
         DEFAULT_PASSWORD = "1234"
 
         # ------------------------------------------------------------------
         # user.User
         # ------------------------------------------------------------------
         
-        # employee
         users = []
         for i in range(1, 6): # f1 ~ f5
             username = f"user{i}"
@@ -127,15 +124,98 @@ class Command(BaseCommand):
 
             users.append(user)
 
-        # 2. Worksites
-        sites = []
-        for _ in range(5):
-            sites.append(Worksite.objects.create(
-                name=f"Site {fake.city()}", 
-                address=fake.address()
-            ))
+        self.stdout.write(self.style.SUCCESS(f"✅ User seeding completed for {len(users)} users"))
 
+        # ------------------------------------------------------------------
+        # worksession.WorkSite, worksession.WorkSession, worksession.WorkSessionMember
+        # ------------------------------------------------------------------
+        self.stdout.write("🚀 Seeding apps.worksession data...")
         now = timezone.now()
+        dates = [now - timedelta(days=i) for i in range(1, 7)] + [now + timedelta(days=i) for i in range(7)]
+        
+        workers = list(User.objects.filter(is_manager=False))
+        managers = list(User.objects.filter(is_manager=True))
+
+        if len(workers) < 2 or len(managers) < 5:
+            raise Exception("❌ Insufficient users: worker>=2, manager>=5 required")
+        
+        station_names = [
+            "강남역",
+            "잠실역",
+            "보라매역",
+            "구로디지털단지역",
+            "판교역",
+        ]
+
+        worksites = []
+        for name in station_names:
+            ws, _ = Worksite.objects.get_or_create(
+                name=name,
+                defaults={
+                    "address": fake.address(), 
+                }
+            )
+            worksites.append(ws)
+
+        task_templates = [
+            "전기설비 점검 작업",
+            "통신 케이블 유지보수",
+            "환기설비 안전 점검",
+        ]
+
+        for date in dates: # 하루 당 3개의 세션씩 랜덤으로 생성
+            for worksite in worksites:
+                for i in range(3):
+                    start_hour = random.randint(9, 15)
+                    duration = random.randint(2, 3)
+
+                    starts_at = timezone.make_aware(
+                        datetime.combine(date, time(hour=start_hour))
+                    )
+                    ends_at = starts_at + timedelta(hours=duration)
+
+                    task_name = random.choice(task_templates)
+
+                    session = WorkSession.objects.create(
+                        worksite=worksite,
+                        name=f"{worksite.name} {task_name}",
+                        starts_at=starts_at,
+                        ends_at=ends_at,
+                        status=random.choice([
+                            WorkSession.StatusChoices.READY,
+                            WorkSession.StatusChoices.IN_PROGRESS,
+                            WorkSession.StatusChoices.DONE,
+                        ]),
+                        # fullcam, bodycam: 실제 blob path 필요 (몇개만)
+                    )
+
+                    # 각 세션당 1명의 HEAD (is_manager=True), 4명의 RELATED (is_manager=True, but not HEAD), 2명의 WORKER (is_manager=False) 배정
+                    head = random.choice(managers)
+                    WorkSessionMember.objects.create(
+                        worksession=session,
+                        user=head,
+                        role=WorkSessionMember.RoleChoices.HEAD,
+                    )
+
+                    relateds = random.sample(
+                        [m for m in managers if m != head],
+                        k=4
+                    )
+                    for rm in relateds:
+                        WorkSessionMember.objects.create(
+                            worksession=session,
+                            user=rm,
+                            role=WorkSessionMember.RoleChoices.RELATED,
+                        )
+
+                    selected_workers = random.sample(workers, k=2)
+                    for w in selected_workers:
+                        WorkSessionMember.objects.create(
+                            worksession=session,
+                            user=w,
+                            role=WorkSessionMember.RoleChoices.WORKER,
+                        )
+        self.stdout.write(self.style.SUCCESS(f"✅ apps.worksession seeding completed"))
 
         for i in range(20):  # Let's create 20 full Work Session "Cards"
             start_time = now - timedelta(days=random.randint(0, 10), hours=random.randint(1, 12))
