@@ -255,9 +255,9 @@ class Command(BaseCommand):
                     employee_id=employee_id,
                     worksession=session,
                     status=Photo.StatusChoices.BEFORE,
-                    image_path=target_before_paths[photo_before_idx]
+                    image_path=target_before_paths[target_before_idx]
                 )
-                photo_before_idx += 1
+                target_before_idx += 1
 
             elif session.status == WorkSession.StatusChoices.DONE: # BEFORE/AFTER 사진 모두 업로드 상태
                 for employee_id in workers: # 1명이 BEFROE 업로드, 1명이 AFTER 업로드 가정
@@ -265,17 +265,17 @@ class Command(BaseCommand):
                         employee_id=employee_id,
                         worksession=session,
                         status=Photo.StatusChoices.BEFORE,
-                        image_path=target_before_paths[photo_before_idx % len(target_before_paths)]
+                        image_path=target_before_paths[target_before_idx]
                     )
-                    photo_before_idx += 1
+                    target_before_idx += 1
 
                     Photo.objects.create(
                         employee_id=employee_id,
                         worksession=session,
                         status=Photo.StatusChoices.AFTER,
-                        image_path=target_after_paths[photo_after_idx % len(target_after_paths)]
+                        image_path=target_after_paths[target_after_idx]
                     )
-                    photo_after_idx += 1
+                    target_after_idx += 1
 
             categories = [
                 Compliance.CategoryChoices.HELMET,
