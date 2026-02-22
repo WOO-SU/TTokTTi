@@ -48,7 +48,7 @@ export default function TopHeader({ title, showBackButton = true, rightComponent
     const navigation = useNavigation();
 
     return (
-        <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <View style={[styles.header, { paddingTop: insets.top, height: 60 + insets.top }]}>
             {showBackButton ? (
                 <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
                     <BackArrowIcon />
@@ -66,7 +66,6 @@ export default function TopHeader({ title, showBackButton = true, rightComponent
 
 const styles = StyleSheet.create({
     header: {
-        height: 64,
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 24,
