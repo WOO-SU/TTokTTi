@@ -115,7 +115,7 @@ def risk_assess(request, assessment_id):
 
     images = list(
         assessment.images
-        .order_by("order", "id")
+        .order_by("created_at")
         .values_list("blob_name", flat=True)
     )
 
@@ -144,10 +144,11 @@ def risk_assess(request, assessment_id):
 
     with transaction.atomic():
         # update RiskAssessment with results
+        perm_str = llm_result["overall"].get("work_permission", "작업 가능")
         assessment.llm_result = llm_result
         assessment.overall_grade = llm_result["overall"]["overall_grade"]
         assessment.overall_max_R = llm_result["overall"]["overall_max_R"]
-        assessment.work_permission = llm_result["overall"]["work_permission"]
+        assessment.work_permission = perm_str != "조치 전 작업 금지"
         assessment.status = RiskAssessment.StatusChoices.COMPLETED
         assessment.save()
 

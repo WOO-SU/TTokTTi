@@ -31,9 +31,9 @@ def get_today_worksession(request):
     today = timezone.now().date()
 
     worksessions = WorkSession.objects.filter(
-        worksession_members__user=employee,
+        members__user=employee,
         starts_at__date=today
-    )
+    ).order_by('starts_at')
 
     serializer = WorkSessionListSerializer(worksessions, many=True)
 
@@ -67,7 +67,7 @@ def activate_worksession(request):
     try:
         worksession = WorkSession.objects.get(
             id=worksession_id,
-            worksession_members__user=employee
+            members__user=employee
         )
     except WorkSession.DoesNotExist:
         return Response(

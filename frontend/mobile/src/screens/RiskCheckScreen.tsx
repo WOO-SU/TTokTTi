@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,20 +7,27 @@ import {
   StatusBar,
   ScrollView,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../App';
+import type { RouteProp } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
+import type { HomeStackParamList } from '../../App';
+import TopHeader from '../components/TopHeader';
+import { requestRiskAssess } from '../api/risk';
+import CheckCard from '../components/CheckCard';
 import { useRiskPhotos } from '../context/RiskPhotoContext';
 
 type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'RiskCheck'>;
+  navigation: NativeStackNavigationProp<HomeStackParamList, 'RiskCheck'>;
+  route: RouteProp<HomeStackParamList, 'RiskCheck'>;
 };
 
 type CheckItem = {
   id: string;
   title: string;
-  checked: boolean;
+  hasPhoto: boolean;
   image: any;
 };
 
@@ -28,120 +35,123 @@ const INITIAL_ITEMS: CheckItem[] = [
   {
     id: '1',
     title: '작업공간',
-    checked: false,
+    hasPhoto: false,
     image: require('../assets/env.png'),
   },
   {
     id: '2',
     title: '사다리',
-    checked: false,
+    hasPhoto: false,
     image: require('../assets/ladder.png'),
   },
   {
     id: '3',
     title: '통신함',
-    checked: false,
+    hasPhoto: false,
     image: require('../assets/box.png'),
   },
 ];
 
-/* ──────── Icon Components ──────── */
-
-function BackArrowIcon() {
-  return (
-    <View style={iconStyles.backContainer}>
-      <View style={iconStyles.backArrowTop} />
-      <View style={iconStyles.backArrowBottom} />
-    </View>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <View style={iconStyles.checkContainer}>
-      <View style={iconStyles.checkShort} />
-      <View style={iconStyles.checkLong} />
-    </View>
-  );
-}
-
 /* ──────── Main Component ──────── */
 
-export default function RiskCheckScreen({ navigation }: Props) {
+export default function RiskCheckScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
-  const [items, setItems] = useState<CheckItem[]>(INITIAL_ITEMS);
-  const { getPhoto } = useRiskPhotos();
+  const { worksession_id } = route.params;
+  const { photos, assessmentId } = useRiskPhotos();
+  const [isRequesting, setIsRequesting] = useState(false);
+  const isComponentMounted = useRef(true);
 
-  const toggleItem = (id: string) => {
-    setItems(prev =>
-      prev.map(item =>
-        item.id === id ? { ...item, checked: !item.checked } : item,
-      ),
-    );
+  useEffect(() => {
+    isComponentMounted.current = true;
+    return () => { isComponentMounted.current = false; };
+  }, []);
+
+  const handleCardPress = (title: string) => {
+    navigation.navigate('RiskCamera', {
+      title,
+      worksession_id,
+      assessmentId: assessmentId,
+    });
   };
 
-  const handleCardPress = (title: string, id: string) => {
-    navigation.navigate('RiskCamera', { title });
+  const displayItems = INITIAL_ITEMS.map(item => ({
+    ...item,
+    hasPhoto: photos.some(p => p.title === item.title),
+  }));
+
+  const hasAnyPhoto = displayItems.some(item => item.hasPhoto);
+
+  const handleRequest = async () => {
+    if (!assessmentId) { return; }
+    setIsRequesting(true);
+    try {
+      await requestRiskAssess(assessmentId);
+      if (!isComponentMounted.current || !navigation.isFocused()) return;
+      navigation.replace('RiskResult', {
+        assessment_id: assessmentId,
+        worksession_id,
+      });
+    } catch (err) {
+      console.error('[RiskCheck] 요청하기 실패:', err);
+    } finally {
+      setIsRequesting(false);
+    }
   };
 
-  const rows = [];
-  for (let i = 0; i < items.length; i += 2) {
-    rows.push(items.slice(i, i + 2));
+  const rows: CheckItem[][] = [];
+  for (let i = 0; i < displayItems.length; i += 2) {
+    rows.push(displayItems.slice(i, i + 2));
   }
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Nav Bar */}
-      <View style={[styles.navBar, { paddingTop: insets.top }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <BackArrowIcon />
-        </TouchableOpacity>
-        <Text style={styles.pageTitle}>위험성 평가</Text>
-      </View>
+      <TopHeader title="위험성 평가" />
 
       {/* Content */}
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={[styles.scrollContent, {paddingBottom: insets.bottom + 24}]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: insets.bottom + 24 },
+        ]}
         showsVerticalScrollIndicator={false}>
+        <Text style={styles.guideText}>
+          각 항목을 촬영하면 위험성 평가 보고서를 생성할 수 있습니다.
+        </Text>
+
         <View style={styles.gridContainer}>
           {rows.map((row, rowIndex) => (
             <View key={rowIndex} style={styles.gridRow}>
               {row.map(item => (
-                <TouchableOpacity
+                <CheckCard
                   key={item.id}
-                  style={styles.equipmentCard}
-                  activeOpacity={0.8}
-                  onPress={() => handleCardPress(item.title, item.id)}>
-                  <View style={styles.cardBorder} />
-                  <Image
-                    source={item.image}
-                    style={styles.cardImage}
-                    resizeMode="contain"
-                  />
-                  <View style={styles.cardBottom}>
-                    <Text style={styles.cardLabel}>{item.title}</Text>
-                    <TouchableOpacity
-                      style={[
-                        styles.checkbox,
-                        item.checked
-                          ? styles.checkboxChecked
-                          : styles.checkboxUnchecked,
-                      ]}
-                      onPress={() => toggleItem(item.id)}
-                      activeOpacity={0.7}>
-                      {item.checked && <CheckIcon />}
-                    </TouchableOpacity>
-                  </View>
-                </TouchableOpacity>
+                  title={item.title}
+                  image={item.image}
+                  isChecked={item.hasPhoto}
+                  onPress={() => handleCardPress(item.title)}
+                />
               ))}
             </View>
           ))}
         </View>
+
+        {/* 요청하기 Button */}
+        <TouchableOpacity
+          style={[
+            styles.requestButton,
+            (!hasAnyPhoto || isRequesting) && styles.requestButtonDisabled,
+          ]}
+          activeOpacity={0.8}
+          disabled={!hasAnyPhoto || isRequesting}
+          onPress={handleRequest}>
+          {isRequesting ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.requestButtonText}>요청하기</Text>
+          )}
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -172,32 +182,6 @@ const iconStyles = StyleSheet.create({
     position: 'absolute',
     transform: [{ rotate: '45deg' }, { translateY: 5.5 }],
   },
-  checkContainer: {
-    width: 10,
-    height: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkShort: {
-    width: 5,
-    height: 1.5,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 1,
-    position: 'absolute',
-    left: 0,
-    bottom: 1,
-    transform: [{ rotate: '45deg' }],
-  },
-  checkLong: {
-    width: 9,
-    height: 1.5,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 1,
-    position: 'absolute',
-    right: 0,
-    bottom: 2.5,
-    transform: [{ rotate: '-45deg' }],
-  },
 });
 
 /* ──────── Main Styles ──────── */
@@ -205,36 +189,19 @@ const iconStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8F9FE',
   },
-
-  /* Nav Bar */
-  navBar: {
-    height: 64,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    backgroundColor: '#FFFFFF',
-    gap: 8,
-  },
-  backButton: {
-    width: 28,
-    height: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pageTitle: {
-    fontFamily: 'Inter',
-    fontWeight: '700',
-    fontSize: 18,
-    color: '#1F2024',
-  },
-
-  /* Content */
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 24,
-    paddingBottom: 24,
+    gap: 24,
+  },
+  guideText: {
+    fontFamily: 'Noto Sans KR',
+    fontWeight: '400',
+    fontSize: 14,
+    color: '#71727A',
+    lineHeight: 20,
   },
   gridContainer: {
     gap: 20,
@@ -244,69 +211,21 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     gap: 20,
   },
-
-  /* Equipment Card */
-  equipmentCard: {
-    width: 154.5,
-    height: 154.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: [
-      {
-        offsetX: 0,
-        offsetY: 4,
-        blurRadius: 4,
-        spreadDistance: 0,
-        color: 'rgba(0, 0, 0, 0.25)',
-        outset: true,
-      },
-    ],
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  cardBorder: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 20,
-    borderWidth: 5,
-    borderColor: '#EAF2FF',
-  },
-  cardImage: {
-    width: 100,
-    height: 100,
-  },
-  cardBottom: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 4,
-  },
-  cardLabel: {
-    fontFamily: 'Inter',
-    fontWeight: '400',
-    fontSize: 15,
-    color: '#000000',
-  },
-
-  /* Checkbox */
-  checkbox: {
-    width: 16,
-    height: 16,
-    borderRadius: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxChecked: {
+  requestButton: {
+    width: '100%',
+    height: 48,
+    borderRadius: 10,
     backgroundColor: '#006FFD',
-    borderWidth: 1.5,
-    borderColor: '#006FFD',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  checkboxUnchecked: {
-    backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: '#C5C6CC',
+  requestButtonDisabled: {
+    backgroundColor: '#C5C6CC',
+  },
+  requestButtonText: {
+    fontFamily: 'Noto Sans KR',
+    fontWeight: '500',
+    fontSize: 16,
+    color: '#FFFFFF',
   },
 });

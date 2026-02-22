@@ -1,23 +1,24 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  Image,
   StatusBar,
-  ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../App';
+import type { RouteProp } from '@react-navigation/native';
+import type { HomeStackParamList } from '../../App';
+import TopHeader from '../components/TopHeader';
+import { checkLatestRisk } from '../api/risk';
+import { useRiskPhotos } from '../context/RiskPhotoContext';
 
 type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'RiskAssessment'>;
+  navigation: NativeStackNavigationProp<HomeStackParamList, 'RiskAssessment'>;
+  route: RouteProp<HomeStackParamList, 'RiskAssessment'>;
 };
-
-const cameraImage = require('../assets/camera.png');
-const resultImage = require('../assets/result.png');
 
 /* ──────── Icon Components ──────── */
 
@@ -32,59 +33,52 @@ function BackArrowIcon() {
 
 /* ──────── Main Component ──────── */
 
-export default function RiskAssessmentScreen({ navigation }: Props) {
+export default function RiskAssessmentScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
+  const { worksession_id } = route.params;
+  const { setAssessmentId } = useRiskPhotos();
+  const isComponentMounted = useRef(true);
+
+  useEffect(() => {
+    isComponentMounted.current = true;
+    async function checkAndNavigate() {
+      try {
+        const result = await checkLatestRisk(worksession_id);
+        if (!isComponentMounted.current || !navigation.isFocused()) return;
+
+        if (result.exists && result.assessment_id) {
+          setAssessmentId(result.assessment_id);
+          navigation.replace('RiskResult', {
+            assessment_id: result.assessment_id,
+            worksession_id,
+          });
+        } else {
+          navigation.replace('RiskCheck', { worksession_id });
+        }
+      } catch (err) {
+        console.error('[RiskAssessment] checkLatestRisk 실패:', err);
+        if (!isComponentMounted.current || !navigation.isFocused()) return;
+        navigation.replace('RiskCheck', { worksession_id });
+      }
+    }
+
+    checkAndNavigate();
+    return () => {
+      isComponentMounted.current = false;
+    };
+  }, [worksession_id, navigation]);
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Nav Bar */}
-      <View style={[styles.navBar, { paddingTop: insets.top }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <BackArrowIcon />
-        </TouchableOpacity>
-        <Text style={styles.pageTitle}>위험성 평가</Text>
+      <TopHeader title="위험성 평가" />
+
+      {/* 로딩 */}
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#006FFD" />
+        <Text style={styles.loadingText}>보고서를 확인 중입니다...</Text>
       </View>
-
-      {/* Content */}
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={[styles.scrollContent, {paddingBottom: insets.bottom + 24}]}
-        bounces={false}
-        showsVerticalScrollIndicator={false}>
-        {/* Banner 1: 촬영하기 */}
-        <TouchableOpacity
-          style={styles.bannerSection}
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate('RiskCheck')}>
-          <View style={styles.bannerCard}>
-            <Image
-              source={cameraImage}
-              style={styles.bannerImage1}
-              resizeMode="contain"
-            />
-            <Text style={styles.bannerText}>촬영하기</Text>
-          </View>
-        </TouchableOpacity>
-
-        {/* Banner 2: 결과 */}
-        <TouchableOpacity
-          style={styles.bannerSection}
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate('RiskResult')}>
-          <View style={styles.bannerCard}>
-            <Image
-              source={resultImage}
-              style={styles.bannerImage2}
-              resizeMode="contain"
-            />
-            <Text style={styles.bannerText}>결과</Text>
-          </View>
-        </TouchableOpacity>
-      </ScrollView>
     </View>
   );
 }
@@ -121,77 +115,17 @@ const iconStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8F9FE',
   },
-
-  /* Nav Bar */
-  navBar: {
-    height: 64,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    backgroundColor: '#FFFFFF',
-    gap: 8,
-  },
-  backButton: {
-    width: 28,
-    height: 28,
+  loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 16,
   },
-  pageTitle: {
-    fontFamily: 'Inter',
-    fontWeight: '700',
-    fontSize: 18,
-    color: '#1F2024',
-  },
-
-  /* Content */
-  scrollContent: {
-    flexGrow: 1,
-    gap: 15,
-    paddingHorizontal: 12,
-    paddingTop: 24,
-    paddingBottom: 24,
-  },
-
-  /* Banner */
-  bannerSection: {},
-  bannerCard: {
-    width: '100%',
-    height: 214,
-    borderRadius: 50,
-    borderWidth: 5,
-    borderColor: '#EAF2FF',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    overflow: 'hidden',
-    boxShadow: [
-      {
-        offsetX: 0,
-        offsetY: 4,
-        blurRadius: 4,
-        spreadDistance: 0,
-        color: 'rgba(0, 0, 0, 0.25)',
-        outset: true,
-      },
-    ],
-  },
-  bannerImage1: {
-    width: 206,
-    height: 206,
-  },
-  bannerImage2: {
-    width: 207,
-    height: 207,
-  },
-  bannerText: {
-    fontFamily: 'Inter',
-    fontWeight: '400',
-    fontSize: 20,
-    color: '#000000',
-    lineHeight: 24,
-    flexShrink: 1,
+  loadingText: {
+    fontFamily: 'Noto Sans KR',
+    fontSize: 14,
+    color: '#71727A',
   },
 });

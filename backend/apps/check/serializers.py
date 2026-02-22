@@ -3,13 +3,18 @@ from .models import Compliance
 from ..detect.models import VideoLog
 
 class ComplianceSerializer(serializers.ModelSerializer):
+    is_updated = serializers.SerializerMethodField()
+
     class Meta:
         model = Compliance
         fields = '__all__'
 
+    def get_is_updated(self, obj):
+        return obj.is_complied is not None
+
 # 탐지 요청 시 프론트에서 보내는 데이터
 class ComplianceRequestSerializer(serializers.Serializer):
-    target = serializers.CharField(max_length=50)
+    category = serializers.CharField(max_length=50)
     original_image = serializers.CharField(max_length=200)
 
 # 탐지 결과 업로드
