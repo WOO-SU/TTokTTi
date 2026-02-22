@@ -45,7 +45,7 @@ def fake_llm_result() -> Dict:
             },
         ]
 
-        overall_grade = random.choice(["Low", "Medium", "High"])
+        overall_grade = random.choice(["Low", "Med", "High"])
         overall_max_R = max(h["risk_R_1_25"] for h in hazards)
 
         return {
@@ -347,7 +347,7 @@ class Command(BaseCommand):
                     employee_id=employee_id,
                     worksession=session,
                     status=Photo.StatusChoices.BEFORE,
-                    image_path=target_before_paths[target_before_idx]
+                    image_path=target_before_paths[target_before_idx % len(target_before_paths)]
                 )
                 target_before_idx += 1
 
@@ -357,7 +357,7 @@ class Command(BaseCommand):
                         employee_id=employee_id,
                         worksession=session,
                         status=Photo.StatusChoices.BEFORE,
-                        image_path=target_before_paths[target_before_idx]
+                        image_path=target_before_paths[target_before_idx % len(target_before_paths)]
                     )
                     target_before_idx += 1
 
@@ -365,7 +365,7 @@ class Command(BaseCommand):
                         employee_id=employee_id,
                         worksession=session,
                         status=Photo.StatusChoices.AFTER,
-                        image_path=target_after_paths[target_after_idx]
+                        image_path=target_after_paths[target_after_idx % len(target_after_paths)]
                     )
                     target_after_idx += 1
 
