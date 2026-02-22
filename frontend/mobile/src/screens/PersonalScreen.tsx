@@ -15,9 +15,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { PersonalStackParamList } from '../../App';
+
 import { getUserProfile, updateUserProfile, type UserProfile } from '../api/user';
 import { useAuth } from '../context/AuthContext';
 import TopHeader from '../components/TopHeader';
@@ -31,31 +29,12 @@ function PersonAvatarIcon() {
   );
 }
 
-function LockIcon() {
-  return (
-    <View style={iconStyles.lockContainer}>
-      <View style={iconStyles.lockShackle} />
-      <View style={iconStyles.lockBody}>
-        <View style={iconStyles.lockKeyhole} />
-      </View>
-    </View>
-  );
-}
 
-function ChevronRightIcon() {
-  return (
-    <View style={iconStyles.chevronContainer}>
-      <View style={iconStyles.chevronTop} />
-      <View style={iconStyles.chevronBottom} />
-    </View>
-  );
-}
 
 /* ──────── Main Component ──────── */
 
 export default function PersonalScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation<NativeStackNavigationProp<PersonalStackParamList>>();
   const { userId } = useAuth();
 
   const [loading, setLoading] = useState(true);
@@ -204,22 +183,7 @@ export default function PersonalScreen() {
               </View>
             </View>
 
-            <View style={styles.divider} />
 
-            {/* Settings Link */}
-            <TouchableOpacity
-              style={styles.settingItem}
-              activeOpacity={0.6}
-              onPress={() => navigation.navigate('ChangePassword')}
-            >
-              <View style={styles.settingLeft}>
-                <View style={styles.lockIconBox}>
-                  <LockIcon />
-                </View>
-                <Text style={styles.settingText}>비밀번호 변경</Text>
-              </View>
-              <ChevronRightIcon />
-            </TouchableOpacity>
           </View>
         </ScrollView>
       )}
@@ -347,59 +311,7 @@ const iconStyles = StyleSheet.create({
     position: 'absolute',
     bottom: 6,
   },
-  lockContainer: {
-    width: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  lockShackle: {
-    width: 9,
-    height: 9,
-    borderWidth: 1.5,
-    borderBottomWidth: 0,
-    borderColor: '#006FFD',
-    borderTopLeftRadius: 4.5,
-    borderTopRightRadius: 4.5,
-    position: 'absolute',
-    top: 1,
-  },
-  lockBody: {
-    width: 14,
-    height: 10,
-    backgroundColor: '#006FFD',
-    borderRadius: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'absolute',
-    bottom: 3,
-  },
-  lockKeyhole: {
-    width: 2,
-    height: 4,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 1,
-  },
-  chevronContainer: {
-    width: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  chevronTop: {
-    width: 7,
-    height: 1.5,
-    backgroundColor: '#C5C6CC',
-    borderRadius: 1,
-    transform: [{ rotate: '45deg' }, { translateY: -2.2 }, { translateX: 1.8 }],
-  },
-  chevronBottom: {
-    width: 7,
-    height: 1.5,
-    backgroundColor: '#C5C6CC',
-    borderRadius: 1,
-    transform: [{ rotate: '-45deg' }, { translateY: 2.2 }, { translateX: 1.8 }],
-  },
+
 });
 
 /* ──────── Main Styles ──────── */
@@ -508,33 +420,6 @@ const styles = StyleSheet.create({
     color: '#1F2024',
   },
 
-  /* Setting Items */
-  settingItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-  },
-  settingLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  lockIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#EAF2FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  settingText: {
-    fontFamily: 'Noto Sans KR',
-    fontWeight: '500',
-    fontSize: 16,
-    color: '#1F2024',
-  },
 
   /* Modal Styles */
   modalOverlay: {
