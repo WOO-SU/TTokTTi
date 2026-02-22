@@ -1,6 +1,6 @@
 /* 메인 홈 화면 - 오늘의 작업 목록 */
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,49 +10,30 @@ import {
   ScrollView,
   Image,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../App';
+import type { HomeStackParamList } from '../../App';
+import { useAuth } from '../context/AuthContext';
+import TopHeader from '../components/TopHeader';
+import {
+  getTodayWorkSessions,
+  activateWorkSession,
+  type WorkSessionItem,
+  type WorkSessionStatus,
+} from '../api/worksession';
 
 type TaskStatus = 'completed' | 'in_progress' | 'pending';
 
-type Task = {
-  id: string;
-  title: string;
-  image: any;
-  status: TaskStatus;
-  timeStart: string;
-  timeEnd: string;
+/** 백엔드 status → 프론트 status 매핑 */
+const STATUS_MAP: Record<WorkSessionStatus, TaskStatus> = {
+  DONE: 'completed',
+  IN_PROGRESS: 'in_progress',
+  READY: 'pending',
 };
-
-const TASKS: Task[] = [
-  {
-    id: '1',
-    title: '통신함 작업',
-    image: require('../assets/box.png'),
-    status: 'completed',
-    timeStart: '11:00',
-    timeEnd: '12:00',
-  },
-  {
-    id: '2',
-    title: '사다리 작업',
-    image: require('../assets/ladder.png'),
-    status: 'in_progress',
-    timeStart: '15:00',
-    timeEnd: '16:40',
-  },
-  {
-    id: '3',
-    title: '고소차',
-    image: require('../assets/box.png'),
-    status: 'pending',
-    timeStart: '18:00',
-    timeEnd: '19:00',
-  },
-];
 
 const STATUS_CONFIG: Record<
   TaskStatus,
@@ -60,42 +41,31 @@ const STATUS_CONFIG: Record<
 > = {
   completed: { label: '작업 완료', bg: '#00FFAE', text: '#000000', icon: '✓' },
   in_progress: {
-    label: '작업 시작하기',
+    label: '작업 중',
     bg: '#006FFD',
     text: '#FFFFFF',
     icon: '▷',
   },
-  pending: { label: '작업 전', bg: '#0F62FE', text: '#FFFFFF', icon: '◷' },
+  pending: { label: '작업 전', bg: '#8F9098', text: '#FFFFFF', icon: '◷' },
 };
 
+/** datetime 문자열에서 HH:MM 추출 */
+function formatTime(datetime: string | null): string {
+  if (!datetime) return '--:--';
+  const date = new Date(datetime);
+  const h = date.getHours().toString().padStart(2, '0');
+  const m = date.getMinutes().toString().padStart(2, '0');
+  return `${h}:${m}`;
+}
+
+/** 오늘 날짜를 'M월 D일 (요일)' 형식으로 반환 */
+function formatToday(): string {
+  const days = ['일', '월', '화', '수', '목', '금', '토'];
+  const now = new Date();
+  return `${now.getMonth() + 1}월 ${now.getDate()}일 (${days[now.getDay()]})`;
+}
+
 /* ──────── Icon Components ──────── */
-
-function SearchIcon() {
-  return (
-    <View style={iconStyles.searchContainer}>
-      <View style={iconStyles.searchCircle} />
-      <View style={iconStyles.searchHandle} />
-    </View>
-  );
-}
-
-function HeartIcon() {
-  return (
-    <View style={iconStyles.heartContainer}>
-      <Text style={iconStyles.heartText}>♡</Text>
-    </View>
-  );
-}
-
-function MenuIcon() {
-  return (
-    <View style={iconStyles.menuContainer}>
-      <View style={iconStyles.menuLine} />
-      <View style={[iconStyles.menuLine, { width: 16 }]} />
-      <View style={iconStyles.menuLine} />
-    </View>
-  );
-}
 
 function ClockIcon() {
   return (
@@ -112,12 +82,36 @@ function ClockIcon() {
 export default function MainHomeScreen() {
   const insets = useSafeAreaInsets();
   const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+    useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
+  const { userName } = useAuth();
 
+  const [sessions, setSessions] = useState<WorkSessionItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showPendingModal, setShowPendingModal] = useState(false);
   const [showCompletedModal, setShowCompletedModal] = useState(false);
 
-  const handleTaskPress = (status: TaskStatus) => {
+  // 화면 포커스 시 마다 오늘의 작업 목록 새로고침
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      setLoading(true);
+      getTodayWorkSessions()
+        .then(data => {
+          if (active) setSessions(data);
+        })
+        .catch(() => {
+          if (active) setSessions([]);
+        })
+        .finally(() => {
+          if (active) setLoading(false);
+        });
+      return () => { active = false; };
+    }, []),
+  );
+
+  const handleTaskPress = async (session: WorkSessionItem) => {
+    const status = STATUS_MAP[session.status];
+
     if (status === 'pending') {
       setShowPendingModal(true);
       return;
@@ -126,7 +120,15 @@ export default function MainHomeScreen() {
       setShowCompletedModal(true);
       return;
     }
-    navigation.navigate('WorkMenu');
+
+    // in_progress → activate 호출 후 WorkMenu 이동
+    try {
+      await activateWorkSession(session.id);
+      navigation.navigate('WorkMenu', { worksession_id: session.id });
+    } catch {
+      // activate 실패 시에도 WorkMenu 이동 (이미 IN_PROGRESS인 경우)
+      navigation.navigate('WorkMenu', { worksession_id: session.id });
+    }
   };
 
   return (
@@ -141,74 +143,74 @@ export default function MainHomeScreen() {
         ]}
         bounces={false}
         showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + 24 }]}>
-          <TouchableOpacity style={styles.headerIcon}>
-            <SearchIcon />
-          </TouchableOpacity>
-          <View style={styles.rightOptions}>
-            <TouchableOpacity style={styles.headerIcon}>
-              <HeartIcon />
-            </TouchableOpacity>
-            <TouchableOpacity>
-              <View style={styles.menuIconWrapper}>
-                <MenuIcon />
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>9</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
+
+        <TopHeader
+          title="작업 리스트"
+          showBackButton={false}
+          rightComponent={
+            <Text style={styles.headerMeta}>
+              {formatToday()}{!loading && sessions.length > 0 ? ` · ${sessions.length}건` : ''}
+            </Text>
+          }
+        />
 
         {/* Title */}
         <View style={styles.titleSection}>
-          <Text style={styles.titleText}>오늘 홍길동님의 작업</Text>
+          <Text style={styles.titleText}>{userName ?? '사용자'}님의 오늘 작업</Text>
           <Text style={styles.subtitleText}>화이팅하세요!</Text>
         </View>
 
         {/* Task Cards */}
         <View style={styles.taskList}>
-          {TASKS.map(task => {
-            const config = STATUS_CONFIG[task.status];
-            return (
-              <TouchableOpacity
-                key={task.id}
-                style={styles.taskCard}
-                activeOpacity={0.8}
-                onPress={() => handleTaskPress(task.status)}>
-                {/* Task Image */}
-                <View style={styles.taskImageWrapper}>
-                  <Image
-                    source={task.image}
-                    style={styles.taskImage}
-                    resizeMode="contain"
-                  />
-                </View>
+          {loading ? (
+            <ActivityIndicator size="large" color="#006FFD" style={{ marginTop: 40 }} />
+          ) : sessions.length === 0 ? (
+            <Text style={styles.emptyText}>오늘 배정된 작업이 없습니다.</Text>
+          ) : (
+            sessions.map(session => {
+              const status = STATUS_MAP[session.status];
+              const config = STATUS_CONFIG[status];
+              return (
+                <TouchableOpacity
+                  key={session.id}
+                  style={styles.taskCard}
+                  activeOpacity={0.8}
+                  onPress={() => handleTaskPress(session)}>
+                  {/* Task Image */}
+                  <View style={styles.taskImageWrapper}>
+                    <Image
+                      source={require('../assets/box.png')}
+                      style={styles.taskImage}
+                      resizeMode="contain"
+                    />
+                  </View>
 
-                {/* Task Info */}
-                <View style={styles.taskInfo}>
-                  <View style={styles.taskHeader}>
-                    <Text style={styles.taskTitle}>{task.title}</Text>
-                    <View
-                      style={[styles.statusBadge, { backgroundColor: config.bg }]}>
+                  {/* Task Info */}
+                  <View style={styles.taskInfo}>
+                    <View style={styles.taskHeader}>
+                      <Text style={styles.taskTitle}>{session.name}</Text>
+                    </View>
+                    <View style={styles.taskTime}>
+                      <ClockIcon />
+                      <Text style={styles.taskTimeText}>
+                        {formatTime(session.starts_at)} - {formatTime(session.ends_at)}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Status Badge at Bottom Right */}
+                  <View style={styles.statusBadgeContainer}>
+                    <View style={[styles.statusBadge, { backgroundColor: config.bg }]}>
                       <Text style={styles.statusIcon}>{config.icon}</Text>
-                      <Text
-                        style={[styles.statusText, { color: config.text }]}>
+                      <Text style={[styles.statusText, { color: config.text }]}>
                         {config.label}
                       </Text>
                     </View>
                   </View>
-                  <View style={styles.taskTime}>
-                    <ClockIcon />
-                    <Text style={styles.taskTimeText}>
-                      {task.timeStart} - {task.timeEnd}
-                    </Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
+                </TouchableOpacity>
+              );
+            })
+          )}
         </View>
       </ScrollView>
 
@@ -276,55 +278,6 @@ export default function MainHomeScreen() {
 /* ──────── Icon Styles ──────── */
 
 const iconStyles = StyleSheet.create({
-  searchContainer: {
-    width: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  searchCircle: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    borderWidth: 2,
-    borderColor: '#1F2024',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-  },
-  searchHandle: {
-    width: 2,
-    height: 6,
-    backgroundColor: '#1F2024',
-    position: 'absolute',
-    bottom: 0,
-    right: 1,
-    transform: [{ rotate: '-45deg' }],
-    borderRadius: 1,
-  },
-  heartContainer: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  heartText: {
-    fontSize: 22,
-    color: '#1F2024',
-    lineHeight: 24,
-  },
-  menuContainer: {
-    width: 24,
-    height: 18,
-    justifyContent: 'space-between',
-  },
-  menuLine: {
-    width: 20,
-    height: 2,
-    backgroundColor: '#1F2024',
-    borderRadius: 1,
-    alignSelf: 'flex-end',
-  },
   clockContainer: {
     width: 16,
     height: 16,
@@ -362,55 +315,12 @@ const iconStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8F9FE',
   },
   scrollContent: {
     flexGrow: 1,
-    gap: 16,
-  },
-
-  /* Header */
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingBottom: 8,
-    backgroundColor: '#FFFFFF',
-  },
-  headerIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  rightOptions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  menuIconWrapper: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  badge: {
-    position: 'absolute',
-    top: -6,
-    right: -6,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#006FFD',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  badgeText: {
-    fontFamily: 'Inter',
-    fontWeight: '600',
-    fontSize: 10,
-    color: '#FFFFFF',
+    gap: 15,
+    paddingBottom: 24,
   },
 
   /* Title */
@@ -418,15 +328,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     paddingHorizontal: 24,
+    marginTop: -4,
   },
   titleText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '700',
     fontSize: 18,
-    color: '#000000',
+    color: '#1F2024',
   },
   subtitleText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 14,
     color: '#71727A',
@@ -434,25 +345,32 @@ const styles = StyleSheet.create({
 
   /* Task List */
   taskList: {
-    paddingHorizontal: 12,
-    gap: 12,
+    paddingHorizontal: 20,
+    gap: 10,
   },
 
   /* Task Card */
   taskCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#EAF2FF',
-    borderRadius: 20,
-    paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingHorizontal: 20,
     paddingVertical: 16,
     gap: 12,
+    position: 'relative',
+    minHeight: 100,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3.84,
+    elevation: 2,
   },
   taskImageWrapper: {
     width: 65,
     height: 65,
     borderRadius: 33,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#EAF2FF',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
@@ -471,10 +389,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   taskTitle: {
-    fontFamily: 'Inter',
-    fontWeight: '600',
+    fontFamily: 'Noto Sans KR',
+    fontWeight: '700',
     fontSize: 16,
-    color: '#000000',
+    color: '#1F2024',
+  },
+  statusBadgeContainer: {
+    position: 'absolute',
+    bottom: 12,
+    right: 14,
   },
   statusBadge: {
     flexDirection: 'row',
@@ -489,7 +412,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   statusText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '600',
     fontSize: 12,
   },
@@ -499,10 +422,28 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   taskTimeText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
+    fontWeight: '400',
+    fontSize: 13,
+    color: '#71727A',
+  },
+
+  /* Header Meta (날짜 · 건수) */
+  headerMeta: {
+    fontFamily: 'Noto Sans KR',
+    fontWeight: '500',
+    fontSize: 12,
+    color: '#71727A',
+  },
+
+  /* Empty State */
+  emptyText: {
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 14,
     color: '#71727A',
+    textAlign: 'center',
+    marginTop: 40,
   },
 
   /* Modal */
@@ -531,7 +472,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   modalTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '800',
     fontSize: 16,
     color: '#1F2024',
@@ -543,7 +484,7 @@ const styles = StyleSheet.create({
     height: 87,
   },
   modalDesc: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 12,
     color: '#71727A',
@@ -559,7 +500,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalFilledBtnText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '600',
     fontSize: 12,
     color: '#FFFFFF',

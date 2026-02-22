@@ -1,6 +1,6 @@
 /* 근무 마무리 화면 */
 
-import React, {useState, useRef, useCallback, useEffect} from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,63 +11,33 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {
-  Camera,
-  useCameraDevice,
-  useCameraPermission,
-} from 'react-native-vision-camera';
-import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import type {RootStackParamList} from '../../App';
-import {getSasToken, uploadToBlob} from '../api/equipment';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Camera, useCameraPermission } from 'react-native-vision-camera';
+import RNFS from 'react-native-fs';
+import BaseCamera from '../components/BaseCamera';
+import PhotoResultView from '../components/PhotoResultView';
+import { useAuth } from '../context/AuthContext';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { HomeStackParamList } from '../../App';
+import TopHeader from '../components/TopHeader';
+import LargeCheckIcon from '../components/LargeCheckIcon';
+import { getSasToken, uploadToBlob } from '../api/equipment';
 
 type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'EndWork'>;
+  navigation: NativeStackNavigationProp<HomeStackParamList, 'EndWork'>;
 };
 
 type ScreenState = 'idle' | 'camera' | 'preview' | 'sending' | 'sent';
 
 /* ──────── Icon Components ──────── */
 
-function BackArrowIcon() {
-  return (
-    <View style={iconStyles.backContainer}>
-      <View style={iconStyles.arrowTop} />
-      <View style={iconStyles.arrowBottom} />
-    </View>
-  );
-}
-
-function CameraIcon() {
-  return (
-    <View style={iconStyles.cameraContainer}>
-      <View style={iconStyles.cameraBody}>
-        <View style={iconStyles.cameraLens} />
-      </View>
-      <View style={iconStyles.cameraTop} />
-    </View>
-  );
-}
-
-function LargeCheckIcon() {
-  return (
-    <View style={iconStyles.largeCheckContainer}>
-      <View style={iconStyles.largeCheckShort} />
-      <View style={iconStyles.largeCheckLong} />
-    </View>
-  );
-}
-
-/* ──────── Main Component ──────── */
-
-export default function EndWorkScreen({navigation}: Props) {
+export default function EndWorkScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const [screenState, setScreenState] = useState<ScreenState>('idle');
   const [photoPath, setPhotoPath] = useState<string | null>(null);
 
   const cameraRef = useRef<Camera>(null);
-  const device = useCameraDevice('back');
-  const {hasPermission, requestPermission} = useCameraPermission();
+  const { hasPermission, requestPermission } = useCameraPermission();
 
   useEffect(() => {
     if (!hasPermission) {
@@ -100,7 +70,7 @@ export default function EndWorkScreen({navigation}: Props) {
     }
     setScreenState('sending');
     try {
-      const {upload_url} = await getSasToken();
+      const { upload_url } = await getSasToken();
       await uploadToBlob(upload_url, photoPath);
       setScreenState('sent');
     } catch (err) {
@@ -113,23 +83,19 @@ export default function EndWorkScreen({navigation}: Props) {
     }
   }, [photoPath]);
 
+  const handleConfirm = useCallback(() => {
+    handleSend();
+  }, [handleSend]);
+
   const handleDone = useCallback(() => {
-    navigation.navigate('Main');
+    navigation.navigate('MainHome');
   }, [navigation]);
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Header */}
-      <View style={[styles.header, {paddingTop: insets.top + 12}]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <BackArrowIcon />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>근무 마무리</Text>
-      </View>
+      <TopHeader title="근무 마무리" />
 
       {/* Idle State */}
       {screenState === 'idle' && (
@@ -145,90 +111,64 @@ export default function EndWorkScreen({navigation}: Props) {
         </View>
       )}
 
-      {/* Camera State */}
-      {screenState === 'camera' && (
+      {/* Camera & Preview States */}
+      {screenState !== 'idle' && (
         <View style={styles.cameraPreview}>
-          {device && hasPermission ? (
-            <Camera
+          {screenState === 'camera' && (
+            <BaseCamera
               ref={cameraRef}
-              style={StyleSheet.absoluteFill}
-              device={device}
               isActive={true}
               photo={true}
+              guideText="마무리 현장을 촬영하세요"
+              onCapture={handleCapture}
             />
-          ) : (
-            <Text style={styles.noCameraText}>
-              {!hasPermission
-                ? '카메라 권한이 필요합니다'
-                : '카메라를 불러오는 중...'}
-            </Text>
           )}
-          <TouchableOpacity
-            style={styles.captureButton}
-            activeOpacity={0.7}
-            onPress={handleCapture}>
-            <CameraIcon />
-          </TouchableOpacity>
-        </View>
-      )}
 
-      {/* Preview / Sending / Sent States */}
-      {(screenState === 'preview' ||
-        screenState === 'sending' ||
-        screenState === 'sent') && (
-        <>
-          <View style={styles.cameraPreview}>
-            <Image
-              source={{uri: photoPath!}}
-              style={styles.capturedImage}
+          {screenState === 'preview' && photoPath && (
+            <PhotoResultView
+              photoPath={photoPath}
+              onRetake={handleRetake}
+              onConfirm={handleConfirm}
+              confirmText="전송"
             />
-
-            {screenState === 'sending' && (
-              <View style={styles.resultCard}>
+          )}
+          {screenState === 'sending' && photoPath && (
+            <PhotoResultView
+              photoPath={photoPath}
+              onRetake={handleRetake}
+              onConfirm={handleConfirm}
+              confirmText="전송"
+              isConfirming={true}
+            >
+              <View style={styles.resultCardOverlay}>
                 <ActivityIndicator size="large" color="#006FFD" />
                 <Text style={styles.resultText}>업로드 중...</Text>
               </View>
-            )}
-
-            {screenState === 'sent' && (
-              <View style={styles.resultCard}>
+            </PhotoResultView>
+          )}
+          {screenState === 'sent' && photoPath && (
+            <PhotoResultView
+              photoPath={photoPath}
+              onRetake={handleRetake}
+              onConfirm={handleDone}
+              confirmText="완료"
+            >
+              <View style={styles.resultCardOverlay}>
                 <LargeCheckIcon />
                 <Text style={styles.resultText}>전송 완료</Text>
               </View>
-            )}
-          </View>
+            </PhotoResultView>
+          )}
+        </View>
+      )}
 
-          <View
-            style={[
-              styles.bottomSection,
-              {paddingBottom: insets.bottom + 16},
-            ]}>
-            {screenState === 'preview' && (
-              <View style={styles.buttonRow}>
-                <TouchableOpacity
-                  style={styles.retakeButton}
-                  activeOpacity={0.8}
-                  onPress={handleRetake}>
-                  <Text style={styles.retakeButtonText}>다시 찍기</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.sendButton}
-                  activeOpacity={0.8}
-                  onPress={handleSend}>
-                  <Text style={styles.sendButtonText}>사진 보내기</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-            {screenState === 'sent' && (
-              <TouchableOpacity
-                style={styles.doneButton}
-                activeOpacity={0.8}
-                onPress={handleDone}>
-                <Text style={styles.doneButtonText}>확인</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </>
+      {screenState === 'camera' && (
+        <View
+          style={[
+            styles.bottomSection,
+            { height: insets.bottom + 16 },
+          ]}
+        />
       )}
     </View>
   );
@@ -249,7 +189,7 @@ const iconStyles = StyleSheet.create({
     backgroundColor: '#006FFD',
     borderRadius: 1,
     position: 'absolute',
-    transform: [{rotate: '-45deg'}, {translateY: -5.5}],
+    transform: [{ rotate: '-45deg' }, { translateY: -5.5 }],
   },
   arrowBottom: {
     width: 14,
@@ -257,40 +197,7 @@ const iconStyles = StyleSheet.create({
     backgroundColor: '#006FFD',
     borderRadius: 1,
     position: 'absolute',
-    transform: [{rotate: '45deg'}, {translateY: 5.5}],
-  },
-  cameraContainer: {
-    width: 28,
-    height: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cameraBody: {
-    width: 24,
-    height: 18,
-    borderWidth: 2,
-    borderColor: '#F8F8F8',
-    borderRadius: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'absolute',
-    bottom: 2,
-  },
-  cameraLens: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    borderWidth: 2,
-    borderColor: '#F8F8F8',
-  },
-  cameraTop: {
-    width: 10,
-    height: 4,
-    borderTopLeftRadius: 2,
-    borderTopRightRadius: 2,
-    backgroundColor: '#F8F8F8',
-    position: 'absolute',
-    top: 2,
+    transform: [{ rotate: '45deg' }, { translateY: 5.5 }],
   },
   largeCheckContainer: {
     width: 112,
@@ -306,7 +213,7 @@ const iconStyles = StyleSheet.create({
     position: 'absolute',
     left: 16,
     bottom: 24,
-    transform: [{rotate: '45deg'}],
+    transform: [{ rotate: '45deg' }],
   },
   largeCheckLong: {
     width: 72,
@@ -316,7 +223,7 @@ const iconStyles = StyleSheet.create({
     position: 'absolute',
     right: 8,
     bottom: 36,
-    transform: [{rotate: '-45deg'}],
+    transform: [{ rotate: '-45deg' }],
   },
 });
 
@@ -325,7 +232,7 @@ const iconStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8F9FE',
   },
   header: {
     height: 64,
@@ -342,7 +249,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '700',
     fontSize: 18,
     color: '#1F2024',
@@ -356,13 +263,13 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   idleTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '600',
     fontSize: 20,
     color: '#1F2024',
   },
   idleSubtitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 14,
     color: '#71727A',
@@ -377,7 +284,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   startCameraButtonText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '600',
     fontSize: 16,
     color: '#FFFFFF',
@@ -386,103 +293,35 @@ const styles = StyleSheet.create({
   /* Camera */
   cameraPreview: {
     flex: 1,
+    marginTop: 16,
     marginHorizontal: 15,
-    backgroundColor: '#000000',
     justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  capturedImage: {
-    ...StyleSheet.absoluteFillObject,
-    resizeMode: 'cover',
+    alignItems: 'stretch',
   },
   noCameraText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontSize: 14,
-    color: '#FFFFFF',
-  },
-  captureButton: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: '#006FFD',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'absolute',
-    bottom: 24,
+    color: '#333333',
   },
 
   /* Result Card */
-  resultCard: {
-    width: 229,
-    height: 169,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+  resultCardOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
-    zIndex: 1,
+    borderRadius: 20,
   },
   resultText: {
-    fontFamily: 'Roboto',
-    fontWeight: '400',
+    fontFamily: 'Noto Sans KR',
+    fontWeight: '700',
     fontSize: 20,
-    color: '#000000',
+    color: '#1F2024',
   },
-
-  /* Bottom Buttons */
   bottomSection: {
     alignItems: 'center',
-    paddingTop: 16,
     paddingHorizontal: 20,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-  },
-  retakeButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: 10,
     backgroundColor: '#FFFFFF',
-    borderWidth: 2,
-    borderColor: '#006FFD',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  retakeButtonText: {
-    fontFamily: 'Roboto',
-    fontWeight: '500',
-    fontSize: 16,
-    color: '#006FFD',
-  },
-  sendButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: 10,
-    backgroundColor: '#006FFD',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sendButtonText: {
-    fontFamily: 'Roboto',
-    fontWeight: '500',
-    fontSize: 16,
-    color: '#FFFFFF',
-  },
-  doneButton: {
-    width: '100%',
-    height: 48,
-    borderRadius: 10,
-    backgroundColor: '#006FFD',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  doneButtonText: {
-    fontFamily: 'Roboto',
-    fontWeight: '500',
-    fontSize: 16,
-    color: '#FFFFFF',
   },
 });

@@ -184,13 +184,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   title: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '800',
     fontSize: 16,
     color: '#1F2024',
   },
   subtitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 12,
     color: '#71727A',
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   fieldTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '700',
     fontSize: 12,
     color: '#2E3036',
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 14,
     color: '#1F2024',
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
   },
   termsText: {
     flex: 1,
-    fontFamily: 'Inter',
+    fontFamily: 'Noto Sans KR',
     fontWeight: '400',
     fontSize: 12,
     color: '#71727A',

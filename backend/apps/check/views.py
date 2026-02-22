@@ -24,6 +24,7 @@ from .serializers import (
     CheckPassResponseSerializer
 )
 
+from ..worksession.models import WorkSession
 # temporary measure. if two redis queues are needed,, pull the client code .
 import os
 import redis
@@ -81,8 +82,7 @@ def upload_result(request):
         compliance = Compliance.objects.get(id=data["compliance_id"])
         compliance.detected_image = data["detected_image"]
         compliance.is_complied = data["is_complied"]
-        compliance.is_updated = True
-        compliance.save(update_fields=["detected_image", "is_complied", "is_updated"])
+        compliance.save(update_fields=["detected_image", "is_complied"])
         return Response({"ok": True})
     except Compliance.DoesNotExist:
         return Response({"ok": False, "detail": "compliance not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -98,28 +98,28 @@ def upload_result(request):
 def request_detection(request):
     """
     "/api/check/start": 탐지 요청 레코드를 DB에 업로드 한다. (프론트 -> 백 -> DB)
-    request body: { "target": "helmet", "original_image": "blob 이미지 경로" }   
+    request body: { "category": "HELMET", "original_image": "blob 이미지 경로" }   
     """
     serializer = ComplianceRequestSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
     user = request.user
     worksession_id = request.data.get("worksession_id")
-    target = serializer.validated_data["target"]
+    category = serializer.validated_data["category"]
     original_image = serializer.validated_data["original_image"]
 
     # Compliance 레코드 생성
     compliance = Compliance.objects.create(
         worksession_id=worksession_id,
         employee=user,
-        target=target,
+        category=category,
         original_image=original_image
     )
 
     message = {
         "compliance_id": compliance.id,
         "original_image": original_image,
-        "target": target
+        "category": category
     }
 
     try:
@@ -274,23 +274,24 @@ def approve_check(request):
     responses={
         200: CheckPassResponseSerializer,
         400: CheckPassResponseSerializer,
+        404: CheckPassResponseSerializer,
     }
 )
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def check_pass(request):
+def check_pass(request, worksession_id):
     """
-    "/api/check/pass": 모든 category에 대한 사용자의 탐지 통과 여부 확인
-    query param: ?worksession_id=1
+    GET /api/check/pass/{worksession_id}?category=helmet
+    query parameter(category)가 없으면 전체 cateogry에 대한 준수 여부 조회
     """
 
-    worksession_id = request.query_params.get("worksession_id")
     employee = request.user
+    category = request.query_params.get("category")
 
-    if not worksession_id:
+    if not WorkSession.objects.filter(id=worksession_id).exists():
         return Response(
-            {"ok": False, "detail": "worksession_id required"},
-            status=400
+            {"ok": False, "detail": "WorkSession not found"},
+            status=404
         )
 
     compliances = Compliance.objects.filter(
@@ -298,9 +299,49 @@ def check_pass(request):
         employee=employee
     )
 
-    all_passed = all(c.is_complied for c in compliances)
+    if category:
+        category = category.upper()
+
+        if category not in Compliance.CategoryChoices.values:
+            return Response(
+                {"ok": False, "detail": "Invalid category"},
+                status=400
+            )
+
+        compliances = compliances.filter(target=category)
+
+        if not compliances.exists():
+            return Response(
+                {
+                    "ok": True,
+                    "passed": False,
+                    "detail": "No compliance records found"
+                },
+                status=200
+            )
+
+        passed = not compliances.filter(is_complied=False).exists()
+
+        return Response({
+            "ok": True,
+            "passed": passed
+        })
+
+    required_categories = Compliance.CategoryChoices.values 
+
+    passed = True
+    for cat in required_categories:
+        cat_compliances = compliances.filter(target=cat)
+
+        if not cat_compliances.exists():
+            passed = False
+            break
+
+        if cat_compliances.filter(is_complied=False).exists():
+            passed = False
+            break
 
     return Response({
         "ok": True,
-        "passed": all_passed
+        "passed": passed
     })
