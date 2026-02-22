@@ -142,6 +142,13 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
     return NO_HELMET; // 기본값
   };
 
+  const getFailureMessage = () => {
+    if (title.includes('헬멧') || title.includes('안전모')) return '안전모 미착용 감지';
+    if (title.includes('조끼')) return '안전조끼 미착용 감지';
+    if (title.includes('장갑')) return '안전장갑 미착용 감지';
+    return '미착용 감지'; // 기본값
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
@@ -173,7 +180,7 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
             {isFailed && !isUploading && (
               <View style={styles.resultCardOverlay}>
                 <Image source={getFailureImage()} style={styles.failureImage} resizeMode="contain" />
-                <Text style={styles.resultText}>❌ 미착용 감지{`\n`}다시 촬영해주세요</Text>
+                <Text style={styles.resultText}>❌ {getFailureMessage()}{`\n`}다시 촬영해주세요</Text>
               </View>
             )}
           </PhotoResultView>
