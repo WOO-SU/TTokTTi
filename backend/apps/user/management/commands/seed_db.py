@@ -17,6 +17,7 @@ from apps.risk.models import *
 from apps.report.models import *
 
 from apps.risk.services import *
+from apps.report.services import *
 
 def fake_llm_result() -> Dict:
         hazards = [
@@ -63,6 +64,48 @@ def fake_llm_result() -> Dict:
             },
         }
 
+def fake_postwork_report(input_pkg: dict) -> dict:
+    ws = input_pkg["worksession"]
+
+    return {
+        "report_title": "작업 종료 종합 보고서",
+        "worksession_summary": {
+            "worksite": ws["worksite"]["name"],
+            "address": ws["worksite"]["address"],
+            "starts_at": ws["starts_at"],
+            "ends_at": ws["ends_at"],
+            "status": ws["status"],
+        },
+        "video_summary": {
+            "fullcam": ws["videos"]["fullcam_video"],
+            "bodycam": ws["videos"]["bodycam_video"],
+            "note": "작업 전 과정 녹화 완료",
+        },
+        "risk_highlights": input_pkg["risk_logs"]["highlights"],
+        "risk_statistics": input_pkg["risk_logs"]["stats"],
+        "compliance_summary": input_pkg["compliance"]["stats"],
+        "before_after_summary": {
+            "before_photos": [
+                p["image_path"] for p in input_pkg["photos"]["before"]
+            ],
+            "after_photos": [
+                p["image_path"] for p in input_pkg["photos"]["after"]
+            ],
+        },
+        "action_items": {
+            "immediate": [
+                "작업 전 보호구 착용 여부 재확인"
+            ] if random.random() < 0.5 else [],
+            "preventive": [
+                "정기적인 작업자 안전 교육 실시",
+                "사다리 및 장비 사전 점검"
+            ],
+            "follow_up": [
+                "유사 작업 시 위험 구간 재점검"
+            ] if random.random() < 0.3 else [],
+        },
+        "generated_at": timezone.now().isoformat(),
+    }
 
 class Command(BaseCommand):
     help = 'Idempotently seeds the database with a large volume of mock data for testing.'
@@ -554,4 +597,42 @@ class Command(BaseCommand):
         # report.PostWorkReport
         # ------------------------------------------------------------------
         self.stdout.write("🚀 Seeding apps.report data...")
-        
+        created = 0
+
+        done_sessions = WorkSession.objects.filter(
+            status=WorkSession.StatusChoices.DONE
+        )
+
+        for session in done_sessions:
+            # v1 이미 있으면 skip
+            if PostWorkReport.objects.filter(
+                worksession_id=session.id,
+                report_version=1,
+            ).exists():
+                continue
+
+            try:
+                input_pkg = build_input_package(session.id)
+                report_snapshot = fake_postwork_report(input_pkg)
+
+                PostWorkReport.objects.create(
+                    worksession_id=session.id,
+                    report_version=1,
+                    input_snapshot=input_pkg,
+                    report_snapshot=report_snapshot,
+                )
+
+                created += 1
+
+            except Exception as e:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"⚠️ PostWorkReport 실패 (ws={session.id}): {e}"
+                    )
+                )
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"✅ apps.report seeding completed ({created} reports)"
+            )
+        )
