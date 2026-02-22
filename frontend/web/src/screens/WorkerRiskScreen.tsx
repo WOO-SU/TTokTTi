@@ -407,7 +407,12 @@ export default function WorkerRiskScreen() {
             const photoUrls: WorkspacePhotos = { ...emptyPhotos };
             for (let i = 0; i < Math.min(images.length, categories.length); i++) {
               photos[categories[i]] = images[i].blob_name;
-              photoUrls[categories[i]] = await fetchImageUrl(images[i].blob_name);
+              try {
+                photoUrls[categories[i]] = await fetchImageUrl(images[i].blob_name);
+              } catch (e) {
+                console.error('Failed to fetch image for ${categories[i]}:', e);
+                photoUrls[categories[i]] = '';
+              }
             }
 
             return { ...base, assessmentId, photos, photoUrls, adminReport };

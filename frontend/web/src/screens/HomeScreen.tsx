@@ -871,7 +871,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'row',
     overflow: 'hidden',
-    minHeight: '100vh',
+    height: '100vh',
   },
 
   // Main

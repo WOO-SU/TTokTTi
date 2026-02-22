@@ -553,6 +553,8 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     gap: 20,
     maxWidth: 560,
+    width: '100%',
+    alignSelf: 'center',
     paddingBottom: 40,
   },
 
