@@ -3,7 +3,7 @@ import {
   login as apiLogin,
   logout as apiLogout,
   getTokens,
-  decodeJwtPayload,
+  getSavedUser,
 } from '../api/client';
 
 type User = { userName: string; userId: number | null };
@@ -25,11 +25,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const { access } = getTokens();
     if (access) {
-      try {
-        const payload = decodeJwtPayload(access);
-        setUser({ userName: payload.user_name as string, userId: (payload.user_id as number) ?? null });
-      } catch {
-        setUser(null);
+      const saved = getSavedUser();
+      if (saved) {
+        setUser(saved);
       }
     }
     setLoading(false);
