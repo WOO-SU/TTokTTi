@@ -19,6 +19,16 @@ type AdminLog = {
   compliance_category?: string | null;
 };
 
+type ManualCheckDetail = {
+  videolog_id: number;
+  status: string | null;
+  employee: { id: number; name: string };
+  worksession: { id: number; name: string };
+  category: string;
+  original_image: string | null;
+  created_at: string;
+};
+
 const COMPLIANCE_LABEL: Record<string, string> = {
   HELMET: '안전모',
   VEST: '안전 조끼',
@@ -88,8 +98,25 @@ function LogDetailModal({
   onApprove: (logId: number, approval: boolean) => void;
   approving: boolean;
 }) {
+  const [manualDetail, setManualDetail] = useState<ManualCheckDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  useEffect(() => {
+    if (log.source === 'MANUAL') {
+      setDetailLoading(true);
+      apiFetch(`/check/admin/request/${log.id}/`)
+        .then(res => res.json())
+        .then(json => {
+          if (json.ok && json.data) setManualDetail(json.data);
+        })
+        .catch(() => {})
+        .finally(() => setDetailLoading(false));
+    }
+  }, [log.id, log.source]);
+
   const isManual = log.source === 'MANUAL';
-  const statusInfo = log.status ? STATUS_LABEL[log.status] : null;
+  const currentStatus = manualDetail?.status ?? log.status;
+  const statusInfo = currentStatus ? STATUS_LABEL[currentStatus] : null;
 
   return (
     <div style={styles.modalBackdrop} onClick={onClose}>
@@ -127,22 +154,50 @@ function LogDetailModal({
           </div>
         </div>
 
+        {isManual && detailLoading && (
+          <div style={{ padding: '16px 24px', textAlign: 'center', color: '#8F9098', fontSize: 13 }}>
+            상세 정보를 불러오는 중...
+          </div>
+        )}
+
         <div style={styles.modalInfoRow}>
           <div style={styles.modalInfoItem}>
             <span style={styles.modalInfoLabel}>작업 현장</span>
-            <span style={styles.modalInfoValue}>{log.worksession_name}</span>
+            <span style={styles.modalInfoValue}>{manualDetail?.worksession.name ?? log.worksession_name}</span>
           </div>
           <div style={styles.modalInfoItem}>
             <span style={styles.modalInfoLabel}>{isManual ? '점검 항목' : '위험 유형'}</span>
             <span style={styles.modalInfoValue}>
               {isManual
-                ? (log.compliance_category ? COMPLIANCE_LABEL[log.compliance_category] ?? log.compliance_category : '-')
+                ? (COMPLIANCE_LABEL[manualDetail?.category ?? log.compliance_category ?? ''] ?? manualDetail?.category ?? log.compliance_category ?? '-')
                 : (log.risk_type_name ?? '-')}
             </span>
           </div>
         </div>
 
-        {isManual && log.status === 'PENDING' && (
+        {isManual && manualDetail?.employee && (
+          <div style={{ padding: '0 24px 16px' }}>
+            <div style={styles.modalInfoItem}>
+              <span style={styles.modalInfoLabel}>요청 작업자</span>
+              <span style={styles.modalInfoValue}>{manualDetail.employee.name}</span>
+            </div>
+          </div>
+        )}
+
+        {isManual && manualDetail?.original_image && (
+          <div style={{ padding: '0 24px 16px' }}>
+            <div style={styles.modalInfoItem}>
+              <span style={styles.modalInfoLabel}>촬영 이미지</span>
+              <img
+                src={manualDetail.original_image}
+                alt="점검 이미지"
+                style={{ width: '100%', borderRadius: 8, marginTop: 8, maxHeight: 240, objectFit: 'contain', backgroundColor: '#F0F1F3' }}
+              />
+            </div>
+          </div>
+        )}
+
+        {isManual && currentStatus === 'PENDING' && (
           <div style={styles.modalApprovalRow}>
             <button
               type="button"
@@ -161,7 +216,7 @@ function LogDetailModal({
           </div>
         )}
 
-        {isManual && log.status && log.status !== 'PENDING' && (
+        {isManual && currentStatus && currentStatus !== 'PENDING' && (
           <div style={{ padding: '0 24px 24px', textAlign: 'center' }}>
             <span style={{
               fontFamily: 'Inter, sans-serif',
