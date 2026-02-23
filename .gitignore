@@ -66,9 +66,11 @@ htmlcov/
 
 vision_fullcam/data/*
 # AI Models
-*.pt
 *.pth
 *.onnx
 *.weights
 *.h5
 *.tflite
+*.pt
+*.mp4
+*.avi
