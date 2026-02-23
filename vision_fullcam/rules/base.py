@@ -1,6 +1,6 @@
 # vision/rules/base.py
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 import time
 
 @dataclass
@@ -9,7 +9,7 @@ class RuleContext:
     frame: "object"  # np.ndarray
     state: "object"  # StateBuffer
     task: "object"   # TaskState
-    keypoints: Dict[str, any]  # keypoint dict (from movenet)
+    keypoints: Optional[Dict[str, Any]] = None  # ✅ default
 
 @dataclass
 class Event:

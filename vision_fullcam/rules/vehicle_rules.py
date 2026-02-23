@@ -25,49 +25,55 @@ class VehicleProximityRule(Rule):
 
         # 사람별 디바운스 (person track_id 기준)
         self.db = Debounce(self.db_sec, self.cooldown)
-
+        
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp
         events: List[Event] = []
 
-        if len(ctx.state.persons) == 0 or len(getattr(ctx.state, "vehicles", {})) == 0:
+        if not ctx.state.persons or not getattr(ctx.state, "vehicles", None):
             return events
 
-        for p in ctx.state.persons.values():
+        for pid, p in ctx.state.persons.items():
             if p.bbox is None:
                 continue
 
-            # 가장 가까운 차량 찾기
             best = None
             best_d = 1e18
-            for v in ctx.state.vehicles.values():
+
+            for vid, v in ctx.state.vehicles.items():
                 if v.bbox is None:
                     continue
                 d = dist_px(p.bbox, v.bbox)
                 if d < best_d:
                     best_d = d
                     best = v
+                    best_vid = vid
 
             if best is None:
                 continue
 
-            # person별 db
-            db = self.db.setdefault(p.track_id, Debounce(self.db_sec, self.cooldown))
+            db = self.db.setdefault(pid, Debounce(self.db_sec, self.cooldown))
 
             # danger: 즉시
             if best_d <= self.danger_px:
                 if db.fire_immediate(now):
                     events.append(Event(
-                        self.name, "high", p.track_id, now,
-                        {"distance_px": best_d, "vehicle_id": best.track_id}
+                        self.name,
+                        "high",
+                        pid,
+                        now,
+                        {"distance_px": best_d, "vehicle_id": best_vid}
                     ))
                 continue
 
-            # warn: 지속시간 필요
+            # warn: 지속 조건
             if db.check(now, best_d <= self.warn_px):
                 events.append(Event(
-                    self.name, "medium", p.track_id, now,
-                    {"distance_px": best_d, "vehicle_id": best.track_id}
+                    self.name,
+                    "medium",
+                    pid,
+                    now,
+                    {"distance_px": best_d, "vehicle_id": best_vid}
                 ))
 
         return events

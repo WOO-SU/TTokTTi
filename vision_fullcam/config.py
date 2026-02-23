@@ -5,10 +5,10 @@ from pathlib import Path
 @dataclass
 class Config:
     # ===== runtime =====
-    use_fake_detector: bool = True
+    use_fake_detector: bool = False
     yolo_model_path: str = "yolov8n.pt"
-    camera_index: int = 0
-    show_window: bool = True
+    camera_index= "vision_fullcam/사다리추락.mp4"
+    show_window: bool = False
     output_dir: str =  str(Path(__file__).resolve().parent / "data")
 
     # ===== task defaults =====

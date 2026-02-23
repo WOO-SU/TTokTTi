@@ -8,6 +8,7 @@ from vision_fullcam.stream.reader import FrameReader
 # detector
 from vision_fullcam.detection.yolo_detector import YoloDetector
 from vision_fullcam.detection.fake_detector import FakeDetector
+from vision_fullcam.detection.composite_detector import CompositeDetector
 
 # tracking / state
 from vision_fullcam.tracking.simple_tracker import SimpleTracker, Tracked
@@ -39,22 +40,42 @@ from vision_fullcam.rules.vehicle_rules import VehicleProximityRule
 from vision_fullcam.events.clip_buffer import ClipBuffer
 from vision_fullcam.events.emitter import EventEmitter
 
-
 def build_detector(cfg: Config):
-    """운영/테스트 스위치"""
-    if getattr(cfg, "use_fake_detector", True):
+    if getattr(cfg, "use_fake_detector", False):
         return FakeDetector(fps=cfg.fps_monitor)
 
-    cls_map = {
-        0: "person",
-        1: "ladder",
-        2: "helmet",
-        3: "safety_vest",
-        4: "safety_shoes",
-        5: "outtrigger",
+    # ✅ 1) best.pt (PPE / ladder / person)
+    best_map = {
+        0: "glove",
+        1: "helmet",
+        2: "ladder",
+        3: "outtrigger",
+        4: "person",
+        5: "safety_vest",
     }
-    return YoloDetector(getattr(cfg, "yolo_model_path", "yolov8n.pt"), cls_map=cls_map)
+    det_best = YoloDetector(
+        model_path="vision_fullcam/best.pt",
+        cls_map=best_map,
+        conf=0.35,
+        imgsz=416,
+    )
 
+    # ✅ 2) COCO YOLO (vehicle 전용)
+    coco_vehicle_map = {
+        2: "vehicle",  # car
+        3: "vehicle",  # motorcycle
+        5: "vehicle",  # bus
+        7: "vehicle",  # truck
+    }
+    det_vehicle = YoloDetector(
+        model_path="yolov8n.pt",
+        cls_map=coco_vehicle_map,
+        conf=0.25,
+        imgsz=416,
+    )
+
+    # ✅ 3) 합쳐서 반환
+    return CompositeDetector([det_best, det_vehicle])
 
 def _handle_keys(detector, task: TaskState, key: int):
     """
@@ -190,13 +211,9 @@ def main():
     try:
         while True:
             t0 = time.time()
-            # frame = reader.read()
-            # if frame is None:
-            #     break
-            frame = reader.read() # test
+            frame = reader.read()
             if frame is None:
-                import numpy as np
-                frame = np.zeros((720, 1280, 3), dtype=np.uint8)
+                break
 
             clip_buffer.push(frame)
 
