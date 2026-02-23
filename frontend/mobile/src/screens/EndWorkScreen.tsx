@@ -13,15 +13,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Camera, useCameraPermission } from 'react-native-vision-camera';
-import RNFS from 'react-native-fs';
 import BaseCamera from '../components/BaseCamera';
 import PhotoResultView from '../components/PhotoResultView';
-import { useAuth } from '../context/AuthContext';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { HomeStackParamList } from '../../App';
 import TopHeader from '../components/TopHeader';
 import LargeCheckIcon from '../components/LargeCheckIcon';
-import { getSasToken, uploadToBlob } from '../api/equipment';
+import { getSasToken, uploadToBlob, requestTargetPhoto } from '../api/equipment';
 
 type Props = {
   navigation: NativeStackNavigationProp<HomeStackParamList, 'EndWork'>;
@@ -32,6 +31,8 @@ type ScreenState = 'idle' | 'camera' | 'preview' | 'sending' | 'sent';
 /* ──────── Icon Components ──────── */
 
 export default function EndWorkScreen({ navigation }: Props) {
+  const route = useRoute<RouteProp<HomeStackParamList, 'EndWork'>>();
+  const { worksession_id } = route.params;
   const insets = useSafeAreaInsets();
   const [screenState, setScreenState] = useState<ScreenState>('idle');
   const [photoPath, setPhotoPath] = useState<string | null>(null);
@@ -70,18 +71,20 @@ export default function EndWorkScreen({ navigation }: Props) {
     }
     setScreenState('sending');
     try {
-      const { upload_url } = await getSasToken();
+      const { upload_url, blob_name } = await getSasToken();
       await uploadToBlob(upload_url, photoPath);
+      // 백엔드 DB에 'AFTER' 상태로 기록 요청
+      await requestTargetPhoto(blob_name, worksession_id, 'AFTER');
       setScreenState('sent');
     } catch (err) {
       console.error('EndWork upload error:', err);
       Alert.alert(
         '업로드 실패',
-        '사진 업로드에 실패했습니다. 다시 시도해주세요.',
+        '사진 업로드 또는 DB 기록에 실패했습니다. 다시 시도해주세요.',
       );
       setScreenState('preview');
     }
-  }, [photoPath]);
+  }, [photoPath, worksession_id]);
 
   const handleConfirm = useCallback(() => {
     handleSend();

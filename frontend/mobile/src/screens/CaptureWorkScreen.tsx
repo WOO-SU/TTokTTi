@@ -18,7 +18,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { HomeStackParamList } from '../../App';
 import TopHeader from '../components/TopHeader';
-import { getSasToken, uploadToBlob } from '../api/equipment';
+import { getSasToken, uploadToBlob, requestTargetPhoto } from '../api/equipment';
 
 type ScreenState = 'idle' | 'camera' | 'preview' | 'sending' | 'sent';
 
@@ -34,6 +34,7 @@ function LargeCheckIcon() {
 export default function CaptureWorkScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
     const route = useRoute<RouteProp<HomeStackParamList, 'CaptureWork'>>();
+    const { worksession_id } = route.params;
     const insets = useSafeAreaInsets();
     const [screenState, setScreenState] = useState<ScreenState>('idle');
     const [photoPath, setPhotoPath] = useState<string | null>(null);
@@ -65,18 +66,20 @@ export default function CaptureWorkScreen() {
         }
         setScreenState('sending');
         try {
-            const { upload_url } = await getSasToken();
+            const { upload_url, blob_name } = await getSasToken();
             await uploadToBlob(upload_url, photoPath);
+            // 업로드 성공 후 백엔드 DB에 기록 요청
+            await requestTargetPhoto(blob_name, worksession_id, 'BEFORE');
             setScreenState('sent');
         } catch (err) {
             console.error('CaptureWork upload error:', err);
             Alert.alert(
                 '업로드 실패',
-                '사진 업로드에 실패했습니다. 다시 시도해주세요.',
+                '사진 업로드 또는 DB 기록에 실패했습니다. 다시 시도해주세요.',
             );
             setScreenState('preview');
         }
-    }, [photoPath]);
+    }, [photoPath, worksession_id]);
 
     const handleDone = useCallback(() => {
         navigation.goBack();

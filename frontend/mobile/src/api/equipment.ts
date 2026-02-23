@@ -5,6 +5,7 @@ const ENDPOINTS = {
   SAS_UPLOAD: '/user/storage/sas/upload/',
   CHECK_START: '/check/start/',
   CHECK_UPDATE: '/check/update/',
+  TARGET_PHOTO: '/check/target/',
 };
 
 // 프론트 장비명 → 백엔드 category 매핑
@@ -38,25 +39,26 @@ export async function getSasToken(contentType?: string) {
 }
 
 /** 1단계: SAS URL로 Blob 스토리지에 이미지 업로드 */
-export function uploadToBlob(
+export async function uploadToBlob(
   uploadUrl: string,
   fileUri: string,
 ): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve();
-      } else {
-        reject(new Error(`Blob upload failed: ${xhr.status}`));
-      }
-    };
-    xhr.onerror = () => reject(new Error('Upload network error'));
-    xhr.open('PUT', uploadUrl);
-    xhr.setRequestHeader('x-ms-blob-type', 'BlockBlob');
-    xhr.setRequestHeader('Content-Type', 'image/jpeg');
-    xhr.send({ uri: fileUri, type: 'image/jpeg', name: 'photo.jpg' } as any);
+  const response = await fetch(uploadUrl, {
+    method: 'PUT',
+    body: {
+      uri: fileUri,
+      type: 'image/jpeg',
+      name: 'photo.jpg',
+    } as any,
+    headers: {
+      'x-ms-blob-type': 'BlockBlob',
+      'Content-Type': 'image/jpeg',
+    },
   });
+
+  if (!response.ok) {
+    throw new Error(`Blob upload failed: ${response.status}`);
+  }
 }
 
 /** 2단계: 탐지 요청 (DB에 Compliance 레코드 생성) */
@@ -98,5 +100,18 @@ export async function requestManualCheck(
   await client.post('/check/request/', {
     worksession_id: worksessionId,
     compliance_id: complianceId,
+  });
+}
+
+/** 5단계: 작업물 촬영 데이터 업로드 (타겟 사진) */
+export async function requestTargetPhoto(
+  blobName: string,
+  worksessionId: number,
+  status: 'BEFORE' | 'AFTER' = 'BEFORE',
+): Promise<void> {
+  await client.post(ENDPOINTS.TARGET_PHOTO, {
+    worksession_id: worksessionId,
+    status: status,
+    image_path: blobName,
   });
 }

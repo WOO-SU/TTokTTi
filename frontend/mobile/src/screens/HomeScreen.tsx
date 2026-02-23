@@ -49,7 +49,7 @@ export default function HomeScreen() {
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 24 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 88 }]}
         bounces={false}
         showsVerticalScrollIndicator={false}>
 
@@ -70,13 +70,6 @@ export default function HomeScreen() {
         />
 
         <MenuBanner
-          title={'작업시작하기\n(실시간 촬영)'}
-          imageSource={workstartImage}
-          imageStyle={styles.bannerImage3}
-          onPress={() => navigation.navigate('SelectMode')}
-        />
-
-        <MenuBanner
           title="작업물 촬영"
           imageSource={targetPictureImage}
           imageStyle={styles.bannerImage4}
@@ -84,10 +77,17 @@ export default function HomeScreen() {
         />
 
         <MenuBanner
+          title={'작업시작하기\n(실시간 촬영)'}
+          imageSource={workstartImage}
+          imageStyle={styles.bannerImage3}
+          onPress={() => navigation.navigate('SelectMode')}
+        />
+
+        <MenuBanner
           title="근무 마무리"
           imageSource={endWorkImage}
           imageStyle={styles.bannerImage4}
-          onPress={() => navigation.navigate('EndWork')}
+          onPress={() => navigation.navigate('EndWork', { worksession_id })}
         />
 
       </ScrollView>
