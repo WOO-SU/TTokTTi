@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../api/client';
-import logoImg from '../assets/logo.png';
+import managerImg from '../assets/manager.jpg';
+import defaultAvatar from '../assets/safety-character.png';
 import useUnreadAlertCount from '../hooks/useUnreadAlertCount';
 
 type EmployeeInfo = {
@@ -22,6 +23,7 @@ const sidebarItems = [
   { label: '안전 장비 점검', icon: '🛡️', path: '/safety' },
   { label: '위험성 평가', icon: '👷', path: '/risk' },
   { label: '보고서 작성', icon: '✏️', path: '/report' },
+  { label: '알림 로그 확인', icon: '🔔', path: '/alert-logs' },
 ];
 
 export default function EmployeeDetailScreen() {
@@ -47,7 +49,7 @@ export default function EmployeeDetailScreen() {
     setLoading(true);
     (async () => {
       try {
-        const res = await apiFetch(`/user/user/${id}/`);
+        const res = await apiFetch(`/user/${id}/`);
         if (res.ok) {
           const data: EmployeeInfo = await res.json();
           setEmployee(data);
@@ -74,14 +76,12 @@ export default function EmployeeDetailScreen() {
       const body: Record<string, unknown> = { ...form };
       if (body.birth_date === '') delete body.birth_date;
 
-      const res = await apiFetch(`/user/user/${id}/`, {
+      const res = await apiFetch(`/user/${id}/`, {
         method: 'PATCH',
         body: JSON.stringify(body),
       });
       if (res.ok) {
-        const data: EmployeeInfo = await res.json();
-        setEmployee(data);
-        setIsEditing(false);
+        navigate('/employees');
       }
     } catch {
       // ignore
@@ -94,7 +94,7 @@ export default function EmployeeDetailScreen() {
     if (!id || !employee) return;
     if (!window.confirm(`"${employee.name}" 직원을 삭제하시겠습니까?`)) return;
     try {
-      const res = await apiFetch(`/user/user/${id}/`, { method: 'DELETE' });
+      const res = await apiFetch(`/user/${id}/`, { method: 'DELETE' });
       if (res.ok) {
         navigate('/employees');
       }
@@ -133,7 +133,7 @@ export default function EmployeeDetailScreen() {
       {/* Sidebar */}
       <aside style={styles.sidebar}>
         <button type="button" style={styles.sidebarLogo} onClick={() => navigate('/home')}>
-          <img src={logoImg} alt="TTokTTi" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+          <img src={managerImg} alt="TTokTTi" style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: '50%' }} />
           <span style={styles.logoText}>TTokTTi</span>
         </button>
 
@@ -205,14 +205,7 @@ export default function EmployeeDetailScreen() {
             {/* Profile Card */}
             <div style={styles.profileCard}>
               <div style={styles.avatarCircle}>
-                {employee.photo ? (
-                  <img src={employee.photo} alt="avatar" style={styles.avatarImg} />
-                ) : (
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#C5C6CC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                    <circle cx="12" cy="7" r="4" />
-                  </svg>
-                )}
+                <img src={employee.photo || defaultAvatar} alt="avatar" style={styles.avatarImg} />
               </div>
               <div style={styles.profileName}>{employee.name}</div>
               <div style={styles.profileUsername}>@{employee.username}</div>
@@ -552,6 +545,8 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     gap: 20,
     maxWidth: 560,
+    width: '100%',
+    alignSelf: 'center',
     paddingBottom: 40,
   },
 
