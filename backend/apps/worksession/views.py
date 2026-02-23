@@ -228,7 +228,7 @@ def get_worksession_summary(request, worksession_id):
         )
 
         checks = {
-            c.category: c.is_complied
+            c.category: c.is_complied if c.is_complied is not None else False
             for c in compliances
         }
 
