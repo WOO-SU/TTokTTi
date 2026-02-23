@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import {
     Camera,
     useCameraDevice,
+    useCameraFormat,
     useCameraPermission,
     useMicrophonePermission,
 } from 'react-native-vision-camera';
@@ -12,6 +13,7 @@ export interface BaseCameraProps {
     photo?: boolean;
     video?: boolean;
     audio?: boolean;
+    format?: ReturnType<typeof useCameraFormat>;
     guideText?: string;
     showControls?: boolean;
     isRecording?: boolean;
@@ -27,6 +29,7 @@ const BaseCamera = forwardRef<Camera, BaseCameraProps>(
             photo = true,
             video = false,
             audio = false,
+            format,
             guideText,
             showControls = true,
             isRecording = false,
@@ -38,6 +41,7 @@ const BaseCamera = forwardRef<Camera, BaseCameraProps>(
     ) => {
         const [cameraType, setCameraType] = useState<'back' | 'front'>('back');
         const device = useCameraDevice(cameraType);
+
         const { hasPermission: hasCamPermission, requestPermission: requestCamPermission } = useCameraPermission();
         const { hasPermission: hasMicPermission, requestPermission: requestMicPermission } = useMicrophonePermission();
 
@@ -76,6 +80,7 @@ const BaseCamera = forwardRef<Camera, BaseCameraProps>(
                     ref={ref}
                     style={[StyleSheet.absoluteFill, { borderRadius: 20, overflow: 'hidden' }]}
                     device={device}
+                    {...(format ? { format } : {})}
                     isActive={isActive}
                     photo={photo}
                     video={video}
