@@ -342,8 +342,41 @@ class Command(BaseCommand):
         target_after_idx = 0
 
         # for Compliance.original_image, Compliance.detected_image
-        original_paths = [f"compliance/original{i}.jpg" for i in range(1, 9)] # blob 업로드 후 index 확인
-        detected_paths = [f"compliance/detected{i}.jpg" for i in range(1, 9)]  # category별 경로 이름으로 수정: /original1_HELMET.jpg
+        original_paths = {
+            Compliance.CategoryChoices.HELMET: [
+                "compliance/original_HELMET_1.jpg",
+                "compliance/original_HELMET_2.jpg",
+                "compliance/original_HELMET_3.jpg",
+            ],
+            Compliance.CategoryChoices.VEST: [
+                "compliance/original_VEST_1.jpg",
+                "compliance/original_VEST_2.jpg",
+                "compliance/original_VEST_3.jpg",
+            ],
+            Compliance.CategoryChoices.GLOVE: [
+                "compliance/original_GLOVE_1.jpg",
+                "compliance/original_GLOVE_2.jpg",
+                "compliance/original_GLOVE_3.jpg",
+            ],
+        }
+
+        detected_paths = {
+            Compliance.CategoryChoices.HELMET: [
+                "compliance/detected_HELMET_1.jpg",
+                "compliance/detected_HELMET_2.jpg",
+                "compliance/detected_HELMET_3.jpg",
+            ],
+            Compliance.CategoryChoices.VEST: [
+                "compliance/detected_VEST_1.jpg",
+                "compliance/detected_VEST_2.jpg",
+                "compliance/detected_VEST_3.jpg",
+            ],
+            Compliance.CategoryChoices.GLOVE: [
+                "compliance/detected_GLOVE_1.jpg",
+                "compliance/detected_GLOVE_2.jpg",
+                "compliance/detected_GLOVE_3.jpg",
+            ],
+        }
         original_idx = 0
         detected_idx = 0
 
@@ -389,7 +422,7 @@ class Command(BaseCommand):
             categories = [
                 Compliance.CategoryChoices.HELMET,
                 Compliance.CategoryChoices.VEST,
-                Compliance.CategoryChoices.SHOES,
+                Compliance.CategoryChoices.GLOVE,
             ]
 
             if session.status == WorkSession.StatusChoices.DONE:
