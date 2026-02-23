@@ -7,6 +7,7 @@ export interface StreamResponse {
   type: StreamMessageType;
   message: string;
   details?: string;
+  timestamp?: string;
 }
 
 class SafetyStream {
@@ -15,6 +16,10 @@ class SafetyStream {
   private onMessageCallback: (data: StreamResponse) => void;
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 5;
+
+  // Throttle timer
+  private lastFrameTime: number = 0;
+  private readonly FRAME_INTERVAL_MS = 1000; // 4 FPS
 
   constructor(clientId: string, onMessage: (data: StreamResponse) => void) {
     // Port 8888 is where your gateway.py FastAPI server is running
@@ -60,13 +65,21 @@ class SafetyStream {
   }
 
   /**
-   * Sends a 4fps video frame to the 'video_frames' queue
+   * Sends video frame in desired rate.
    */
   public sendFrame(base64Image: string) {
+    const now = Date.now();
+    // Drop frames if they are coming in too fast
+    if (now - this.lastFrameTime < this.FRAME_INTERVAL_MS) {
+        return;
+    }
+    
     if (this.ws?.readyState === WebSocket.OPEN) {
+      this.lastFrameTime = now;
       this.ws.send(JSON.stringify({
         type: 'FRAME',
-        image: base64Image
+        image: base64Image,
+        timestamp: now
       }));
     }
   }
@@ -78,8 +91,9 @@ class SafetyStream {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({
         type: 'QUESTION',
+        image: base64Image,
         text: text,
-        image: base64Image
+        timestamp: Date.now()
       }));
     }
   }
