@@ -1,13 +1,5 @@
 from django.urls import path
-from .views import (
-    upload_result, 
-    check_update, 
-    request_detection,
-    target_photo, 
-    request_check, 
-    approve_check,
-    check_pass
-)
+from .views import *
 
 app_name = "check"
 
@@ -19,4 +11,5 @@ urlpatterns = [
     path("request/", request_check, name="request_check"),
     path("approve/", approve_check, name="approve_check"),
     path("pass/<int:worksession_id>/", check_pass, name="check_pass"),
+    path("admin/request/<int:videolog_id>/", manual_check, name="manual_check"),
 ]

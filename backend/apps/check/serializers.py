@@ -75,3 +75,25 @@ class CheckPassResponseSerializer(serializers.Serializer):
     ok = serializers.BooleanField()
     passed = serializers.BooleanField(required=False)
     detail = serializers.CharField(required=False)
+
+class EmployeeSimpleSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+
+
+class WorkSessionSimpleSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+
+# "/api/check/admin/request" 응답 시리얼라이저
+class ManualCheckResponseSerializer(serializers.Serializer):
+    videolog_id = serializers.IntegerField()
+    status = serializers.CharField(allow_null=True)
+
+    employee = EmployeeSimpleSerializer()
+    worksession = WorkSessionSimpleSerializer()
+
+    category = serializers.CharField()
+
+    original_image = serializers.CharField(allow_null=True)
+    created_at = serializers.DateTimeField()
