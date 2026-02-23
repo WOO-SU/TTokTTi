@@ -27,3 +27,27 @@ class CheckLogsResponseSerializer(serializers.Serializer):
     compliance_id = serializers.IntegerField(allow_null=True) # MANUAL only
     compliance_category = serializers.CharField(allow_null=True) # MANUAL only: from compliance
     risk_type_name = serializers.CharField(allow_null=True) # AUTO only: from risktype
+
+class WorkerSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+
+
+class WorkSessionSimpleSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+
+
+class RiskTypeSimpleSerializer(serializers.Serializer):
+    name = serializers.CharField()
+
+class AutoCheckResponseSerializer(serializers.Serializer):
+    videolog_id = serializers.IntegerField()
+    status = serializers.CharField(allow_null=True)
+
+    workers = WorkerSerializer(many=True)
+    worksession = WorkSessionSimpleSerializer()
+    risk_type = RiskTypeSimpleSerializer()
+
+    original_video = serializers.CharField(allow_null=True)
+    created_at = serializers.DateTimeField()
