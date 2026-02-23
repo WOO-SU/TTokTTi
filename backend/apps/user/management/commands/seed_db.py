@@ -377,8 +377,17 @@ class Command(BaseCommand):
                 "compliance/detected_GLOVE_3.jpg",
             ],
         }
-        original_idx = 0
-        detected_idx = 0
+        original_idx = {
+            Compliance.CategoryChoices.HELMET: 0,
+            Compliance.CategoryChoices.VEST: 0,
+            Compliance.CategoryChoices.GLOVE: 0,
+        }
+
+        detected_idx = {
+            Compliance.CategoryChoices.HELMET: 0,
+            Compliance.CategoryChoices.VEST: 0,
+            Compliance.CategoryChoices.GLOVE: 0,
+        }
 
         for session in WorkSession.objects.all():
             workers = list(
@@ -441,12 +450,16 @@ class Command(BaseCommand):
                         worksession=session,
                         category=category,
                         is_complied=True,
-                        original_image=original_paths[original_idx % len(original_paths)],
-                        detected_image=detected_paths[detected_idx % len(detected_paths)],
+                        original_image=original_paths[category][
+                            original_idx[category] % len(original_paths[category])
+                        ],
+                        detected_image=detected_paths[category][
+                            detected_idx[category] % len(detected_paths[category])
+                        ],
                     )
-                    original_idx += 1
-                    detected_idx += 1
-
+                    original_idx[category] += 1
+                    detected_idx[category] += 1
+                    
         self.stdout.write(self.style.SUCCESS("✅ apps.check seeding completed"))
 
         # ------------------------------------------------------------------
