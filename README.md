@@ -61,5 +61,21 @@ npm run android
 ---
 
 
+## DB seeding
+currently code is seeded at backend/apps/users/management/seed_db.py
+
+```bash
+docker compose down -v 
+docker compose up -d --build
+docker exec -it riskpulse_be python manage.py makemigrations
+```
+
+```bash
+# Password is 'rootpassword' as defined in your docker-compose.yml
+docker exec -it riskpulse_db mysql -u root -p
+```
+id:admin
+pw:adminpassword
+
 ## todos
 TODO 1 : nvidia-container-toolkit installed on your Linux host for this to work. (worker)

@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     'apps.risk',
     'apps.check',
     'apps.detect',
+    'apps.incident',
     'apps.worksession',
     'apps.report',
 ]
@@ -133,7 +134,7 @@ DATABASES = {
 
         'NAME': os.getenv('DB_NAME', 'riskpulse_db'),
         'USER': os.getenv('DB_USER', 'user'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'password'),
+        'PASSWORD': os.getenv('DB_PASSWORD', 'Riskpulse1'),
 
         'HOST': os.getenv('DB_HOST', 'db'),
         'PORT': os.getenv('DB_PORT', '3306'),
