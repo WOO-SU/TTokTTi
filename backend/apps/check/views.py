@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from django.utils import timezone
 
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.decorators import api_view, permission_classes
@@ -8,7 +9,7 @@ from rest_framework import status
 import json
 
 from .models import Compliance, Photo
-from ..detect.models import VideoLog
+from ..detect.models import VideoLog, VideoLogRead
 from .serializers import *
 
 from ..worksession.models import WorkSession
@@ -336,7 +337,7 @@ def check_pass(request, worksession_id):
 @swagger_auto_schema(
     method="get",
     responses={
-        200: ,
+        200: ManualCheckResponseSerializer,
         403: UploadResultResponseSerializer,
         404: UploadResultResponseSerializer,
     }
@@ -368,6 +369,14 @@ def manual_check(request, videolog_id=None):
             status=404
         )
 
+    VideoLogRead.objects.update_or_create(
+        videolog=log,
+        manager=request.user,
+        defaults={
+            "is_read": True,
+            "read_at": timezone.now(),
+        }
+    )
     compliance = log.compliance
     employee = compliance.employee
     worksession = log.worksession
