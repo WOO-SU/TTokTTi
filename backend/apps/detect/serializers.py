@@ -32,10 +32,15 @@ class WorkerSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
 
+    class Meta:
+        ref_name = "DetectWorker"
+
 
 class WorkSessionSimpleSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
+    class Meta:
+        ref_name = "DetectWorkSessionSimple"
 
 
 class RiskTypeSimpleSerializer(serializers.Serializer):
