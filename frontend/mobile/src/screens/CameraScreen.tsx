@@ -33,8 +33,8 @@ type Props = {
 /* ──────── Configuration ──────── */
 
 const STREAM_CONFIG = {
-  WIDTH: 360,
-  HEIGHT: 360,
+  WIDTH: 480,
+  HEIGHT: 480,
   INTERVAL_MS: 1000, // 4 fps (1000/250)
 };
 
