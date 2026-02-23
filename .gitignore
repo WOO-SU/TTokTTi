@@ -65,3 +65,6 @@ __pycache__/
 htmlcov/
 
 vision_fullcam/data/*
+*.pt
+*.mp4
+*.avi
