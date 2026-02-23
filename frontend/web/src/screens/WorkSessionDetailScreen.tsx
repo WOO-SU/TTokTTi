@@ -1,87 +1,53 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { apiFetch } from '../api/client';
 import managerImg from '../assets/manager.jpg';
 
 // ── Types ──
 
-type WorkSiteCard = {
+type WorkSessionCard = {
   id: number;
-  siteName: string;
-  startTime: string;
-  location: string;
-  members: { id: number; name: string }[];
-  workStatus: '작업 전' | '작업 중' | '작업 끝';
-  equipmentCheck: { memberId: number; name: string; complied: boolean }[];
-  riskAssessmentDone: boolean;
-  reportDone: boolean;
-  reportId?: number;
+  name: string;
+  starts_at: string;
+  ends_at: string | null;
+  status: 'READY' | 'IN_PROGRESS' | 'DONE';
+  workers_detail?: { employee_id: number; name: string; equipment_check: boolean }[];
+  risk_assessment: string;
+  report: boolean;
 };
 
-// ── Mock detail data keyed by session id ──
-
-const mockRiskResults: Record<number, { item: string; level: '높음' | '중간' | '낮음'; description: string }[]> = {
-  1: [
-    { item: '고소 작업', level: '높음', description: '2m 이상 고소 작업 시 안전대 미착용 위험' },
-    { item: '전기 설비', level: '중간', description: '노후 전기 설비 감전 위험' },
-  ],
-  2: [
-    { item: '중장비 운행', level: '높음', description: '크레인 반경 내 작업자 충돌 위험' },
-  ],
-  3: [],
-  4: [
-    { item: '고소 작업', level: '낮음', description: '안전 장비 착용 완료, 낮은 위험도' },
-    { item: '화기 작업', level: '중간', description: '용접 작업 시 화재 위험' },
-  ],
+type RiskReport = {
+  id: number;
+  scene_summary: any;
+  hazards: any;
+  overall: any;
+  generated_at: string;
 };
 
-const mockEquipmentResults: Record<number, { member: string; helmet: boolean; vest: boolean; gloves: boolean }[]> = {
-  1: [
-    { member: '송영민', helmet: true, vest: true, gloves: true },
-    { member: '임정원', helmet: true, vest: false, gloves: false },
-  ],
-  2: [
-    { member: '김태호', helmet: true, vest: true, gloves: true },
-    { member: '박지수', helmet: true, vest: true, gloves: true },
-  ],
-  3: [
-    { member: '이준혁', helmet: false, vest: false, gloves: false },
-    { member: '최서연', helmet: false, vest: false, gloves: false },
-  ],
-  4: [
-    { member: '우수연', helmet: true, vest: true, gloves: true },
-    { member: '원인영', helmet: true, vest: true, gloves: true },
-  ],
+type EquipmentCheck = {
+  worker: { id: number; name: string };
+  checks: { HELMET: boolean | null; VEST: boolean | null; SHOES: boolean | null };
 };
 
-const mockRiskLogs: Record<number, { time: string; type: string; member: string; videoUrl: string | null }[]> = {
-  1: [
-    { time: '10:23:15', type: '안전모 미착용', member: '임정원', videoUrl: null },
-    { time: '11:05:42', type: '작업 구역 이탈', member: '송영민', videoUrl: null },
-  ],
-  2: [],
-  3: [],
-  4: [
-    { time: '09:17:08', type: '중장비 접근', member: '원인영', videoUrl: null },
-  ],
+type AutoLog = {
+  id: number;
+  risk_type: string | null;
+  video_path: string | null;
+  created_at: string;
 };
 
-const mockWorkPhotos: Record<number, { label: string; url: string | null }[]> = {
-  1: [
-    { label: '작업 전', url: null },
-    { label: '작업 후', url: null },
-  ],
-  2: [
-    { label: '작업 전', url: null },
-    { label: '작업 후', url: null },
-  ],
-  3: [
-    { label: '작업 전', url: null },
-    { label: '작업 후', url: null },
-  ],
-  4: [
-    { label: '작업 전', url: null },
-    { label: '작업 후', url: null },
-  ],
+type PhotoItem = {
+  id: number;
+  type: string;
+  image: string | null;
+};
+
+type SummaryData = {
+  worksession: { id: number; name: string };
+  risk_report: RiskReport | null;
+  equipment_checks: EquipmentCheck[];
+  auto_logs: AutoLog[];
+  photos: PhotoItem[];
 };
 
 const riskLevelColor: Record<string, { bg: string; text: string }> = {
@@ -130,6 +96,44 @@ function CheckBadge({ ok }: { ok: boolean }) {
   );
 }
 
+// ── Helpers ──
+
+const statusTextMap: Record<string, string> = {
+  READY: '작업 전',
+  IN_PROGRESS: '작업 중',
+  DONE: '작업 끝',
+};
+
+const workStatusColors: Record<string, { bg: string; text: string }> = {
+  READY: { bg: '#F0F1F3', text: '#71727A' },
+  IN_PROGRESS: { bg: '#E7F4E8', text: '#298A3E' },
+  DONE: { bg: '#EAF2FF', text: '#006FFD' },
+};
+
+function formatTime(isoStr: string): string {
+  try {
+    const d = new Date(isoStr);
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+  } catch {
+    return '';
+  }
+}
+
+function formatSessionTime(isoStr: string): string {
+  if (!isoStr) return '시간 미정';
+  try {
+    const d = new Date(isoStr);
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  } catch {
+    return '시간 오류';
+  }
+}
+
+const PHOTO_LABEL: Record<string, string> = {
+  BEFORE: '작업 전',
+  AFTER: '작업 후',
+};
+
 // ── Main Component ──
 
 export default function WorkSessionDetailScreen() {
@@ -138,23 +142,31 @@ export default function WorkSessionDetailScreen() {
   const { id } = useParams<{ id: string }>();
   const sessionId = Number(id ?? 1);
 
-  const card: WorkSiteCard | undefined = (location.state as any)?.card;
-  const siteName = card?.siteName ?? `작업 현장 #${sessionId}`;
-  const workStatus = card?.workStatus ?? '작업 중';
+  const card: WorkSessionCard | undefined = (location.state as any)?.card;
+  const siteName = card?.name ?? `작업 현장 #${sessionId}`;
+  const cardStatus = card?.status ?? 'READY';
+  const workers = card?.workers_detail ?? [];
 
   const [activeTab, setActiveTab] = useState<TabKey>('risk');
+  const [summary, setSummary] = useState<SummaryData | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const riskResults = mockRiskResults[sessionId] ?? [];
-  const equipmentResults = mockEquipmentResults[sessionId] ?? [];
-  const riskLogs = mockRiskLogs[sessionId] ?? [];
-  const workPhotos = mockWorkPhotos[sessionId] ?? [];
+  const fetchSummary = useCallback(async () => {
+    try {
+      const res = await apiFetch(`/worksession/summary/${sessionId}/`);
+      if (res.ok) {
+        const json = await res.json();
+        setSummary(json);
+      }
+    } catch { /* ignore */ }
+    setLoading(false);
+  }, [sessionId]);
 
-  const workStatusColors: Record<string, { bg: string; text: string }> = {
-    '작업 전': { bg: '#F0F1F3', text: '#71727A' },
-    '작업 중': { bg: '#E7F4E8', text: '#298A3E' },
-    '작업 끝': { bg: '#EAF2FF', text: '#006FFD' },
-  };
-  const sc = workStatusColors[workStatus] ?? workStatusColors['작업 전'];
+  useEffect(() => {
+    fetchSummary();
+  }, [fetchSummary]);
+
+  const sc = workStatusColors[cardStatus] ?? workStatusColors.READY;
 
   return (
     <div style={styles.container}>
@@ -190,17 +202,15 @@ export default function WorkSessionDetailScreen() {
             <div style={styles.headerMeta}>
               {card && (
                 <>
-                  <span style={styles.headerMetaText}>⏰ 작업 시작 {card.startTime}</span>
+                  <span style={styles.headerMetaText}>⏰ 작업 시작 {formatSessionTime(card.starts_at)}</span>
                   <span style={styles.headerMetaText}>·</span>
-                  <span style={styles.headerMetaText}>📍 {card.location}</span>
-                  <span style={styles.headerMetaText}>·</span>
-                  {card.members.map((m, i) => (
-                    <React.Fragment key={m.id}>
+                  {workers.map((m, i) => (
+                    <React.Fragment key={m.employee_id}>
                       {i > 0 && <span style={styles.headerMetaText}>, </span>}
                       <button
                         type="button"
                         style={styles.memberBtn}
-                        onClick={() => navigate(`/employee/${m.id}`, { state: { siteName } })}>
+                        onClick={() => navigate(`/employee/${m.employee_id}`, { state: { siteName } })}>
                         {m.name}
                       </button>
                     </React.Fragment>
@@ -208,7 +218,7 @@ export default function WorkSessionDetailScreen() {
                 </>
               )}
               <span style={{ ...styles.statusBadge, backgroundColor: sc.bg, color: sc.text }}>
-                {workStatus}
+                {statusTextMap[cardStatus] ?? '작업 전'}
               </span>
             </div>
           </div>
@@ -233,118 +243,174 @@ export default function WorkSessionDetailScreen() {
 
         {/* Tab content */}
         <div style={styles.tabContent}>
-
-          {/* ── 위험성 평가 결과 ── */}
-          {activeTab === 'risk' && (
-            <div style={styles.section}>
-              <span style={styles.sectionTitle}>위험성 평가 결과</span>
-              {riskResults.length === 0 ? (
-                <div style={styles.emptyState}>
-                  <span style={{ fontSize: 32 }}>✅</span>
-                  <span style={styles.emptyText}>위험 항목 없음</span>
-                </div>
-              ) : (
-                <div style={styles.riskList}>
-                  {riskResults.map((r, i) => {
-                    const lc = riskLevelColor[r.level];
-                    return (
-                      <div key={i} style={styles.riskRow}>
-                        <div style={styles.riskRowLeft}>
-                          <span style={{ ...styles.riskLevelBadge, backgroundColor: lc.bg, color: lc.text }}>
-                            {r.level}
+          {loading ? (
+            <div style={styles.emptyState}>
+              <span style={styles.emptyText}>데이터를 불러오는 중...</span>
+            </div>
+          ) : (
+            <>
+              {/* ── 위험성 평가 결과 ── */}
+              {activeTab === 'risk' && (
+                <div style={styles.section}>
+                  <span style={styles.sectionTitle}>위험성 평가 결과</span>
+                  {!summary?.risk_report ? (
+                    <div style={styles.emptyState}>
+                      <span style={{ fontSize: 32 }}>✅</span>
+                      <span style={styles.emptyText}>위험성 평가 결과 없음</span>
+                    </div>
+                  ) : (
+                    <div style={styles.riskList}>
+                      {/* Overall */}
+                      {summary.risk_report.overall && (
+                        <div style={styles.riskRow}>
+                          <div style={styles.riskRowLeft}>
+                            <span style={{ ...styles.riskLevelBadge, backgroundColor: '#EAF2FF', color: '#006FFD' }}>
+                              종합
+                            </span>
+                            <span style={styles.riskItem}>종합 평가</span>
+                          </div>
+                          <span style={styles.riskDesc}>
+                            {typeof summary.risk_report.overall === 'string'
+                              ? summary.risk_report.overall
+                              : JSON.stringify(summary.risk_report.overall)}
                           </span>
-                          <span style={styles.riskItem}>{r.item}</span>
-                        </div>
-                        <span style={styles.riskDesc}>{r.description}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── 장비 점검 결과 ── */}
-          {activeTab === 'equipment' && (
-            <div style={styles.section}>
-              <span style={styles.sectionTitle}>장비 점검 결과</span>
-              <div style={styles.equipTable}>
-                {/* Header */}
-                <div style={styles.equipHeaderRow}>
-                  <span style={{ ...styles.equipCell, ...styles.equipHeaderCell }}>작업자</span>
-                  <span style={{ ...styles.equipCell, ...styles.equipHeaderCell, justifyContent: 'center' }}>⛑️ 안전모</span>
-                  <span style={{ ...styles.equipCell, ...styles.equipHeaderCell, justifyContent: 'center' }}>🦺 안전조끼</span>
-                  <span style={{ ...styles.equipCell, ...styles.equipHeaderCell, justifyContent: 'center' }}>🧤 안전장갑</span>
-                </div>
-                {equipmentResults.map((eq, i) => (
-                  <div key={i} style={{ ...styles.equipRow, backgroundColor: i % 2 === 0 ? '#FFFFFF' : '#F8F9FA' }}>
-                    <span style={{ ...styles.equipCell, fontWeight: 600, color: '#1F2024' }}>{eq.member}</span>
-                    <span style={{ ...styles.equipCell, justifyContent: 'center' }}><CheckBadge ok={eq.helmet} /></span>
-                    <span style={{ ...styles.equipCell, justifyContent: 'center' }}><CheckBadge ok={eq.vest} /></span>
-                    <span style={{ ...styles.equipCell, justifyContent: 'center' }}><CheckBadge ok={eq.gloves} /></span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ── 위험 감지 로그 ── */}
-          {activeTab === 'logs' && (
-            <div style={styles.section}>
-              <span style={styles.sectionTitle}>위험 감지 로그</span>
-              {riskLogs.length === 0 ? (
-                <div style={styles.emptyState}>
-                  <span style={{ fontSize: 32 }}>✅</span>
-                  <span style={styles.emptyText}>감지된 위험 없음</span>
-                </div>
-              ) : (
-                <div style={styles.logList}>
-                  {riskLogs.map((log, i) => (
-                    <div key={i} style={styles.logCard}>
-                      <div style={styles.logCardHeader}>
-                        <span style={styles.logTime}>{log.time}</span>
-                        <span style={styles.logMember}>{log.member}</span>
-                        <span style={styles.logTypeBadge}>{log.type}</span>
-                      </div>
-                      {log.videoUrl ? (
-                        <video
-                          src={log.videoUrl}
-                          controls
-                          style={styles.logVideo}
-                        />
-                      ) : (
-                        <div style={styles.logVideoPlaceholder}>
-                          <span style={{ fontSize: 28 }}>🎥</span>
-                          <span style={styles.logVideoPlaceholderText}>영상 없음</span>
                         </div>
                       )}
+                      {/* Scene Summary */}
+                      {summary.risk_report.scene_summary && (
+                        <div style={styles.riskRow}>
+                          <div style={styles.riskRowLeft}>
+                            <span style={{ ...styles.riskLevelBadge, backgroundColor: '#FFF4E5', color: '#E8900C' }}>
+                              현장
+                            </span>
+                            <span style={styles.riskItem}>현장 요약</span>
+                          </div>
+                          <span style={styles.riskDesc}>
+                            {typeof summary.risk_report.scene_summary === 'string'
+                              ? summary.risk_report.scene_summary
+                              : JSON.stringify(summary.risk_report.scene_summary)}
+                          </span>
+                        </div>
+                      )}
+                      {/* Hazards */}
+                      {Array.isArray(summary.risk_report.hazards) && summary.risk_report.hazards.map((h: any, i: number) => (
+                        <div key={i} style={styles.riskRow}>
+                          <div style={styles.riskRowLeft}>
+                            <span style={{ ...styles.riskLevelBadge, backgroundColor: '#FFEAEA', color: '#D32F2F' }}>
+                              위험
+                            </span>
+                            <span style={styles.riskItem}>
+                              {typeof h === 'string' ? h : (h.name ?? h.title ?? `위험 요소 ${i + 1}`)}
+                            </span>
+                          </div>
+                          <span style={styles.riskDesc}>
+                            {typeof h === 'string' ? '' : (h.description ?? h.detail ?? JSON.stringify(h))}
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
               )}
-            </div>
-          )}
 
-          {/* ── 작업 전/후 사진 ── */}
-          {activeTab === 'photos' && (
-            <div style={styles.section}>
-              <span style={styles.sectionTitle}>작업 전/후 사진</span>
-              <div style={styles.photoGrid}>
-                {workPhotos.map((photo, i) => (
-                  <div key={i} style={styles.photoCard}>
-                    <span style={styles.photoLabel}>{photo.label}</span>
-                    {photo.url ? (
-                      <img src={photo.url} alt={photo.label} style={styles.photoImg} />
-                    ) : (
-                      <div style={styles.photoPlaceholder}>
-                        <span style={{ fontSize: 32 }}>📷</span>
-                        <span style={styles.photoPlaceholderText}>사진 없음</span>
+              {/* ── 장비 점검 결과 ── */}
+              {activeTab === 'equipment' && (
+                <div style={styles.section}>
+                  <span style={styles.sectionTitle}>장비 점검 결과</span>
+                  {(!summary?.equipment_checks || summary.equipment_checks.length === 0) ? (
+                    <div style={styles.emptyState}>
+                      <span style={{ fontSize: 32 }}>✅</span>
+                      <span style={styles.emptyText}>장비 점검 정보 없음</span>
+                    </div>
+                  ) : (
+                    <div style={styles.equipTable}>
+                      <div style={styles.equipHeaderRow}>
+                        <span style={{ ...styles.equipCell, ...styles.equipHeaderCell }}>작업자</span>
+                        <span style={{ ...styles.equipCell, ...styles.equipHeaderCell, justifyContent: 'center' }}>⛑️ 안전모</span>
+                        <span style={{ ...styles.equipCell, ...styles.equipHeaderCell, justifyContent: 'center' }}>🦺 안전조끼</span>
+                        <span style={{ ...styles.equipCell, ...styles.equipHeaderCell, justifyContent: 'center' }}>👟 안전화</span>
                       </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
+                      {summary.equipment_checks.map((ec, i) => (
+                        <div key={ec.worker.id} style={{ ...styles.equipRow, backgroundColor: i % 2 === 0 ? '#FFFFFF' : '#F8F9FA' }}>
+                          <span style={{ ...styles.equipCell, fontWeight: 600, color: '#1F2024' }}>{ec.worker.name}</span>
+                          <span style={{ ...styles.equipCell, justifyContent: 'center' }}><CheckBadge ok={ec.checks.HELMET === true} /></span>
+                          <span style={{ ...styles.equipCell, justifyContent: 'center' }}><CheckBadge ok={ec.checks.VEST === true} /></span>
+                          <span style={{ ...styles.equipCell, justifyContent: 'center' }}><CheckBadge ok={ec.checks.SHOES === true} /></span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── 위험 감지 로그 ── */}
+              {activeTab === 'logs' && (
+                <div style={styles.section}>
+                  <span style={styles.sectionTitle}>위험 감지 로그</span>
+                  {(!summary?.auto_logs || summary.auto_logs.length === 0) ? (
+                    <div style={styles.emptyState}>
+                      <span style={{ fontSize: 32 }}>✅</span>
+                      <span style={styles.emptyText}>감지된 위험 없음</span>
+                    </div>
+                  ) : (
+                    <div style={styles.logList}>
+                      {summary.auto_logs.map(log => (
+                        <div key={log.id} style={styles.logCard}>
+                          <div style={styles.logCardHeader}>
+                            <span style={styles.logTime}>{formatTime(log.created_at)}</span>
+                            <span style={styles.logTypeBadge}>{log.risk_type ?? '위험 감지'}</span>
+                          </div>
+                          {log.video_path ? (
+                            <video
+                              src={log.video_path}
+                              controls
+                              style={styles.logVideo}
+                            />
+                          ) : (
+                            <div style={styles.logVideoPlaceholder}>
+                              <span style={{ fontSize: 28 }}>🎥</span>
+                              <span style={styles.logVideoPlaceholderText}>영상 없음</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── 작업 전/후 사진 ── */}
+              {activeTab === 'photos' && (
+                <div style={styles.section}>
+                  <span style={styles.sectionTitle}>작업 전/후 사진</span>
+                  {(!summary?.photos || summary.photos.length === 0) ? (
+                    <div style={styles.emptyState}>
+                      <span style={{ fontSize: 32 }}>📷</span>
+                      <span style={styles.emptyText}>사진 없음</span>
+                    </div>
+                  ) : (
+                    <div style={styles.photoGrid}>
+                      {summary.photos.map(photo => {
+                        const label = PHOTO_LABEL[photo.type] ?? photo.type;
+                        return (
+                          <div key={photo.id} style={styles.photoCard}>
+                            <span style={styles.photoLabel}>{label}</span>
+                            {photo.image ? (
+                              <img src={photo.image} alt={label} style={styles.photoImg} />
+                            ) : (
+                              <div style={styles.photoPlaceholder}>
+                                <span style={{ fontSize: 32 }}>📷</span>
+                                <span style={styles.photoPlaceholderText}>사진 없음</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>

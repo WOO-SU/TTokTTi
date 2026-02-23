@@ -113,6 +113,34 @@ export default function SafetyRegulationScreen() {
   const [loading, setLoading] = useState(true);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const fetchComplianceData = useCallback(async (sessions: WorkSessionCard[]) => {
+    if (sessions.length === 0) return;
+    try {
+      const wsIds = sessions.map(ws => ws.id);
+      const res = await apiFetch('/check/admin/', {
+        method: 'POST',
+        body: JSON.stringify({ worksession_ids: wsIds }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const worksessions = json.worksessions ?? [];
+        setCompliance(prev => {
+          const next = { ...prev };
+          for (const ws of worksessions) {
+            for (const wc of ws.workers ?? []) {
+              for (const eq of equipmentItems) {
+                const key = complianceKey(ws.worksession_id, wc.worker.id, eq.category);
+                const val = wc.checks?.[eq.category];
+                next[key] = val === true;
+              }
+            }
+          }
+          return next;
+        });
+      }
+    } catch { /* ignore */ }
+  }, []);
+
   const fetchWorkSessions = useCallback(async () => {
     try {
       const res = await apiFetch('/worksession/admin/today/');
@@ -120,26 +148,12 @@ export default function SafetyRegulationScreen() {
         const json = await res.json();
         if (Array.isArray(json)) {
           setWorkSessions(json);
-          // Initialize compliance from equipment_check (preserve manual overrides)
-          setCompliance(prev => {
-            const next = { ...prev };
-            for (const ws of json as WorkSessionCard[]) {
-              for (const worker of ws.workers_detail ?? []) {
-                for (const eq of equipmentItems) {
-                  const key = complianceKey(ws.id, worker.employee_id, eq.category);
-                  if (!(key in next)) {
-                    next[key] = worker.equipment_check;
-                  }
-                }
-              }
-            }
-            return next;
-          });
           setExpandedGroupId(prev => prev ?? (json.length > 0 ? (json[0] as WorkSessionCard).id : null));
+          await fetchComplianceData(json as WorkSessionCard[]);
         }
       }
     } catch { /* ignore */ }
-  }, []);
+  }, [fetchComplianceData]);
 
   useEffect(() => {
     fetchWorkSessions().finally(() => setLoading(false));

@@ -29,6 +29,16 @@ type ManualCheckDetail = {
   created_at: string;
 };
 
+type AutoCheckDetail = {
+  videolog_id: number;
+  status: string | null;
+  workers: { id: number; name: string }[];
+  worksession: { id: number; name: string };
+  risk_type: { name: string };
+  original_video: string | null;
+  created_at: string;
+};
+
 const COMPLIANCE_LABEL: Record<string, string> = {
   HELMET: '안전모',
   VEST: '안전 조끼',
@@ -99,11 +109,12 @@ function LogDetailModal({
   approving: boolean;
 }) {
   const [manualDetail, setManualDetail] = useState<ManualCheckDetail | null>(null);
+  const [autoDetail, setAutoDetail] = useState<AutoCheckDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
+    setDetailLoading(true);
     if (log.source === 'MANUAL') {
-      setDetailLoading(true);
       apiFetch(`/check/admin/request/${log.id}/`)
         .then(res => res.json())
         .then(json => {
@@ -111,11 +122,21 @@ function LogDetailModal({
         })
         .catch(() => {})
         .finally(() => setDetailLoading(false));
+    } else {
+      apiFetch(`/detect/admin/request/${log.id}/`)
+        .then(res => res.json())
+        .then(json => {
+          if (json.ok && json.data) setAutoDetail(json.data);
+        })
+        .catch(() => {})
+        .finally(() => setDetailLoading(false));
     }
   }, [log.id, log.source]);
 
   const isManual = log.source === 'MANUAL';
-  const currentStatus = manualDetail?.status ?? log.status;
+  const currentStatus = isManual
+    ? (manualDetail?.status ?? log.status)
+    : (autoDetail?.status ?? log.status);
   const statusInfo = currentStatus ? STATUS_LABEL[currentStatus] : null;
 
   return (
@@ -154,7 +175,7 @@ function LogDetailModal({
           </div>
         </div>
 
-        {isManual && detailLoading && (
+        {detailLoading && (
           <div style={{ padding: '16px 24px', textAlign: 'center', color: '#8F9098', fontSize: 13 }}>
             상세 정보를 불러오는 중...
           </div>
@@ -163,18 +184,47 @@ function LogDetailModal({
         <div style={styles.modalInfoRow}>
           <div style={styles.modalInfoItem}>
             <span style={styles.modalInfoLabel}>작업 현장</span>
-            <span style={styles.modalInfoValue}>{manualDetail?.worksession.name ?? log.worksession_name}</span>
+            <span style={styles.modalInfoValue}>
+              {(isManual ? manualDetail?.worksession.name : autoDetail?.worksession.name) ?? log.worksession_name}
+            </span>
           </div>
           <div style={styles.modalInfoItem}>
             <span style={styles.modalInfoLabel}>{isManual ? '점검 항목' : '위험 유형'}</span>
             <span style={styles.modalInfoValue}>
               {isManual
                 ? (COMPLIANCE_LABEL[manualDetail?.category ?? log.compliance_category ?? ''] ?? manualDetail?.category ?? log.compliance_category ?? '-')
-                : (log.risk_type_name ?? '-')}
+                : (autoDetail?.risk_type.name ?? log.risk_type_name ?? '-')}
             </span>
           </div>
         </div>
 
+        {/* AUTO: 작업자 목록 */}
+        {!isManual && autoDetail?.workers && autoDetail.workers.length > 0 && (
+          <div style={{ padding: '0 24px 16px' }}>
+            <div style={styles.modalInfoItem}>
+              <span style={styles.modalInfoLabel}>현장 작업자</span>
+              <span style={styles.modalInfoValue}>
+                {autoDetail.workers.map(w => w.name).join(', ')}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* AUTO: 영상 */}
+        {!isManual && autoDetail?.original_video && (
+          <div style={{ padding: '0 24px 16px' }}>
+            <div style={styles.modalInfoItem}>
+              <span style={styles.modalInfoLabel}>감지 영상</span>
+              <video
+                src={autoDetail.original_video}
+                controls
+                style={{ width: '100%', borderRadius: 8, marginTop: 8, maxHeight: 260, backgroundColor: '#000' }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* MANUAL: 요청 작업자 */}
         {isManual && manualDetail?.employee && (
           <div style={{ padding: '0 24px 16px' }}>
             <div style={styles.modalInfoItem}>
@@ -184,6 +234,7 @@ function LogDetailModal({
           </div>
         )}
 
+        {/* MANUAL: 촬영 이미지 */}
         {isManual && manualDetail?.original_image && (
           <div style={{ padding: '0 24px 16px' }}>
             <div style={styles.modalInfoItem}>
@@ -197,6 +248,7 @@ function LogDetailModal({
           </div>
         )}
 
+        {/* MANUAL: 수락/거절 */}
         {isManual && currentStatus === 'PENDING' && (
           <div style={styles.modalApprovalRow}>
             <button
