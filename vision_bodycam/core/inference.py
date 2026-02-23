@@ -66,6 +66,9 @@ class SafetyAnalyzer:
                 result_text = message.content[0].get("text", "").strip()
             else:
                 result_text = str(message.content).strip()
+
+            # For debugging
+            print(f"[vLLM OUTPUT]: {result_text}")
                 
             # 4. Standardize empty text fallbacks
             if not result_text:
@@ -111,7 +114,7 @@ class SafetyAnalyzer:
             if isinstance(message.content, list):
                 return message.content[0].get("text", "").strip()
 
-            return str(mesage.content).strip()
+            return str(message.content).strip()
 
         except Exception as e:
             logger.error(f"Action Detection Error: {e}")

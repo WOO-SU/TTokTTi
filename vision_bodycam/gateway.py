@@ -100,27 +100,17 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
             
             # 1. EXTRACT THE IMAGE BASE64
             # Handle both simple frames {"data": "base64"} and questions {"data": {"data": "base64", "text": "..."}}
-            b64_string = None
-            is_nested = False
+            b64_string = data_json.get("image")
             
-            if isinstance(data_json.get("data"), str):
-                b64_string = data_json["data"]
-            elif isinstance(data_json.get("data"), dict) and "data" in data_json["data"]:
-                b64_string = data_json["data"]["data"]
-                is_nested = True
-
+            
             # 2. OFFLOAD RESIZING TO A BACKGROUND THREAD
             if b64_string:
                 # asyncio.to_thread prevents the heavy image math from blocking FastAPI's event loop
                 optimized_b64 = await asyncio.to_thread(
-                    enforce_image_resolution, b64_string, 1280, 720
+                    enforce_image_resolution, b64_string, 448, 448
                 )
                 
-                # 3. RE-INJECT OPTIMIZED STRING BACK INTO JSON
-                if is_nested:
-                    data_json["data"]["data"] = optimized_b64
-                else:
-                    data_json["data"] = optimized_b64
+                data_json["image"] = optimized_b64
 
             # Wrap data with client_id for the worker
             payload = json.dumps({"client_id": client_id, "data": data_json})
