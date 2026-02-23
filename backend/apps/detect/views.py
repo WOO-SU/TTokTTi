@@ -147,6 +147,80 @@ def search_video(request):
     })
 
 @swagger_auto_schema(
+    method='post',
+    responses={200: SaveVideoResponseSerializer}
+)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def bodycam_risk(request):
+    """
+    "/api/detect/bodycam": 바디캠 위험 감지 영상 로그 저장 (AUTO)
+    """
+    worksession_id = request.data.get("worksession_id")
+    risk_type_id = request.data.get("risk_type_id")
+    video_path = request.data.get("video_path")
+
+    # 1. Validate Payload
+    if not worksession_id:
+        return Response(
+            {"ok": False, "data": None, "detail": "worksession_id required"},
+            status=400
+        )
+
+    if not risk_type_id:
+        return Response(
+            {"ok": False, "data": None, "detail": "risk_type_id required"},
+            status=400
+        )
+
+    if not video_path:
+        return Response(
+            {"ok": False, "data": None, "detail": "video_path required"},
+            status=400
+        )
+
+    # 2. Fetch and Validate WorkSession
+    try:
+        worksession = WorkSession.objects.get(id=worksession_id)
+    except WorkSession.DoesNotExist:
+        return Response(
+            {"ok": False, "data": None, "detail": "invalid worksession_id"},
+            status=404
+        )
+
+    # 3. Fetch and Validate RiskType (Ensure it is a BODY cam risk)
+    try:
+        risk_type = RiskType.objects.get(id=risk_type_id)
+        
+        # Validation: Make sure we aren't accidentally saving a FULL cam risk here
+        if risk_type.camera_type != RiskType.CameraType.BODY:
+             return Response(
+                {"ok": False, "data": None, "detail": "provided risk_type is not a BODY cam risk"},
+                status=400
+            )
+    except RiskType.DoesNotExist:
+        return Response(
+            {"ok": False, "data": None, "detail": "invalid risk_type_id"},
+            status=404
+        )
+
+    # 4. Create VideoLog with strictly required fields based on Schema
+    video = VideoLog.objects.create(
+        worksession=worksession,
+        risk_type=risk_type,
+        original_video=video_path,
+        source=VideoLog.SourceChoices.AUTO  # Explicitly set to AUTO for AI detections
+        # Note: 'status' and 'compliance' are left empty (NULL) as per your schema for AUTO logs
+    )
+
+    serializer = VideoSerializer(video)
+
+    return Response(
+        {"ok": True, "data": serializer.data},
+        status=200
+    )
+    
+@swagger_auto_schema(
     method="get",
     responses={200: CheckLogsResponseSerializer(many=True)}
 )
