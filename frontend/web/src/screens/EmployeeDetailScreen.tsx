@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../api/client';
 import managerImg from '../assets/manager.jpg';
+import defaultAvatar from '../assets/safety-character.png';
 import useUnreadAlertCount from '../hooks/useUnreadAlertCount';
 
 type EmployeeInfo = {
@@ -204,14 +205,7 @@ export default function EmployeeDetailScreen() {
             {/* Profile Card */}
             <div style={styles.profileCard}>
               <div style={styles.avatarCircle}>
-                {employee.photo ? (
-                  <img src={employee.photo} alt="avatar" style={styles.avatarImg} />
-                ) : (
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#C5C6CC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                    <circle cx="12" cy="7" r="4" />
-                  </svg>
-                )}
+                <img src={employee.photo || defaultAvatar} alt="avatar" style={styles.avatarImg} />
               </div>
               <div style={styles.profileName}>{employee.name}</div>
               <div style={styles.profileUsername}>@{employee.username}</div>

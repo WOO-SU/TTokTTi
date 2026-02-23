@@ -11,6 +11,7 @@ type User = { userName: string; userId: number | null };
 type AuthContextValue = {
   user: User | null;
   isAuthenticated: boolean;
+  loading: boolean;
   login: (userName: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -19,6 +20,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const { access } = getTokens();
@@ -30,6 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
       }
     }
+    setLoading(false);
   }, []);
 
   const login = useCallback(async (userName: string, password: string) => {
@@ -43,7 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

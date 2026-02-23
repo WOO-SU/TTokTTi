@@ -16,7 +16,8 @@ import EmployeeListScreen from './screens/EmployeeListScreen';
 import AlertLogScreen from './screens/AlertLogScreen';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
+  if (loading) return null;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
