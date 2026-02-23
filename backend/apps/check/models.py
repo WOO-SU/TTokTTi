@@ -6,7 +6,7 @@ class Compliance(models.Model):
     class CategoryChoices(models.TextChoices):
         HELMET = "HELMET", "Helmet"
         VEST = "VEST", "Vest"
-        SHOES = "SHOES", "Shoes"
+        GLOVE = "GLOVE", "Glove"
 
     employee = models.ForeignKey(
         settings.AUTH_USER_MODEL,

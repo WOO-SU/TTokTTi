@@ -12,7 +12,7 @@ from .views import (
 app_name = "user"
 
 router = DefaultRouter()
-router.register(r"user", UserManageViewSet, basename="users")
+router.register(r"", UserManageViewSet, basename="users")
 
 urlpatterns = [
     path("login/", LoginView.as_view(), name="login"),

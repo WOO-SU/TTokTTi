@@ -7,6 +7,8 @@ type RiskPhoto = {
 
 type RiskPhotoContextType = {
   photos: RiskPhoto[];
+  assessmentId: number | undefined;
+  setAssessmentId: (id: number | undefined) => void;
   addPhoto: (title: string, uri: string) => void;
   getPhoto: (title: string) => string | undefined;
   clearPhotos: () => void;
@@ -14,13 +16,16 @@ type RiskPhotoContextType = {
 
 const RiskPhotoContext = createContext<RiskPhotoContextType>({
   photos: [],
-  addPhoto: () => {},
+  assessmentId: undefined,
+  setAssessmentId: () => { },
+  addPhoto: () => { },
   getPhoto: () => undefined,
-  clearPhotos: () => {},
+  clearPhotos: () => { },
 });
 
 export function RiskPhotoProvider({ children }: { children: React.ReactNode }) {
   const [photos, setPhotos] = useState<RiskPhoto[]>([]);
+  const [assessmentId, setAssessmentId] = useState<number | undefined>(undefined);
 
   const addPhoto = useCallback((title: string, uri: string) => {
     setPhotos(prev => {
@@ -34,10 +39,13 @@ export function RiskPhotoProvider({ children }: { children: React.ReactNode }) {
     [photos],
   );
 
-  const clearPhotos = useCallback(() => setPhotos([]), []);
+  const clearPhotos = useCallback(() => {
+    setPhotos([]);
+    setAssessmentId(undefined);
+  }, []);
 
   return (
-    <RiskPhotoContext.Provider value={{ photos, addPhoto, getPhoto, clearPhotos }}>
+    <RiskPhotoContext.Provider value={{ photos, assessmentId, setAssessmentId, addPhoto, getPhoto, clearPhotos }}>
       {children}
     </RiskPhotoContext.Provider>
   );

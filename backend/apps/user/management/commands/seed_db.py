@@ -17,6 +17,7 @@ from apps.risk.models import *
 from apps.report.models import *
 
 from apps.risk.services import *
+from apps.report.services import *
 
 def fake_llm_result() -> Dict:
         hazards = [
@@ -44,7 +45,7 @@ def fake_llm_result() -> Dict:
             },
         ]
 
-        overall_grade = random.choice(["Low", "Medium", "High"])
+        overall_grade = random.choice(["Low", "Med", "High"])
         overall_max_R = max(h["risk_R_1_25"] for h in hazards)
 
         return {
@@ -63,6 +64,48 @@ def fake_llm_result() -> Dict:
             },
         }
 
+def fake_postwork_report(input_pkg: dict) -> dict:
+    ws = input_pkg["worksession"]
+
+    return {
+        "report_title": "작업 종료 종합 보고서",
+        "worksession_summary": {
+            "worksite": ws["worksite"]["name"],
+            "address": ws["worksite"]["address"],
+            "starts_at": ws["starts_at"],
+            "ends_at": ws["ends_at"],
+            "status": ws["status"],
+        },
+        "video_summary": {
+            "fullcam": ws["videos"]["fullcam_video"],
+            "bodycam": ws["videos"]["bodycam_video"],
+            "note": "작업 전 과정 녹화 완료",
+        },
+        "risk_highlights": input_pkg["risk_logs"]["highlights"],
+        "risk_statistics": input_pkg["risk_logs"]["stats"],
+        "compliance_summary": input_pkg["compliance"]["stats"],
+        "before_after_summary": {
+            "before_photos": [
+                p["image_path"] for p in input_pkg["photos"]["before"]
+            ],
+            "after_photos": [
+                p["image_path"] for p in input_pkg["photos"]["after"]
+            ],
+        },
+        "action_items": {
+            "immediate": [
+                "작업 전 보호구 착용 여부 재확인"
+            ] if random.random() < 0.5 else [],
+            "preventive": [
+                "정기적인 작업자 안전 교육 실시",
+                "사다리 및 장비 사전 점검"
+            ],
+            "follow_up": [
+                "유사 작업 시 위험 구간 재점검"
+            ] if random.random() < 0.3 else [],
+        },
+        "generated_at": timezone.now().isoformat(),
+    }
 
 class Command(BaseCommand):
     help = 'Idempotently seeds the database with a large volume of mock data for testing.'
@@ -212,6 +255,8 @@ class Command(BaseCommand):
             "환기설비 안전 점검",
         ]
 
+        has_in_progress = False
+
         for date in dates: # 하루 당 3개의 세션씩 랜덤으로 생성
             for worksite in worksites:
                 for i in range(3):
@@ -229,6 +274,7 @@ class Command(BaseCommand):
                         status = WorkSession.StatusChoices.DONE
                     elif starts_at <= now <= ends_at:
                         status = WorkSession.StatusChoices.IN_PROGRESS
+                        has_in_progress = True
                     else:
                         status = WorkSession.StatusChoices.READY
 
@@ -267,6 +313,20 @@ class Command(BaseCommand):
                             user=w,
                             role=WorkSessionMember.RoleChoices.WORKER,
                         )
+        if not has_in_progress:
+            session = (
+                WorkSession.objects
+                .filter(starts_at__date=now.date())
+                .order_by("?")
+                .first()
+            )
+
+            if session:
+                session.starts_at = now - timedelta(hours=1)
+                session.ends_at = now + timedelta(hours=1)
+                session.status = WorkSession.StatusChoices.IN_PROGRESS
+                session.save()        
+        
         self.stdout.write(self.style.SUCCESS(f"✅ apps.worksession seeding completed"))
 
 
@@ -282,10 +342,52 @@ class Command(BaseCommand):
         target_after_idx = 0
 
         # for Compliance.original_image, Compliance.detected_image
-        original_paths = [f"compliance/original{i}.jpg" for i in range(1, 9)] # blob 업로드 후 index 확인
-        detected_paths = [f"compliance/detected{i}.jpg" for i in range(1, 9)]  # category별 경로 이름으로 수정: /original1_HELMET.jpg
-        original_idx = 0
-        detected_idx = 0
+        original_paths = {
+            Compliance.CategoryChoices.HELMET: [
+                "compliance/original_HELMET_1.jpg",
+                "compliance/original_HELMET_2.jpg",
+                "compliance/original_HELMET_3.jpg",
+            ],
+            Compliance.CategoryChoices.VEST: [
+                "compliance/original_VEST_1.jpg",
+                "compliance/original_VEST_2.jpg",
+                "compliance/original_VEST_3.jpg",
+            ],
+            Compliance.CategoryChoices.GLOVE: [
+                "compliance/original_GLOVE_1.jpg",
+                "compliance/original_GLOVE_2.jpg",
+                "compliance/original_GLOVE_3.jpg",
+            ],
+        }
+
+        detected_paths = {
+            Compliance.CategoryChoices.HELMET: [
+                "compliance/detected_HELMET_1.jpg",
+                "compliance/detected_HELMET_2.jpg",
+                "compliance/detected_HELMET_3.jpg",
+            ],
+            Compliance.CategoryChoices.VEST: [
+                "compliance/detected_VEST_1.jpg",
+                "compliance/detected_VEST_2.jpg",
+                "compliance/detected_VEST_3.jpg",
+            ],
+            Compliance.CategoryChoices.GLOVE: [
+                "compliance/detected_GLOVE_1.jpg",
+                "compliance/detected_GLOVE_2.jpg",
+                "compliance/detected_GLOVE_3.jpg",
+            ],
+        }
+        original_idx = {
+            Compliance.CategoryChoices.HELMET: 0,
+            Compliance.CategoryChoices.VEST: 0,
+            Compliance.CategoryChoices.GLOVE: 0,
+        }
+
+        detected_idx = {
+            Compliance.CategoryChoices.HELMET: 0,
+            Compliance.CategoryChoices.VEST: 0,
+            Compliance.CategoryChoices.GLOVE: 0,
+        }
 
         for session in WorkSession.objects.all():
             workers = list(
@@ -304,7 +406,7 @@ class Command(BaseCommand):
                     employee_id=employee_id,
                     worksession=session,
                     status=Photo.StatusChoices.BEFORE,
-                    image_path=target_before_paths[target_before_idx % 9]
+                    image_path=target_before_paths[target_before_idx % len(target_before_paths)]
                 )
                 target_before_idx += 1
 
@@ -314,7 +416,7 @@ class Command(BaseCommand):
                         employee_id=employee_id,
                         worksession=session,
                         status=Photo.StatusChoices.BEFORE,
-                        image_path=target_before_paths[target_before_idx % 9]
+                        image_path=target_before_paths[target_before_idx % len(target_before_paths)]
                     )
                     target_before_idx += 1
 
@@ -322,14 +424,14 @@ class Command(BaseCommand):
                         employee_id=employee_id,
                         worksession=session,
                         status=Photo.StatusChoices.AFTER,
-                        image_path=target_after_paths[target_after_idx % 9]
+                        image_path=target_after_paths[target_after_idx % len(target_after_paths)]
                     )
                     target_after_idx += 1
 
             categories = [
                 Compliance.CategoryChoices.HELMET,
                 Compliance.CategoryChoices.VEST,
-                Compliance.CategoryChoices.SHOES,
+                Compliance.CategoryChoices.GLOVE,
             ]
 
             if session.status == WorkSession.StatusChoices.DONE:
@@ -348,11 +450,15 @@ class Command(BaseCommand):
                         worksession=session,
                         category=category,
                         is_complied=True,
-                        original_image=original_paths[original_idx % len(original_paths)],
-                        detected_image=detected_paths[detected_idx % len(detected_paths)],
+                        original_image=original_paths[category][
+                            original_idx[category] % len(original_paths[category])
+                        ],
+                        detected_image=detected_paths[category][
+                            detected_idx[category] % len(detected_paths[category])
+                        ],
                     )
-                    original_idx += 1
-                    detected_idx += 1
+                    original_idx[category] += 1
+                    detected_idx[category] += 1
 
         self.stdout.write(self.style.SUCCESS("✅ apps.check seeding completed"))
 
@@ -374,13 +480,14 @@ class Command(BaseCommand):
             ("outtrigger_not_deployed", "아웃트리거 미전개 감지", None),
             ("excessive_body_tilt", "작업자 몸 기울임 감지", None),
             ("insufficient_worker_count", "단독 작업 감지", "2인 1조 작업 원칙"),
-            ("vehicle_proximity", "차량 근접 감지", None),
             ("fall_detected", "낙상 사고 감지", None),
         ]
 
         BODY_RISK_TYPES = [
-            ("body_dummy_1", "바디캠 위험 유형 예시 1", None), # JS 유형 전달 필요
-            ("body_dummy_2", "바디캠 위험 유형 예시 2", None),
+            ("hands_off_ladder_while_moving", "사다리 이동 중 손 미접촉", None),
+            ("ac_power_proximity", "전원부 근접 위험", None),
+            ("conditional_gloves_not_worn", "보호장갑 미착용", None),
+            ("trip_hazard_in_path", "이동 경로 걸림 위험", None),
         ]
 
         for code, name, desc in FULL_RISK_TYPES:
@@ -423,7 +530,7 @@ class Command(BaseCommand):
                     worksession=session,
                     source=VideoLog.SourceChoices.AUTO,
                     risk_type=risk,
-                    original_video=f"videolog/{risk.code}_videolog{i+1}.mp4", # 아직 blob 업로드 안된 상태
+                    original_video=f"videolog/{risk.code}_videolog.mp4",
                 )
 
         managers = list(User.objects.filter(is_manager=True))
@@ -514,13 +621,13 @@ class Command(BaseCommand):
                     )
                     assessments.append(ra)
         
-        image_idx = 1
+        image_idx = 0
 
         for ra in assessments:
             for i in range(3):
                 RiskAssessmentImage.objects.create(
                     assessment=ra,
-                    blob_name=f"assessment/image{image_idx}.jpg"
+                    blob_name=f"assessment/image{image_idx%20+1}.jpg"
                 )
                 image_idx += 1
         
@@ -548,10 +655,48 @@ class Command(BaseCommand):
                 short_message=wr["short_message"],
             )
             
-            self.stdout.write(self.style.SUCCESS("✅ apps.risk seeding completed"))
+        self.stdout.write(self.style.SUCCESS("✅ apps.risk seeding completed"))
         
         # ------------------------------------------------------------------
         # report.PostWorkReport
         # ------------------------------------------------------------------
         self.stdout.write("🚀 Seeding apps.report data...")
-        
+        created = 0
+
+        done_sessions = WorkSession.objects.filter(
+            status=WorkSession.StatusChoices.DONE
+        )
+
+        for session in done_sessions:
+            # v1 이미 있으면 skip
+            if PostWorkReport.objects.filter(
+                worksession_id=session.id,
+                report_version=1,
+            ).exists():
+                continue
+
+            try:
+                input_pkg = build_input_package(session.id)
+                report_snapshot = fake_postwork_report(input_pkg)
+
+                PostWorkReport.objects.create(
+                    worksession_id=session.id,
+                    report_version=1,
+                    input_snapshot=input_pkg,
+                    report_snapshot=report_snapshot,
+                )
+
+                created += 1
+
+            except Exception as e:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"⚠️ PostWorkReport 실패 (ws={session.id}): {e}"
+                    )
+                )
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"✅ apps.report seeding completed ({created} reports)"
+            )
+        )

@@ -16,7 +16,11 @@ from .models import User
 
 # user_name 필드를 로그인 아이디로 사용
 class UserNameTokenObtainPairSerializer(TokenObtainPairSerializer):
-    username_field = "username"
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        data['user_id'] = getattr(self.user, 'id', None)
+        data['name'] = getattr(self.user, 'name', '')
+        return data
 
 class LoginView(TokenObtainPairView):
     serializer_class = UserNameTokenObtainPairSerializer
