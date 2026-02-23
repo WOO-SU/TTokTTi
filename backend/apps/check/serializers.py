@@ -84,6 +84,9 @@ class EmployeeSimpleSerializer(serializers.Serializer):
 class WorkSessionSimpleSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
+    
+    class Meta:
+        ref_name = "CheckWorkSessionSimple"
 
 # "/api/check/admin/request" 응답 시리얼라이저
 class ManualCheckResponseSerializer(serializers.Serializer):
