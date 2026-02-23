@@ -1,0 +1,32 @@
+# core
+ultralytics==8.0.0
+opencv-python==4.8.0
+numpy==1.23
+
+# torch
+torch==1.13
+torchvision==0.14
+
+# pose (optional, phase 2)
+tensorflow==2.9
+tensorflow-hub==0.12
+
+# utils
+tqdm
+loguru
+Pillow
+
+django==5.2.10
+python-dotenv==1.2.1
+celery==5.6.2
+gunicorn==25.0.0
+djangorestframework-simplejwt==5.5.1
+djangorestframework==3.16.1
+drf-yasg==1.21.11
+whitenoise==6.11.0
+
+mysqlclient==2.2.7
+
+azure-storage-blob==12.19.0
+openai>=2.20.0
+drf-spectacular>=0.29.0,<1.0.0

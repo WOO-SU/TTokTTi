@@ -6,3 +6,12 @@ djangorestframework-simplejwt==5.5.1
 djangorestframework==3.16.1
 drf-yasg==1.21.11
 whitenoise==6.11.0
+
+mysqlclient==2.2.7
+redis
+
+azure-storage-blob==12.19.0
+openai>=2.20.0
+drf-spectacular>=0.29.0,<1.0.0
+
+Faker==30.0.0

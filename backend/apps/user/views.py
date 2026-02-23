@@ -2,6 +2,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.views import APIView
+from rest_framework.viewsets import ModelViewSet
 
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -9,12 +11,16 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.exceptions import AuthenticationFailed
 
 from drf_yasg.utils import swagger_auto_schema
-from .serializers import LogoutSerializer, ChangePasswordSerializer
-
+from .serializers import LogoutSerializer, ChangePasswordSerializer, UserManageSerializer
+from .models import User
 
 # user_name 필드를 로그인 아이디로 사용
 class UserNameTokenObtainPairSerializer(TokenObtainPairSerializer):
-    username_field = "user_name"
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        data['user_id'] = getattr(self.user, 'id', None)
+        data['name'] = getattr(self.user, 'name', '')
+        return data
 
 class LoginView(TokenObtainPairView):
     serializer_class = UserNameTokenObtainPairSerializer
@@ -82,3 +88,8 @@ def change_password(request):
     user.save(update_fields=["password"])
 
     return Response({"ok": True})
+
+class UserManageViewSet(ModelViewSet):
+    queryset = User.objects.all().order_by("-created_at")
+    serializer_class = UserManageSerializer
+    permission_classes = [IsAuthenticated]

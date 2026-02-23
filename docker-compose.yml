@@ -8,11 +8,11 @@ services:
       MYSQL_DATABASE: ${DB_NAME}
       MYSQL_USER: ${DB_USER}
       MYSQL_PASSWORD: ${DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$MYSQL_ROOT_PASSWORD"]
       timeout: 20s
       retries: 10
 
@@ -21,6 +21,31 @@ services:
     container_name: riskpulse_redis
     ports:
       - "6379:6379"
+    restart: always
+
+    command: redis-server --protected-mode no
+
+  frontend:
+    build: 
+      context: ./frontend
+      dockerfile: web/Dockerfile
+      target: builder
+    container_name: riskpulse_fe_web
+    command: npm run dev -- --host 0.0.0.0 --port 3000
+    working_dir: /app/web
+    volumes:
+      - ./frontend:/app
+      - fe_node_modules:/app//web/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://backend:8000
+      - WATCHPACK_POLLING=true
+      - DEBUG=${DEBUG}
+    depends_on:
+      - backend
+    stdin_open: true
+    tty: true 
 
   # 3. Backend (Django) - UPDATED
   backend:
@@ -30,7 +55,7 @@ services:
     volumes:
       - ./backend:/app
     ports:
-      - "8000:8000"
+      - "0.0.0.0:8000:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -43,48 +68,73 @@ services:
       - MYSQL_PORT=3306
 
       - DEBUG=${DEBUG}
-      - DJANGO_SECRET_KEY=${SECRET_KEY}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - AUTO_SEED_DB=True
 
+    env_file:
+      - ./backend/.env
+  
     # Dev
-    command: python manage.py runserver 0.0.0.0:8000
+    command: dev
+
+  # azurite:
+  #   image: mcr.microsoft.com/azure-storage/azurite:3.29.0
+  #   container_name: riskpulse_azurite
+  #   command:
+  #     - azurite-blob
+  #     - --blobHost
+  #     - 0.0.0.0
+  #     - --blobPort
+  #     - "10000"
+  #     - --location
+  #     - /data
+  #     - --debug
+  #     - /data/debug.log
+  #   ports:
+  #     - "10000:10000"
+  #   volumes:
+  #     - azurite_data:/data
 
     # For Deployment
     # command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3
 
-  worker_risk:
-    build: ./backend
-    container_name: riskpulse_gpu_risk
+  # worker_risk:
+  #   build: ./backend
+  #   container_name: riskpulse_gpu_risk
 
-    volumes:
-      - ./backend:/app
-      # If the worker needs to write to DB, share DB logic or use API
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_started
+  #   volumes:
+  #     - ./backend:/app
+  #     # If the worker needs to write to DB, share DB logic or use API
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_started
 
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: 1
+  #             capabilities: [gpu]
 
-    command: celery -A config worker -l info
+  #   command: celery -A config worker -l info
 
-    environment:
-      - MYSQL_DATABASE=${DB_NAME}
-      - MYSQL_USER=${DB_USER}
-      - MYSQL_PASSWORD=${DB_PASSWORD}
-      - MYSQL_HOST=db
-      - MYSQL_PORT=3306
-      - DJANGO_SECRET_KEY=${SECRET_KEY}
-      # Same Connection String as Backend
+  #   environment:
+  #     - MYSQL_DATABASE=${DB_NAME}
+  #     - MYSQL_USER=${DB_USER}
+  #     - MYSQL_PASSWORD=${DB_PASSWORD}
+  #     - MYSQL_HOST=db
+  #     - MYSQL_PORT=3306
+  #     - DJANGO_SECRET_KEY=${SECRET_KEY}
+  #     # Same Connection String as Backend
 
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+  #     - REDIS_HOST=redis
+  #     - REDIS_PORT=6379
 
 volumes:
   db_data:
+  fe_node_modules:
+#   azurite_data:
+
