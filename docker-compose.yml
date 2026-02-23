@@ -8,7 +8,7 @@ services:
       MYSQL_DATABASE: ${DB_NAME}
       MYSQL_USER: ${DB_USER}
       MYSQL_PASSWORD: ${DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
@@ -69,13 +69,13 @@ services:
 
       - DEBUG=${DEBUG}
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
-    
+      - AUTO_SEED_DB=True
 
     env_file:
       - ./backend/.env
   
     # Dev
-    command: python manage.py runserver 0.0.0.0:8000
+    command: dev
 
   # azurite:
   #   image: mcr.microsoft.com/azure-storage/azurite:3.29.0

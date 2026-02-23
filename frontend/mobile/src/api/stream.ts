@@ -18,7 +18,11 @@ class SafetyStream {
 
   constructor(clientId: string, onMessage: (data: StreamResponse) => void) {
     // Port 8001 is where your gateway.py FastAPI server is running
+<<<<<<< HEAD
     this.url = `wss://https://laptop-gpu.tail413c80.ts.net/ws/stream/${clientId}`;
+=======
+    this.url = `wss://laptop-gpu.tail413c80.ts.net/ws/stream/${clientId}`;
+>>>>>>> refs/remotes/origin/feat/bridge-P18
     this.onMessageCallback = onMessage;
   }
 
