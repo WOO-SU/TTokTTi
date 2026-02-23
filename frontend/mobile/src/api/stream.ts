@@ -17,7 +17,7 @@ class SafetyStream {
   private maxReconnectAttempts: number = 5;
 
   constructor(clientId: string, onMessage: (data: StreamResponse) => void) {
-    // Port 8001 is where your gateway.py FastAPI server is running
+    // Port 8888 is where your gateway.py FastAPI server is running
     this.url = `wss://laptop-gpu.tail413c80.ts.net/ws/stream/${clientId}`;
     this.onMessageCallback = onMessage;
   }
