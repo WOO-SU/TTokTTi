@@ -2,110 +2,54 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../api/client';
-import logoImg from '../assets/logo.png';
+import useUnreadAlertCount from '../hooks/useUnreadAlertCount';
+import managerImg from '../assets/manager.jpg';
 import ladderCharImg from '../assets/ladder-character.png';
 
 // ── Types ──
 
-type WorkSiteCard = {
-  id: number;
-  siteName: string;
-  startTime: string;
-  location: string;
-  members: { id: number; name: string }[];
-  workStatus: '작업 전' | '작업 중' | '작업 끝';
-  equipmentCheck: { memberId: number; name: string; complied: boolean }[];
-  riskAssessmentDone: boolean;
-  reportDone: boolean;
-  reportId?: number;
+type WorkerStatus = {
+  employee_id: number;
+  name: string;
+  equipment_check: boolean;
 };
 
-type VideoAlert = {
+type WorkSessionCard = {
   id: number;
-  employee: number;
-  is_risky: boolean;
-  original_video: string | null;
-  camera_type: 'BODY' | 'FULL';
+  name: string;
+  starts_at: string;
+  ends_at: string | null;
+  status: 'READY' | 'IN_PROGRESS' | 'DONE';
+  workers_detail: WorkerStatus[];
+  risk_assessment: string;
+  report: boolean;
+};
+
+type AdminLog = {
+  id: number;
+  status: string | null;
+  worksession_name: string;
+  source: 'AUTO' | 'MANUAL';
   created_at: string;
+  is_read: boolean;
+  risk_type_name?: string | null;
+  compliance_id?: number | null;
+  compliance_category?: string | null;
 };
 
-// ── Mock Data ──
+const COMPLIANCE_LABEL: Record<string, string> = {
+  HELMET: '안전모',
+  VEST: '안전 조끼',
+  SHOES: '안전화',
+};
 
-const workSiteCards: WorkSiteCard[] = [
-  {
-    id: 1,
-    siteName: '봉천동 작업공간',
-    startTime: '08:30',
-    location: '봉천동',
-    members: [{ id: 1, name: '송영민' }, { id: 2, name: '임정원' }],
-    workStatus: '작업 전',
-    equipmentCheck: [
-      { memberId: 1, name: '송영민', complied: true },
-      { memberId: 2, name: '임정원', complied: false },
-    ],
-    riskAssessmentDone: true,
-    reportDone: false,
-  },
-  {
-    id: 2,
-    siteName: '신대방동 작업공간',
-    startTime: '08:30',
-    location: '신대방동',
-    members: [{ id: 3, name: '김태호' }, { id: 4, name: '박지수' }],
-    workStatus: '작업 중',
-    equipmentCheck: [
-      { memberId: 3, name: '김태호', complied: true },
-      { memberId: 4, name: '박지수', complied: true },
-    ],
-    riskAssessmentDone: false,
-    reportDone: false,
-  },
-  {
-    id: 3,
-    siteName: '신림동 작업공간',
-    startTime: '08:50',
-    location: '신림동',
-    members: [{ id: 5, name: '이준혁' }, { id: 6, name: '최서연' }],
-    workStatus: '작업 중',
-    equipmentCheck: [
-      { memberId: 5, name: '이준혁', complied: false },
-      { memberId: 6, name: '최서연', complied: false },
-    ],
-    riskAssessmentDone: false,
-    reportDone: false,
-  },
-  {
-    id: 4,
-    siteName: '보라매동 작업공간',
-    startTime: '09:10',
-    location: '보라매동',
-    members: [{ id: 7, name: '우수연' }, { id: 8, name: '원인영' }],
-    workStatus: '작업 끝',
-    equipmentCheck: [
-      { memberId: 7, name: '우수연', complied: true },
-      { memberId: 8, name: '원인영', complied: true },
-    ],
-    riskAssessmentDone: true,
-    reportDone: true,
-    reportId: 1,
-  },
-];
+const STATUS_LABEL: Record<string, { text: string; color: string }> = {
+  PENDING: { text: '대기 중', color: '#E37D00' },
+  APPROVED: { text: '승인됨', color: '#22A06B' },
+  REJECTED: { text: '거절됨', color: '#DC2626' },
+};
 
-const employeeNameMap: Record<number, string> = {};
-workSiteCards.forEach(site => {
-  site.members.forEach(m => { employeeNameMap[m.id] = m.name; });
-});
-
-function getSiteForEmployee(empId: number): string | null {
-  for (const site of workSiteCards) {
-    if (site.members.some(m => m.id === empId)) return site.siteName;
-  }
-  return null;
-}
-
-function getRiskType(alert: VideoAlert): string {
-  return alert.camera_type === 'BODY' ? '개인 안전 위험' : '작업 구역 위험';
-}
+// ── Utils ──
 
 const sidebarItems = [
   { label: 'Home', icon: '🏠', path: '/home' },
@@ -113,6 +57,7 @@ const sidebarItems = [
   { label: '안전 장비 점검', icon: '🛡️', path: '/safety' },
   { label: '위험성 평가', icon: '👷', path: '/risk' },
   { label: '보고서 작성', icon: '✏️', path: '/report' },
+  { label: '알림 로그 확인', icon: '🔔', path: '/alert-logs' },
 ];
 
 const POLL_INTERVAL = 10_000;
@@ -131,9 +76,15 @@ function persistReadAlertIds(ids: Set<number>) {
 }
 
 const workStatusColors: Record<string, { bg: string; text: string }> = {
-  '작업 전': { bg: '#F0F1F3', text: '#71727A' },
-  '작업 중': { bg: '#E7F4E8', text: '#298A3E' },
-  '작업 끝': { bg: '#EAF2FF', text: '#006FFD' },
+  'READY': { bg: '#F0F1F3', text: '#71727A' },
+  'IN_PROGRESS': { bg: '#E7F4E8', text: '#298A3E' },
+  'DONE': { bg: '#EAF2FF', text: '#006FFD' },
+};
+
+const statusTextMap: Record<string, string> = {
+  'READY': '작업 전',
+  'IN_PROGRESS': '작업 중',
+  'DONE': '작업 끝',
 };
 
 function formatAlertTime(isoStr: string): string {
@@ -144,73 +95,144 @@ function formatAlertTime(isoStr: string): string {
   return `${h}:${m}:${s}`;
 }
 
+function formatSessionTime(isoStr: string): string {
+  if (!isoStr) return "시간 미정";
+  try {
+    const d = new Date(isoStr);
+    const h = String(d.getHours()).padStart(2, '0');
+    const m = String(d.getMinutes()).padStart(2, '0');
+    return `${h}:${m}`;
+  } catch {
+    return "시간 오류";
+  }
+}
+
+function getAlertDescription(log: AdminLog): string {
+  if (log.source === 'MANUAL') {
+    const cat = log.compliance_category ? COMPLIANCE_LABEL[log.compliance_category] ?? log.compliance_category : '장비';
+    return `수동 점검 요청 · ${cat}`;
+  }
+  return log.risk_type_name ?? '위험 감지';
+}
+
 // ── Alert Detail Modal ──
 
 function AlertDetailModal({
-  alert,
+  log,
   onClose,
   onMarkRead,
+  onApprove,
+  approving,
 }: {
-  alert: VideoAlert;
+  log: AdminLog;
   onClose: () => void;
   onMarkRead: (id: number) => void;
+  onApprove: (logId: number, approval: boolean) => void;
+  approving: boolean;
 }) {
-  const empName = employeeNameMap[alert.employee] ?? `직원 #${alert.employee}`;
-  const siteName = getSiteForEmployee(alert.employee) ?? '알 수 없는 현장';
-  const riskType = getRiskType(alert);
-
   useEffect(() => {
-    onMarkRead(alert.id);
-  }, [alert.id, onMarkRead]);
+    onMarkRead(log.id);
+  }, [log.id, onMarkRead]);
+
+  const isManual = log.source === 'MANUAL';
+  const statusInfo = log.status ? STATUS_LABEL[log.status] : null;
 
   return (
     <div style={styles.modalBackdrop} onClick={onClose}>
       <div style={styles.modalBox} onClick={e => e.stopPropagation()}>
-        {/* Header */}
         <div style={styles.modalHeader}>
           <div>
-            <span style={styles.modalTitle}>⚠ 위험 알림 상세</span>
-            <span style={styles.modalSub}>{formatAlertTime(alert.created_at)} · {siteName}</span>
+            <span style={{
+              ...styles.modalTitle,
+              color: isManual ? '#006FFD' : '#DC2626',
+            }}>
+              {isManual ? '📋 수동 점검 요청' : '⚠ 위험 알림 상세'}
+            </span>
+            <span style={styles.modalSub}>
+              {formatAlertTime(log.created_at)} · {log.worksession_name}
+            </span>
           </div>
           <button type="button" style={styles.modalClose} onClick={onClose}>✕</button>
         </div>
 
-        {/* Video */}
         <div style={styles.modalSection}>
-          <span style={styles.modalSectionLabel}>위험 발생 영상</span>
-          {alert.original_video ? (
-            <video
-              src={alert.original_video}
-              controls
-              style={styles.modalVideo}
-            />
-          ) : (
-            <div style={styles.modalVideoPlaceholder}>
-              <span style={{ fontSize: 32 }}>🎥</span>
-              <span style={styles.modalVideoPlaceholderText}>영상 없음</span>
-            </div>
-          )}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <span style={{
+              ...styles.sourceBadge,
+              backgroundColor: isManual ? '#EAF2FF' : '#FFF5F5',
+              color: isManual ? '#006FFD' : '#DC2626',
+            }}>
+              {isManual ? 'MANUAL' : 'AUTO'}
+            </span>
+            {statusInfo && (
+              <span style={{
+                ...styles.sourceBadge,
+                backgroundColor: '#F8F9FA',
+                color: statusInfo.color,
+              }}>
+                {statusInfo.text}
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Risk type + status */}
         <div style={styles.modalInfoRow}>
           <div style={styles.modalInfoItem}>
-            <span style={styles.modalInfoLabel}>위험 유형</span>
-            <span style={styles.modalInfoValue}>{riskType}</span>
+            <span style={styles.modalInfoLabel}>작업 현장</span>
+            <span style={styles.modalInfoValue}>{log.worksession_name}</span>
           </div>
           <div style={styles.modalInfoItem}>
-            <span style={styles.modalInfoLabel}>조치 여부</span>
-            <span style={{ ...styles.modalInfoValue, color: '#E37D00' }}>미조치</span>
+            <span style={styles.modalInfoLabel}>
+              {isManual ? '점검 항목' : '위험 유형'}
+            </span>
+            <span style={styles.modalInfoValue}>
+              {isManual
+                ? (log.compliance_category ? COMPLIANCE_LABEL[log.compliance_category] ?? log.compliance_category : '-')
+                : (log.risk_type_name ?? '-')}
+            </span>
           </div>
         </div>
 
-        {/* Contact button */}
-        <button
-          type="button"
-          style={styles.contactBtn}
-          onClick={() => alert && window.open(`tel:010-0000-0000`)}>
-          📞 작업자에게 연락 ({empName})
-        </button>
+        {isManual && log.status === 'PENDING' && (
+          <div style={styles.modalApprovalRow}>
+            <button
+              type="button"
+              style={styles.rejectBtn}
+              disabled={approving}
+              onClick={() => onApprove(log.id, false)}>
+              거절
+            </button>
+            <button
+              type="button"
+              style={styles.approveBtn}
+              disabled={approving}
+              onClick={() => onApprove(log.id, true)}>
+              수락
+            </button>
+          </div>
+        )}
+
+        {isManual && log.status && log.status !== 'PENDING' && (
+          <div style={{ padding: '0 24px 24px', textAlign: 'center' }}>
+            <span style={{
+              fontFamily: 'Inter, sans-serif',
+              fontWeight: 600,
+              fontSize: 14,
+              color: statusInfo?.color ?? '#71727A',
+            }}>
+              이 요청은 {statusInfo?.text ?? '처리'}되었습니다.
+            </span>
+          </div>
+        )}
+
+        {!isManual && (
+          <button
+            type="button"
+            style={styles.contactBtn}
+            onClick={() => window.open(`tel:010-0000-0000`)}>
+            📞 작업자에게 연락
+          </button>
+        )}
       </div>
     </div>
   );
@@ -225,15 +247,22 @@ function WorkSiteCardComponent({
   onMemberClick,
   onCardClick,
   onReportClick,
+  onActivateClick,
 }: {
-  card: WorkSiteCard;
+  card: WorkSessionCard;
   isHovered: boolean;
   onHoverChange: (hov: boolean) => void;
   onMemberClick: (id: number, siteName: string) => void;
-  onCardClick: (card: WorkSiteCard) => void;
-  onReportClick: (card: WorkSiteCard, e: React.MouseEvent) => void;
+  onCardClick: (card: WorkSessionCard) => void;
+  onReportClick: (card: WorkSessionCard, e: React.MouseEvent<HTMLButtonElement>) => void;
+  onActivateClick: (card: WorkSessionCard, e: React.MouseEvent<HTMLButtonElement>) => void;
 }) {
-  const sc = workStatusColors[card.workStatus] ?? workStatusColors['작업 전'];
+  const safeStatus = card.status || 'READY';
+  const sc = workStatusColors[safeStatus] ?? workStatusColors.READY;
+  const statusText = statusTextMap[safeStatus] ?? '작업 전';
+
+  const workers = Array.isArray(card.workers_detail) ? card.workers_detail : [];
+  const riskAssessmentDone = String(card.risk_assessment ?? '').toUpperCase() !== 'PENDING';
 
   return (
     <div
@@ -244,95 +273,121 @@ function WorkSiteCardComponent({
           : '0 2px 10px rgba(0,0,0,0.08)',
       }}
       onMouseEnter={() => onHoverChange(true)}
-      onMouseLeave={() => onHoverChange(false)}>
-
-      {/* Image area */}
+      onMouseLeave={() => onHoverChange(false)}
+      onClick={() => onCardClick(card)} 
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') onCardClick(card);
+      }}
+    >
       <div style={styles.cardImageArea}>
         <img src={ladderCharImg} alt="character" style={styles.cardCharImage} />
       </div>
 
-      {/* Always-visible info */}
       <div style={styles.cardInfoArea}>
         <div style={styles.cardInfoTop}>
-          <span style={styles.cardSiteName}>{card.siteName}</span>
+          <span style={styles.cardSiteName}>{card.name || "이름 없는 작업장"}</span>
           <span style={{ ...styles.workStatusBadge, backgroundColor: sc.bg, color: sc.text }}>
-            {card.workStatus}
+            {statusText}
           </span>
         </div>
+
         <div style={styles.cardMeta}>
           <span style={{ fontSize: 13 }}>⏰</span>
-          <span style={styles.cardMetaText}>작업 시작 {card.startTime}</span>
+          <span style={styles.cardMetaText}>작업 시작 {formatSessionTime(card.starts_at)}</span>
         </div>
+
         <div style={styles.cardMembers}>
-          {card.members.map((m, i) => (
-            <React.Fragment key={m.id}>
-              {i > 0 && <span style={styles.memberSep}>, </span>}
-              <button
-                type="button"
-                style={styles.memberBtn}
-                onClick={e => { e.stopPropagation(); onMemberClick(m.id, card.siteName); }}>
-                {m.name}
-              </button>
-            </React.Fragment>
-          ))}
+          {workers.length > 0 ? (
+            workers.map((m, i) => (
+              <React.Fragment key={`${m.employee_id || i}-${i}`}>
+                {i > 0 && <span style={styles.memberSep}>, </span>}
+                <button
+                  type="button"
+                  style={styles.memberBtn}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if(m.employee_id) onMemberClick(m.employee_id, card.name);
+                  }}
+                >
+                  {m.name || "알수없음"}
+                </button>
+              </React.Fragment>
+            ))
+          ) : (
+            <span style={{ ...styles.cardMetaText, opacity: 0.7 }}>작업자 미지정</span>
+          )}
         </div>
+
         <button
           type="button"
           style={styles.detailBtn}
-          onClick={e => { e.stopPropagation(); onCardClick(card); }}>
+          onClick={(e) => {
+            e.stopPropagation();
+            onCardClick(card);
+          }}
+        >
           상세 보기
         </button>
       </div>
 
-      {/* Expandable section — grows card vertically on hover */}
-      <div style={{
-        maxHeight: isHovered ? 300 : 0,
-        overflow: 'hidden',
-        transition: 'max-height 0.3s ease',
-      }}>
+      <div
+        style={{
+          maxHeight: isHovered ? 300 : 0,
+          overflow: 'hidden',
+          transition: 'max-height 0.3s ease',
+        }}
+      >
         <div style={styles.expandSection}>
           <div style={styles.expandDivider} />
 
-          {/* Equipment check */}
           <div style={styles.expandRow}>
             <span style={styles.expandLabel}>🦺 장비 점검</span>
             <div style={styles.expandEquipRow}>
-              {card.equipmentCheck.map(ec => (
-                <span key={ec.memberId} style={styles.expandEquipItem}>
-                  {ec.name}:&nbsp;
-                  <span style={{ color: ec.complied ? '#22A06B' : '#D32F2F', fontWeight: 700 }}>
-                    {ec.complied ? 'O' : 'X'}
+              {workers.map((ec, i) => (
+                <span key={`equip-${ec.employee_id || i}`} style={styles.expandEquipItem}>
+                  {ec.name || "알수없음"}:&nbsp;
+                  <span style={{ color: ec.equipment_check ? '#22A06B' : '#D32F2F', fontWeight: 700 }}>
+                    {ec.equipment_check ? 'O' : 'X'}
                   </span>
                 </span>
               ))}
+              {workers.length === 0 && (
+                <span style={{ ...styles.cardMetaText, opacity: 0.7 }}>작업자 미지정</span>
+              )}
             </div>
           </div>
 
-          {/* Risk assessment */}
           <div style={styles.expandRow}>
             <span style={styles.expandLabel}>⚠️ 위험성 평가</span>
-            <span style={{
-              fontFamily: 'Inter, sans-serif',
-              fontWeight: 600,
-              fontSize: 12,
-              color: card.riskAssessmentDone ? '#22A06B' : '#8F9098',
-            }}>
-              {card.riskAssessmentDone ? '완료' : '미완료'}
+            <span
+              style={{
+                fontFamily: 'Inter, sans-serif',
+                fontWeight: 600,
+                fontSize: 12,
+                color: riskAssessmentDone ? '#22A06B' : '#8F9098',
+              }}
+            >
+              {riskAssessmentDone ? '완료' : '미완료'}
             </span>
           </div>
 
-          {/* Report */}
           <div style={styles.expandRow}>
             <span style={styles.expandLabel}>📝 보고서</span>
             <button
               type="button"
               style={{
                 ...styles.expandReportBtn,
-                color: card.reportDone ? '#006FFD' : '#8F9098',
-                borderColor: card.reportDone ? '#006FFD' : '#C5C6CC',
+                color: card.report ? '#006FFD' : '#8F9098',
+                borderColor: card.report ? '#006FFD' : '#C5C6CC',
               }}
-              onClick={e => { e.stopPropagation(); onReportClick(card, e); }}>
-              {card.reportDone ? '완료 · 보기' : '미완료 · 작성'}
+              onClick={(e) => {
+                e.stopPropagation();
+                onReportClick(card, e);
+              }}
+            >
+              {card.report ? '완료 · 보기' : '미완료 · 작성'}
             </button>
           </div>
         </div>
@@ -344,34 +399,69 @@ function WorkSiteCardComponent({
 // ── Alert Row Component ──
 
 function AlertRowComponent({
-  alert,
+  log,
   isRead,
   onClick,
 }: {
-  alert: VideoAlert;
+  log: AdminLog;
   isRead: boolean;
   onClick: () => void;
 }) {
-  const empName = employeeNameMap[alert.employee] ?? `직원 #${alert.employee}`;
-  const siteName = getSiteForEmployee(alert.employee) ?? '알 수 없음';
-  const riskType = getRiskType(alert);
+  const isManual = log.source === 'MANUAL';
+  const description = getAlertDescription(log);
+  const statusInfo = log.status ? STATUS_LABEL[log.status] : null;
 
   return (
     <button
       type="button"
       style={{
         ...styles.alertCard,
-        backgroundColor: isRead ? '#FFFFFF' : '#FFF5F5',
-        borderLeft: `3px solid ${isRead ? '#E8E9EB' : '#DC2626'}`,
+        backgroundColor: isRead ? '#FFFFFF' : (isManual ? '#F0F4FF' : '#FFF5F5'),
+        borderLeft: `3px solid ${isRead ? '#E8E9EB' : (isManual ? '#006FFD' : '#DC2626')}`,
       }}
       onClick={onClick}>
       <div style={styles.alertTopRow}>
-        <span style={styles.alertTime}>{formatAlertTime(alert.created_at)}</span>
-        {!isRead && <span style={styles.alertUnreadDot} />}
+        <span style={styles.alertTime}>{formatAlertTime(log.created_at)}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{
+            fontFamily: 'Inter, sans-serif',
+            fontWeight: 600,
+            fontSize: 9,
+            color: isManual ? '#006FFD' : '#DC2626',
+            backgroundColor: isManual ? '#EAF2FF' : '#FFF5F5',
+            padding: '1px 5px',
+            borderRadius: 4,
+          }}>
+            {isManual ? 'MANUAL' : 'AUTO'}
+          </span>
+          {!isRead && <span style={styles.alertUnreadDot} />}
+        </div>
       </div>
-      <span style={styles.alertSite}>{siteName}</span>
-      <span style={styles.alertType}>{riskType}</span>
-      <span style={styles.alertEmployee}>{empName}</span>
+      <span style={styles.alertSite}>{log.worksession_name}</span>
+      <span style={{ ...styles.alertType, color: isManual ? '#006FFD' : '#DC2626' }}>
+        {description}
+      </span>
+      {isManual && statusInfo && (
+        <span style={{
+          fontFamily: 'Inter, sans-serif',
+          fontWeight: 600,
+          fontSize: 10,
+          color: statusInfo.color,
+        }}>
+          {statusInfo.text}
+        </span>
+      )}
+      {isManual && log.status === 'PENDING' && (
+        <span style={{
+          fontFamily: 'Inter, sans-serif',
+          fontWeight: 600,
+          fontSize: 10,
+          color: '#006FFD',
+          marginTop: 2,
+        }}>
+          요청 확인하기 →
+        </span>
+      )}
     </button>
   );
 }
@@ -385,63 +475,118 @@ export default function HomeScreen() {
   const [activeSidebar, setActiveSidebar] = useState('Home');
   const isProfileActive = location.pathname === '/profile';
   const [hoveredCardId, setHoveredCardId] = useState<number | null>(null);
-  const [selectedAlert, setSelectedAlert] = useState<VideoAlert | null>(null);
+  const [selectedLog, setSelectedLog] = useState<AdminLog | null>(null);
+  const [approving, setApproving] = useState(false);
 
-  const [alerts, setAlerts] = useState<VideoAlert[]>([]);
+  const [logs, setLogs] = useState<AdminLog[]>([]);
+  const [workSessions, setWorkSessions] = useState<WorkSessionCard[]>([]);
   const [readIds, setReadIds] = useState<Set<number>>(getReadAlertIds);
+  const [isLoading, setIsLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const fetchAlerts = useCallback(async () => {
+  const fetchLogs = useCallback(async () => {
     try {
-      const res = await apiFetch('/detect/search/?is_risky=true');
+      const res = await apiFetch('/detect/admin/logs/');
       if (res.ok) {
         const json = await res.json();
-        if (json.ok && Array.isArray(json.data)) {
-          // Sort by created_at descending (newest first)
-          const sorted = [...(json.data as VideoAlert[])].sort(
-            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-          );
-          setAlerts(sorted);
-        }
+        if (Array.isArray(json)) setLogs(json);
+        else if (json && Array.isArray(json.data)) setLogs(json.data);
+        else if (json && Array.isArray(json.results)) setLogs(json.results);
       }
     } catch { /* ignore */ }
   }, []);
 
+  const fetchWorkSessions = useCallback(async () => {
+    try {
+      setApiError(null);
+      const res = await apiFetch('/worksession/admin/today/');
+      console.log('[WorkSession] status:', res.status);
+      if (!res.ok) {
+        const body = await res.text();
+        console.error('[WorkSession] API error:', res.status, body);
+        return;
+      }
+      const json = await res.json();
+      console.log('[WorkSession] raw response:', JSON.stringify(json).slice(0, 500));
+      const data: WorkSessionCard[] = Array.isArray(json) ? json : (json?.data ?? []);
+      console.log('[WorkSession] parsed cards:', data.length);
+      setWorkSessions(data);
+    } catch (err: any) {
+      console.error('[WorkSession] fetch error:', err);
+      setApiError(`네트워크 오류: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    fetchAlerts();
-    pollingRef.current = setInterval(fetchAlerts, POLL_INTERVAL);
+    const fetchAll = async () => {
+      await fetchLogs();
+      await fetchWorkSessions();
+    };
+    fetchAll();
+    pollingRef.current = setInterval(fetchAll, POLL_INTERVAL);
     return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
-  }, [fetchAlerts]);
+  }, [fetchLogs, fetchWorkSessions]);
 
-  const unreadCount = alerts.filter(a => !readIds.has(a.id)).length;
+  const unreadCount = useUnreadAlertCount();
 
-  const markAsRead = useCallback((alertId: number) => {
+  const markAsRead = useCallback((logId: number) => {
     setReadIds(prev => {
-      if (prev.has(alertId)) return prev;
+      if (prev.has(logId)) return prev;
       const next = new Set(prev);
-      next.add(alertId);
+      next.add(logId);
       persistReadAlertIds(next);
       return next;
     });
   }, []);
 
-  const handleAlertClick = (alert: VideoAlert) => {
-    setSelectedAlert(alert);
-  };
+  const handleApprove = useCallback(async (logId: number, approval: boolean) => {
+    setApproving(true);
+    try {
+      const res = await apiFetch('/check/approve/', {
+        method: 'PATCH',
+        body: JSON.stringify({ video_log_id: logId, approval }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        setLogs(prev => prev.map(l =>
+          l.id === logId ? { ...l, status: approval ? 'APPROVED' : 'REJECTED' } : l
+        ));
+        setSelectedLog(prev =>
+          prev && prev.id === logId ? { ...prev, status: approval ? 'APPROVED' : 'REJECTED' } : prev
+        );
+      }
+    } catch { /* ignore */ }
+    setApproving(false);
+  }, []);
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
   };
 
-  const handleCardClick = (card: WorkSiteCard) => {
+  const handleCardClick = (card: WorkSessionCard) => {
     navigate(`/worksession/${card.id}`, { state: { card } });
   };
 
-  const handleReportClick = (card: WorkSiteCard, e: React.MouseEvent) => {
+  const handleActivateClick = async (card: WorkSessionCard, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (card.reportDone && card.reportId) {
-      navigate(`/report/${card.reportId}`);
+    try {
+      const res = await apiFetch('/worksession/activate/', {
+        method: 'PATCH',
+        body: JSON.stringify({ worksession_id: card.id }),
+      });
+      const json = await res.json();
+      if (json.ok) fetchWorkSessions();
+    } catch { /* ignore */ }
+  };
+
+  const handleReportClick = (card: WorkSessionCard, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (card.report) {
+      navigate(`/report/${card.id}`);
     } else {
       navigate('/report');
     }
@@ -452,7 +597,7 @@ export default function HomeScreen() {
       {/* ── Sidebar ── */}
       <aside style={styles.sidebar}>
         <button type="button" style={styles.sidebarLogo} onClick={() => navigate('/home')}>
-          <img src={logoImg} alt="TTokTTi" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+          <img src={managerImg} alt="TTokTTi" style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: '50%' }} />
           <span style={styles.logoText}>TTokTTi</span>
         </button>
 
@@ -464,7 +609,6 @@ export default function HomeScreen() {
             👤
           </button>
           <button type="button" style={styles.sidebarIconBtn}>⚙️</button>
-          {/* Bell with unread badge */}
           <button type="button" style={{ ...styles.sidebarIconBtn, position: 'relative' }}>
             🔔
             {unreadCount > 0 && (
@@ -513,45 +657,62 @@ export default function HomeScreen() {
 
           <div style={styles.sectionHeader}>
             <span style={styles.sectionTitle}>오늘의 작업 현장</span>
-            <span style={styles.sectionBadge}>{workSiteCards.length}</span>
+            <span style={styles.sectionBadge}>{workSessions.length}</span>
           </div>
 
           <div style={styles.siteGrid}>
-            {workSiteCards.map(card => (
-              <WorkSiteCardComponent
-                key={card.id}
-                card={card}
-                isHovered={hoveredCardId === card.id}
-                onHoverChange={hov => setHoveredCardId(hov ? card.id : null)}
-                onMemberClick={(id, siteName) => navigate(`/employee/${id}`, { state: { siteName } })}
-                onCardClick={handleCardClick}
-                onReportClick={handleReportClick}
-              />
-            ))}
+            {isLoading ? (
+              <div style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center', color: '#8F9098' }}>
+                데이터를 불러오는 중입니다...
+              </div>
+            ) : apiError ? (
+              <div style={{ gridColumn: '1 / -1', padding: '20px', color: '#DC2626', backgroundColor: '#FFF5F5', borderRadius: '12px', fontWeight: 600 }}>
+                🚨 {apiError}
+              </div>
+            ) : workSessions.length === 0 ? (
+              <div style={styles.emptyStateContainer}>
+                <span style={{ fontSize: 48, marginBottom: 12 }}>📭</span>
+                <span style={styles.emptyStateTitle}>오늘 예정된 작업이 없습니다.</span>
+                <span style={styles.emptyStateSub}>새로운 작업을 등록하거나 일정을 확인해 주세요.</span>
+              </div>
+            ) : (
+              workSessions.map(card => (
+                <WorkSiteCardComponent
+                  key={card.id || Math.random()}
+                  card={card}
+                  isHovered={hoveredCardId === card.id}
+                  onHoverChange={hov => setHoveredCardId(hov ? card.id : null)}
+                  onMemberClick={(id, siteName) => navigate(`/employee/${id}`, { state: { siteName } })}
+                  onCardClick={handleCardClick}
+                  onReportClick={handleReportClick}
+                  onActivateClick={handleActivateClick}
+                />
+              ))
+            )}
           </div>
         </main>
 
         {/* ── Alert Panel ── */}
         <aside style={styles.alertPanel}>
           <div style={styles.alertPanelHeader}>
-            <span style={styles.alertPanelTitle}>⚠ 위험 알림</span>
+            <span style={styles.alertPanelTitle}>⚠ 알림 로그</span>
             {unreadCount > 0 && (
               <span style={styles.alertBadge}>{unreadCount > 99 ? '99+' : unreadCount}</span>
             )}
           </div>
           <div style={styles.alertList}>
-            {alerts.length === 0 ? (
+            {logs.length === 0 ? (
               <div style={styles.alertEmpty}>
                 <span style={{ fontSize: 28 }}>✅</span>
                 <span style={styles.alertEmptyText}>알림 없음</span>
               </div>
             ) : (
-              alerts.map(alert => (
+              logs.map(log => (
                 <AlertRowComponent
-                  key={alert.id}
-                  alert={alert}
-                  isRead={readIds.has(alert.id)}
-                  onClick={() => handleAlertClick(alert)}
+                  key={log.id}
+                  log={log}
+                  isRead={log.is_read || readIds.has(log.id)}
+                  onClick={() => setSelectedLog(log)}
                 />
               ))
             )}
@@ -560,11 +721,13 @@ export default function HomeScreen() {
       </div>
 
       {/* ── Alert Detail Modal ── */}
-      {selectedAlert && (
+      {selectedLog && (
         <AlertDetailModal
-          alert={selectedAlert}
-          onClose={() => setSelectedAlert(null)}
+          log={selectedLog}
+          onClose={() => setSelectedLog(null)}
           onMarkRead={markAsRead}
+          onApprove={handleApprove}
+          approving={approving}
         />
       )}
     </div>
@@ -714,7 +877,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'row',
     overflow: 'hidden',
-    minHeight: '100vh',
+    height: '100vh',
   },
 
   // Main
@@ -779,6 +942,32 @@ const styles: Record<string, React.CSSProperties> = {
     gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
     gap: 20,
     alignItems: 'start',
+  },
+
+  emptyStateContainer: {
+    gridColumn: '1 / -1',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '80px 20px',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    border: '1px dashed #D4D6DD',
+    marginTop: 10,
+  },
+  emptyStateTitle: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 700,
+    fontSize: 16,
+    color: '#1F2024',
+  },
+  emptyStateSub: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 500,
+    fontSize: 13,
+    color: '#8F9098',
+    marginTop: 8,
   },
 
   // Work site card
@@ -879,7 +1068,7 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: 'center',
   },
 
-  // Expandable section (hover reveals)
+  // Expandable section
   expandSection: {
     padding: '0 16px 16px',
     display: 'flex',
@@ -1016,12 +1205,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 11,
     color: '#DC2626',
   },
-  alertEmployee: {
-    fontFamily: 'Inter, sans-serif',
-    fontWeight: 500,
-    fontSize: 11,
-    color: '#71727A',
-  },
   alertEmpty: {
     display: 'flex',
     flexDirection: 'column',
@@ -1103,30 +1286,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     color: '#1F2024',
   },
-  modalVideo: {
-    width: '100%',
-    borderRadius: 10,
-    backgroundColor: '#000',
-    maxHeight: 260,
-    objectFit: 'contain',
-  },
-  modalVideoPlaceholder: {
-    width: '100%',
-    height: 160,
-    backgroundColor: '#F0F1F3',
-    borderRadius: 10,
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-  },
-  modalVideoPlaceholderText: {
-    fontFamily: 'Inter, sans-serif',
-    fontWeight: 500,
-    fontSize: 13,
-    color: '#8F9098',
-  },
   modalInfoRow: {
     display: 'flex',
     flexDirection: 'row',
@@ -1153,6 +1312,45 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     fontSize: 15,
     color: '#1F2024',
+  },
+  sourceBadge: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 700,
+    fontSize: 11,
+    padding: '3px 10px',
+    borderRadius: 6,
+  },
+  modalApprovalRow: {
+    display: 'flex',
+    flexDirection: 'row',
+    gap: 12,
+    padding: '4px 24px 24px',
+  },
+  approveBtn: {
+    flex: 1,
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 700,
+    fontSize: 14,
+    color: '#FFFFFF',
+    backgroundColor: '#22A06B',
+    border: 'none',
+    borderRadius: 10,
+    padding: '14px 0',
+    cursor: 'pointer',
+    textAlign: 'center',
+  },
+  rejectBtn: {
+    flex: 1,
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 700,
+    fontSize: 14,
+    color: '#FFFFFF',
+    backgroundColor: '#DC2626',
+    border: 'none',
+    borderRadius: 10,
+    padding: '14px 0',
+    cursor: 'pointer',
+    textAlign: 'center',
   },
   contactBtn: {
     fontFamily: 'Inter, sans-serif',

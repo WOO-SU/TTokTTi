@@ -40,6 +40,8 @@ class TopStepUsageRule(Rule):
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp
         # Movenet으로 ankle keypoint를 추적
+        if not ctx.keypoints:
+            return []
         left_ankle = ctx.keypoints.get("left_ankle", None)
         right_ankle = ctx.keypoints.get("right_ankle", None)
 

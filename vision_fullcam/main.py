@@ -8,6 +8,7 @@ from vision_fullcam.stream.reader import FrameReader
 # detector
 from vision_fullcam.detection.yolo_detector import YoloDetector
 from vision_fullcam.detection.fake_detector import FakeDetector
+from vision_fullcam.detection.composite_detector import CompositeDetector
 
 # tracking / state
 from vision_fullcam.tracking.simple_tracker import SimpleTracker, Tracked
@@ -33,27 +34,48 @@ from vision_fullcam.rules.posture_rules import (
     ExcessiveBodyTiltRule,
     TopStepUsageRule,
 )
+from vision_fullcam.rules.vehicle_rules import VehicleProximityRule
 
 # events
 from vision_fullcam.events.clip_buffer import ClipBuffer
 from vision_fullcam.events.emitter import EventEmitter
 
-
 def build_detector(cfg: Config):
-    """운영/테스트 스위치"""
-    if getattr(cfg, "use_fake_detector", True):
+    if getattr(cfg, "use_fake_detector", False):
         return FakeDetector(fps=cfg.fps_monitor)
 
-    cls_map = {
-        0: "person",
-        1: "ladder",
-        2: "helmet",
-        3: "safety_vest",
-        4: "safety_shoes",
-        5: "outtrigger",
+    # ✅ 1) best.pt (PPE / ladder / person)
+    best_map = {
+        0: "glove",
+        1: "helmet",
+        2: "ladder",
+        3: "outtrigger",
+        4: "person",
+        5: "safety_vest",
     }
-    return YoloDetector(getattr(cfg, "yolo_model_path", "yolov8n.pt"), cls_map=cls_map)
+    det_best = YoloDetector(
+        model_path="vision_fullcam/best.pt",
+        cls_map=best_map,
+        conf=0.35,
+        imgsz=416,
+    )
 
+    # ✅ 2) COCO YOLO (vehicle 전용)
+    coco_vehicle_map = {
+        2: "vehicle",  # car
+        3: "vehicle",  # motorcycle
+        5: "vehicle",  # bus
+        7: "vehicle",  # truck
+    }
+    det_vehicle = YoloDetector(
+        model_path="yolov8n.pt",
+        cls_map=coco_vehicle_map,
+        conf=0.25,
+        imgsz=416,
+    )
+
+    # ✅ 3) 합쳐서 반환
+    return CompositeDetector([det_best, det_vehicle])
 
 def _handle_keys(detector, task: TaskState, key: int):
     """
@@ -81,6 +103,7 @@ def _handle_keys(detector, task: TaskState, key: int):
         ord("6"): ("tilted_ladder",      "tilted_ladder(1s -> ladder_tilt)"),
         ord("7"): ("outtrigger_missing", "outtrigger_missing(2.5s -> outtrigger_not_deployed, task required=True)"),
         ord("8"): ("outtrigger_deployed","outtrigger_deployed(정상 상태)"),
+        ord("9"): ("vehicle_proximity",  "vehicle_proximity(0.6s -> vehicle_proximity)"),
     }
 
     if key in mapping:
@@ -160,6 +183,8 @@ def main():
         # posture (pose 붙이면 활성)
         ExcessiveBodyTiltRule(cfg),
         TopStepUsageRule(cfg),
+        # vehicle
+        VehicleProximityRule(cfg),
     ]
 
     if isinstance(detector, FakeDetector):
@@ -173,6 +198,7 @@ def main():
         print("6: tilted_ladder (1s -> ladder_tilt)")
         print("7: outtrigger_missing (2.5s -> outtrigger_not_deployed, task required=True)")
         print("8: outtrigger_deployed (정상 상태)")
+        print("9: vehicle_proximity (0.6s -> vehicle_proximity)")
         print("t: toggle outtrigger_required")
         print("h: toggle expected_height_m (2.0 <-> 4.0)")
         print("ESC: quit")
