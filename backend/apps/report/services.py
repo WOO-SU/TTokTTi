@@ -159,7 +159,7 @@ def compute_risk_stats_and_highlights(
     return stats, out
 
 
-def build_input_package(worksession_id: int, assessment_id: Optional[int] = None) -> Dict[str, Any]:
+def build_input_package(worksession_id: int) -> Dict[str, Any]:
     """
     worksession 기반 입력 패키지 생성 + (선택) assessment 섹션
     """
@@ -300,39 +300,6 @@ def build_input_package(worksession_id: int, assessment_id: Optional[int] = None
             "highlights": highlights,
             "events_sample": events_sample,
         },
-        "risk_assessment": None,
     }
-
-    # assessment 섹션(선택) — 너희 risk/models.py에 맞춤
-    if assessment_id:
-        ra = RiskAssessment.objects.get(id=assessment_id)
-
-        imgs = list(ra.images.all().order_by("order", "id"))
-        rr = getattr(ra, "admin_report", None)
-        wr = getattr(ra, "worker_recommendation", None)
-
-        pkg["risk_assessment"] = {
-            "assessment_id": ra.id,
-            "site_label": ra.site_label,
-            "work_type_fixed": ra.work_type_fixed,
-            "created_at": _dt(ra.created_at),
-            "blob_path": ra.blob_path,
-            "blob_paths": ra.blob_paths,
-            "input_images": [{"id": im.id, "blob_name": im.blob_name, "order": im.order} for im in imgs],
-            "llm_result": ra.llm_result,
-            "admin_report": None if rr is None else {
-                "report_version": rr.report_version,
-                "scene_summary": rr.scene_summary,
-                "hazards": rr.hazards,
-                "overall": rr.overall,
-                "generated_at": _dt(rr.generated_at),
-            },
-            "worker_recommendation": None if wr is None else {
-                "top_risks": wr.top_risks,
-                "immediate_actions": wr.immediate_actions,
-                "short_message": wr.short_message,
-                "generated_at": _dt(wr.generated_at),
-            },
-        }
 
     return pkg

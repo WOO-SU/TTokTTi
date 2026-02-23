@@ -84,19 +84,15 @@ def _permission_from_grade(grade: str) -> str:
 # ✅ id 순서 고정
 HAZARD_ORDER = ["FALL", "DROPPING", "ELECTRIC", "PINCH", "ERGO"]
 
-
 PROMPT = f"""
 너는 산업안전 사전 위험성 평가자다.
-입력은 "작업 시작 전" 현장 사진 1장이다.
+입력은 작업 시작 전 현장 사진 1장 이상이다.
 작업 내용은 항상 "{WORK_TYPE_FIXED}"로 고정한다.
-작업자/출입(인원, 출입 가능 여부 등) 관련 언급은 금지한다.
+작업자 수, 출입 여부 등 인원 관련 언급은 하지 않는다.
 
-반드시 아래 JSON 스키마로만 출력해라.
-- 설명/마크다운/코드블록(``` ) 금지
-- JSON 외 텍스트 금지
-- 첫 글자는 {{ 로 시작하고 마지막 글자는 }} 로 끝나야 한다.
+출력은 반드시 아래 JSON 스키마를 정확히 따르는 JSON 객체 하나만 출력한다.
 
-[스키마]
+[JSON 스키마]
 {{
   "site_label": string,
   "work_type_fixed": "{WORK_TYPE_FIXED}",
@@ -131,15 +127,12 @@ PROMPT = f"""
   }}
 }}
 
-추가 규칙:
-- hazards는 정확히 5개, id 순서 반드시: FALL, DROPPING, ELECTRIC, PINCH, ERGO
+규칙:
+- hazards는 FALL, DROPPING, ELECTRIC, PINCH, ERGO 순서로 정확히 5개 생성
 - likelihood_L_1_5, severity_S_1_5는 1~5 정수
-- risk_R_1_25는 L×S를 정확히 계산
-- risk_grade는 R 기준:
-  1~4 Low, 5~9 Medium, 10~16 High, 17~25 Critical
-- residual_* 값은 개선대책 적용 후 잔여 위험이며 보통 R이 낮아져야 한다.
+- risk_R_1_25는 likelihood × severity
+- residual_* 값은 개선대책 적용 후 잔여 위험으로, 보통 감소해야 한다
 """.strip()
-
 
 @dataclass
 class AssessInput:

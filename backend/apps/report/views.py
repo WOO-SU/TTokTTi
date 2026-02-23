@@ -30,12 +30,10 @@ def generate_postwork_report(request):
     ser.is_valid(raise_exception=True)
 
     worksession_id = ser.validated_data["worksession_id"]
-    assessment_id = ser.validated_data.get("assessment_id")
 
     # 1) DB → 입력 패키지
     input_pkg = build_input_package(
         worksession_id=worksession_id,
-        assessment_id=assessment_id,
     )
 
     # 2) LLM → 보고서(서술/구성)
@@ -63,7 +61,6 @@ def generate_postwork_report(request):
 
     saved = PostWorkReport.objects.create(
         worksession_id=worksession_id,
-        assessment_id=assessment_id,
         report_version=next_ver,
         input_snapshot=input_pkg,
         report_snapshot=report_json,
