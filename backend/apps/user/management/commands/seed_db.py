@@ -480,7 +480,6 @@ class Command(BaseCommand):
             ("outtrigger_not_deployed", "아웃트리거 미전개 감지", None),
             ("excessive_body_tilt", "작업자 몸 기울임 감지", None),
             ("insufficient_worker_count", "단독 작업 감지", "2인 1조 작업 원칙"),
-            ("vehicle_proximity", "차량 근접 감지", None),
             ("fall_detected", "낙상 사고 감지", None),
         ]
 
@@ -531,7 +530,7 @@ class Command(BaseCommand):
                     worksession=session,
                     source=VideoLog.SourceChoices.AUTO,
                     risk_type=risk,
-                    original_video=f"videolog/{risk.code}_videolog{i+1}.mp4", # 아직 blob 업로드 안된 상태
+                    original_video=f"videolog/{risk.code}_videolog.mp4",
                 )
 
         managers = list(User.objects.filter(is_manager=True))
