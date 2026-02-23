@@ -35,7 +35,7 @@ type Props = {
 const STREAM_CONFIG = {
   WIDTH: 360,
   HEIGHT: 360,
-  INTERVAL_MS: 250, // 4 fps (1000/250)
+  INTERVAL_MS: 1000, // 4 fps (1000/250)
 };
 
 /* ──────── Main Component ──────── */
