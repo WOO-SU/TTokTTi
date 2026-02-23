@@ -33,6 +33,7 @@ frontend/mobile/node_modules/
 .expo/
 *.log
 .metro/
+**/.vite
 
 **/.vite
 

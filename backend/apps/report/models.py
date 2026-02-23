@@ -2,7 +2,6 @@ from django.db import models
 
 class PostWorkReport(models.Model):
     worksession_id = models.IntegerField(db_index=True)
-    assessment_id = models.IntegerField(null=True, blank=True, db_index=True)
 
     report_version = models.PositiveIntegerField()  # 1,2,3...
     input_snapshot = models.JSONField()

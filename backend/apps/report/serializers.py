@@ -3,7 +3,6 @@ from rest_framework import serializers
 
 class ReportGenerateRequestSerializer(serializers.Serializer):
     worksession_id = serializers.IntegerField()
-    assessment_id = serializers.IntegerField(required=False, allow_null=True)
 
     # 옵션: 나중에 확장 가능
     include_worklog = serializers.BooleanField(required=False, default=True)
