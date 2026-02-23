@@ -104,8 +104,8 @@ async def process_job(queue_name, payload):
         data = json.loads(payload)
         client_id = data["client_id"]
         content = data["data"]
-        image_b64 = content.get("data")
 
+        image_b64 = content.get("image")
         if not image_b64: return
 
         # Initialize client state if new
