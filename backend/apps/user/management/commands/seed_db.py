@@ -459,7 +459,7 @@ class Command(BaseCommand):
                     )
                     original_idx[category] += 1
                     detected_idx[category] += 1
-                    
+
         self.stdout.write(self.style.SUCCESS("✅ apps.check seeding completed"))
 
         # ------------------------------------------------------------------
@@ -622,13 +622,13 @@ class Command(BaseCommand):
                     )
                     assessments.append(ra)
         
-        image_idx = 1
+        image_idx = 0
 
         for ra in assessments:
             for i in range(3):
                 RiskAssessmentImage.objects.create(
                     assessment=ra,
-                    blob_name=f"assessment/image{image_idx}.jpg"
+                    blob_name=f"assessment/image{image_idx%20+1}.jpg"
                 )
                 image_idx += 1
         
