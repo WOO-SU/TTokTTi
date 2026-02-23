@@ -16,6 +16,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 REDIS_URL = "redis://localhost:6379"
+GPU_API_KEY = os.getenv("GPU_API_KEY", "your_secure_gpu_key")
 redis_client: redis.Redis | None = None
 
 # --- CPU-Bound Image Bouncer Logic ---
