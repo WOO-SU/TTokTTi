@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../api/client';
+// 💡 useUnreadAlertCount 훅을 제거하여 상태 충돌을 방지합니다.
 import managerImg from '../assets/manager.jpg';
 import ladderCharImg from '../assets/ladder-character.png';
 
@@ -19,7 +20,7 @@ type WorkSessionCard = {
   starts_at: string;
   ends_at: string | null;
   status: 'READY' | 'IN_PROGRESS' | 'DONE';
-  workers_detail?: WorkerStatus[];
+  workers_detail: WorkerStatus[];
   risk_assessment: string;
   report: boolean;
 };
@@ -34,26 +35,6 @@ type AdminLog = {
   risk_type_name?: string | null;
   compliance_id?: number | null;
   compliance_category?: string | null;
-};
-
-type ManualCheckDetail = {
-  videolog_id: number;
-  status: string | null;
-  employee: { id: number; name: string };
-  worksession: { id: number; name: string };
-  category: string;
-  original_image: string | null;
-  created_at: string;
-};
-
-type AutoCheckDetail = {
-  videolog_id: number;
-  status: string | null;
-  workers: { id: number; name: string }[];
-  worksession: { id: number; name: string };
-  risk_type: { name: string };
-  original_video: string | null;
-  created_at: string;
 };
 
 const COMPLIANCE_LABEL: Record<string, string> = {
@@ -129,7 +110,7 @@ function formatSessionTime(isoStr: string): string {
 function getAlertDescription(log: AdminLog): string {
   if (log.source === 'MANUAL') {
     const cat = log.compliance_category ? COMPLIANCE_LABEL[log.compliance_category] ?? log.compliance_category : '장비';
-    return `수동 점검 · ${cat}`;
+    return `수동 점검 요청 · ${cat}`;
   }
   return log.risk_type_name ?? '위험 감지';
 }
@@ -149,40 +130,12 @@ function AlertDetailModal({
   onApprove: (logId: number, approval: boolean) => void;
   approving: boolean;
 }) {
-  const [manualDetail, setManualDetail] = useState<ManualCheckDetail | null>(null);
-  const [autoDetail, setAutoDetail] = useState<AutoCheckDetail | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-
   useEffect(() => {
     onMarkRead(log.id);
   }, [log.id, onMarkRead]);
 
-  useEffect(() => {
-    setDetailLoading(true);
-    if (log.source === 'MANUAL') {
-      apiFetch(`/check/admin/request/${log.id}/`)
-        .then(res => res.json())
-        .then(json => {
-          if (json.ok && json.data) setManualDetail(json.data);
-        })
-        .catch(() => {})
-        .finally(() => setDetailLoading(false));
-    } else {
-      apiFetch(`/detect/admin/request/${log.id}/`)
-        .then(res => res.json())
-        .then(json => {
-          if (json.ok && json.data) setAutoDetail(json.data);
-        })
-        .catch(() => {})
-        .finally(() => setDetailLoading(false));
-    }
-  }, [log.id, log.source]);
-
   const isManual = log.source === 'MANUAL';
-  const currentStatus = isManual
-    ? (manualDetail?.status ?? log.status)
-    : (autoDetail?.status ?? log.status);
-  const statusInfo = currentStatus ? STATUS_LABEL[currentStatus] : null;
+  const statusInfo = log.status ? STATUS_LABEL[log.status] : null;
 
   return (
     <div style={styles.modalBackdrop} onClick={onClose}>
@@ -193,7 +146,7 @@ function AlertDetailModal({
               ...styles.modalTitle,
               color: isManual ? '#006FFD' : '#DC2626',
             }}>
-              {isManual ? '📋 수동 점검 요청 상세' : '⚠ 위험 알림 상세'}
+              {isManual ? '📋 수동 점검 요청' : '⚠ 위험 알림 상세'}
             </span>
             <span style={styles.modalSub}>
               {formatAlertTime(log.created_at)} · {log.worksession_name}
@@ -223,18 +176,10 @@ function AlertDetailModal({
           </div>
         </div>
 
-        {detailLoading && (
-          <div style={{ padding: '16px 24px', textAlign: 'center', color: '#8F9098', fontSize: 13 }}>
-            상세 정보를 불러오는 중...
-          </div>
-        )}
-
         <div style={styles.modalInfoRow}>
           <div style={styles.modalInfoItem}>
             <span style={styles.modalInfoLabel}>작업 현장</span>
-            <span style={styles.modalInfoValue}>
-              {(isManual ? manualDetail?.worksession.name : autoDetail?.worksession.name) ?? log.worksession_name}
-            </span>
+            <span style={styles.modalInfoValue}>{log.worksession_name}</span>
           </div>
           <div style={styles.modalInfoItem}>
             <span style={styles.modalInfoLabel}>
@@ -242,74 +187,13 @@ function AlertDetailModal({
             </span>
             <span style={styles.modalInfoValue}>
               {isManual
-                ? (COMPLIANCE_LABEL[manualDetail?.category ?? log.compliance_category ?? ''] ?? manualDetail?.category ?? log.compliance_category ?? '-')
-                : (autoDetail?.risk_type.name ?? log.risk_type_name ?? '-')}
+                ? (log.compliance_category ? COMPLIANCE_LABEL[log.compliance_category] ?? log.compliance_category : '-')
+                : (log.risk_type_name ?? '-')}
             </span>
           </div>
         </div>
 
-        {/* AUTO: 작업자 목록 */}
-        {!isManual && autoDetail?.workers && autoDetail.workers.length > 0 && (
-          <div style={{ padding: '0 24px 16px' }}>
-            <div style={styles.modalInfoItem}>
-              <span style={styles.modalInfoLabel}>현장 작업자</span>
-              <span style={styles.modalInfoValue}>
-                {autoDetail.workers.map(w => w.name).join(', ')}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* AUTO: 영상 */}
-        {!isManual && autoDetail?.original_video && (
-          <div style={{ padding: '0 24px 16px' }}>
-            <div style={styles.modalInfoItem}>
-              <span style={styles.modalInfoLabel}>감지 영상</span>
-              <video
-                src={autoDetail.original_video}
-                controls
-                style={{ width: '100%', borderRadius: 8, marginTop: 8, maxHeight: 260, backgroundColor: '#000' }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* AUTO: 즉시 연락 버튼 */}
-        {!isManual && (
-          <button
-            type="button"
-            style={styles.contactBtn}
-            onClick={() => window.open(`tel:010-0000-0000`)}>
-            📞 작업자에게 즉시 연락
-          </button>
-        )}
-
-        {/* MANUAL: 요청 작업자 */}
-        {isManual && manualDetail?.employee && (
-          <div style={{ padding: '0 24px 16px' }}>
-            <div style={styles.modalInfoItem}>
-              <span style={styles.modalInfoLabel}>요청 작업자</span>
-              <span style={styles.modalInfoValue}>{manualDetail.employee.name}</span>
-            </div>
-          </div>
-        )}
-
-        {/* MANUAL: 촬영 이미지 */}
-        {isManual && manualDetail?.original_image && (
-          <div style={{ padding: '0 24px 16px' }}>
-            <div style={styles.modalInfoItem}>
-              <span style={styles.modalInfoLabel}>촬영 이미지</span>
-              <img
-                src={manualDetail.original_image}
-                alt="점검 이미지"
-                style={{ width: '100%', borderRadius: 8, marginTop: 8, maxHeight: 240, objectFit: 'contain', backgroundColor: '#F0F1F3' }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* MANUAL: 수락/거절 */}
-        {isManual && currentStatus === 'PENDING' && (
+        {isManual && log.status === 'PENDING' && (
           <div style={styles.modalApprovalRow}>
             <button
               type="button"
@@ -328,7 +212,7 @@ function AlertDetailModal({
           </div>
         )}
 
-        {isManual && currentStatus && currentStatus !== 'PENDING' && (
+        {isManual && log.status && log.status !== 'PENDING' && (
           <div style={{ padding: '0 24px 24px', textAlign: 'center' }}>
             <span style={{
               fontFamily: 'Inter, sans-serif',
@@ -339,6 +223,15 @@ function AlertDetailModal({
               이 요청은 {statusInfo?.text ?? '처리'}되었습니다.
             </span>
           </div>
+        )}
+
+        {!isManual && (
+          <button
+            type="button"
+            style={styles.contactBtn}
+            onClick={() => window.open(`tel:010-0000-0000`)}>
+            📞 작업자에게 연락
+          </button>
         )}
       </div>
     </div>
@@ -518,67 +411,57 @@ function AlertRowComponent({
   const description = getAlertDescription(log);
   const statusInfo = log.status ? STATUS_LABEL[log.status] : null;
 
-  const bgColor = isRead ? '#FFFFFF' : (isManual ? '#F4F8FF' : '#FFF5F5');
-  const borderColor = isRead ? '#E8E9EB' : (isManual ? '#006FFD' : '#DC2626');
-  const titleColor = isRead ? '#71727A' : '#1F2024';
-  const descColor = isRead ? '#8F9098' : (isManual ? '#006FFD' : '#DC2626');
-  const tagBgColor = isRead ? '#F5F5F5' : (isManual ? '#EAF2FF' : '#FFF0F1');
-
   return (
     <button
       type="button"
       style={{
         ...styles.alertCard,
-        backgroundColor: bgColor,
-        borderColor: isRead ? '#F0F1F3' : 'transparent',
-        borderLeftColor: borderColor,
+        backgroundColor: isRead ? '#FFFFFF' : (isManual ? '#F0F4FF' : '#FFF5F5'),
+        borderLeft: `3px solid ${isRead ? '#E8E9EB' : (isManual ? '#006FFD' : '#DC2626')}`,
       }}
       onClick={onClick}>
-      
       <div style={styles.alertTopRow}>
         <span style={styles.alertTime}>{formatAlertTime(log.created_at)}</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <span style={{
             fontFamily: 'Inter, sans-serif',
-            fontWeight: 700,
-            fontSize: 10,
-            color: isRead ? '#8F9098' : (isManual ? '#006FFD' : '#DC2626'),
-            backgroundColor: tagBgColor,
-            padding: '3px 8px',
-            borderRadius: 6,
+            fontWeight: 600,
+            fontSize: 9,
+            color: isManual ? '#006FFD' : '#DC2626',
+            backgroundColor: isManual ? '#EAF2FF' : '#FFF5F5',
+            padding: '1px 5px',
+            borderRadius: 4,
           }}>
             {isManual ? 'MANUAL' : 'AUTO'}
           </span>
-          {!isRead && <span style={{
-            ...styles.alertUnreadDot,
-            backgroundColor: isManual ? '#006FFD' : '#DC2626',
-            boxShadow: isManual ? '0 0 0 2px #EAF2FF' : '0 0 0 2px #FFF5F5',
-          }} />}
+          {!isRead && <span style={styles.alertUnreadDot} />}
         </div>
       </div>
-      
-      <span style={{ ...styles.alertSite, color: titleColor }}>{log.worksession_name}</span>
-      
-      <div style={styles.alertBottomRow}>
-        <span style={{ ...styles.alertType, color: descColor }}>
-          {description}
+      <span style={styles.alertSite}>{log.worksession_name}</span>
+      <span style={{ ...styles.alertType, color: isManual ? '#006FFD' : '#DC2626' }}>
+        {description}
+      </span>
+      {isManual && statusInfo && (
+        <span style={{
+          fontFamily: 'Inter, sans-serif',
+          fontWeight: 600,
+          fontSize: 10,
+          color: statusInfo.color,
+        }}>
+          {statusInfo.text}
         </span>
-        {statusInfo && (
-          <span style={{
-            fontFamily: 'Inter, sans-serif',
-            fontWeight: 700,
-            fontSize: 11,
-            color: isRead ? '#A0A3AB' : statusInfo.color,
-          }}>
-            {statusInfo.text}
-          </span>
-        )}
-        {isManual && log.status === 'PENDING' && !isRead && (
-          <span style={styles.alertActionText}>
-            요청 확인하기 →
-          </span>
-        )}
-      </div>
+      )}
+      {isManual && log.status === 'PENDING' && (
+        <span style={{
+          fontFamily: 'Inter, sans-serif',
+          fontWeight: 600,
+          fontSize: 10,
+          color: '#006FFD',
+          marginTop: 2,
+        }}>
+          요청 확인하기 →
+        </span>
+      )}
     </button>
   );
 }
@@ -600,103 +483,59 @@ export default function HomeScreen() {
   const [readIds, setReadIds] = useState<Set<number>>(getReadAlertIds);
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
-  
-  // ✨ 로컬 알림 배지 카운트 상태를 직접 관리
-  const [localUnreadCount, setLocalUnreadCount] = useState<number>(0);
-  
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // 💡 즉각적인 알림 개수 갱신 (Derived State)
+  // logs와 readIds 기반으로 컴포넌트 내부에서 즉시 필터링하여 계산합니다.
+  const unreadCount = logs.filter(log => !log.is_read && !readIds.has(log.id)).length;
 
   const fetchLogs = useCallback(async () => {
     try {
       const res = await apiFetch('/detect/admin/logs/');
       if (res.ok) {
         const json = await res.json();
-        let fetchedLogs: AdminLog[] = [];
-        if (Array.isArray(json)) fetchedLogs = json;
-        else if (json && Array.isArray(json.data)) fetchedLogs = json.data;
-        else if (json && Array.isArray(json.results)) fetchedLogs = json.results;
-        
-        setLogs(fetchedLogs);
-        
-        // 💡 알림을 가져올 때, 로컬에 저장된 readIds를 반영하여 안 읽은 개수를 정확히 계산
-        const unread = fetchedLogs.filter(log => !log.is_read && !readIds.has(log.id)).length;
-        setLocalUnreadCount(unread);
+        if (Array.isArray(json)) setLogs(json);
+        else if (json && Array.isArray(json.data)) setLogs(json.data);
+        else if (json && Array.isArray(json.results)) setLogs(json.results);
       }
     } catch { /* ignore */ }
-  }, [readIds]);
+  }, []);
 
   const fetchWorkSessions = useCallback(async () => {
     try {
       setApiError(null);
-      let rawArray: any[] = [];
-      
       const res = await apiFetch('/worksession/admin/today/');
-      if (res.ok) {
-        const json = await res.json();
-        if (Array.isArray(json)) rawArray = json;
-        else if (json && Array.isArray(json.data)) rawArray = json.data;
-        else if (json && Array.isArray(json.results)) rawArray = json.results;
-        else {
-          const possibleArray = Object.values(json).find(Array.isArray);
-          if (possibleArray) rawArray = possibleArray as any[];
-        }
-      }
-
-      if (rawArray.length === 0) {
-        const res2 = await apiFetch('/worksession/today/');
-        if (res2.ok) {
-          const json2 = await res2.json();
-          if (Array.isArray(json2)) rawArray = json2;
-          else if (json2 && Array.isArray(json2.data)) rawArray = json2.data;
-          else if (json2 && Array.isArray(json2.results)) rawArray = json2.results;
-        }
-      }
-
-      const mappedSessions: WorkSessionCard[] = rawArray.map((item: any) => ({
-        id: item.id,
-        name: item.name || "이름 없는 작업장",
-        starts_at: item.starts_at,
-        ends_at: item.ends_at || null,
-        status: item.status || 'READY',
-        workers_detail: item.workers_detail || item.worker_members || [],
-        risk_assessment: item.risk_assessment || item.risk_assessment_status || 'PENDING',
-        report: item.report !== undefined ? item.report : (item.report_status || false)
-      }));
-
-      setWorkSessions(mappedSessions);
+      if (!res.ok) return;
+      const json = await res.json();
+      const data: WorkSessionCard[] = Array.isArray(json) ? json : (json?.data ?? []);
+      setWorkSessions(data);
     } catch (err: any) {
-      setApiError(`네트워크 오류 발생: ${err.message}`);
+      setApiError(`네트워크 오류: ${err.message}`);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchLogs();
-    fetchWorkSessions();
-    pollingRef.current = setInterval(() => {
-      fetchLogs();
-      fetchWorkSessions();
-    }, POLL_INTERVAL);
+    const fetchAll = async () => {
+      await fetchLogs();
+      await fetchWorkSessions();
+    };
+    fetchAll();
+    pollingRef.current = setInterval(fetchAll, POLL_INTERVAL);
     return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
   }, [fetchLogs, fetchWorkSessions]);
 
-  // ✨ 알림 클릭 시 읽음 처리 로직 (즉각적인 렌더링 반영)
   const markAsRead = useCallback((logId: number) => {
     setReadIds(prev => {
       if (prev.has(logId)) return prev;
-      
       const next = new Set(prev);
       next.add(logId);
       persistReadAlertIds(next);
-      
-      // 화면의 뱃지 카운트도 1개 즉시 깎아줍니다 (부드러운 UX)
-      setLocalUnreadCount(currentCount => Math.max(0, currentCount - 1));
-      
       return next;
     });
 
-    // 백엔드에도 읽음 처리 API를 비동기로 날려줍니다 (백그라운드 처리)
+    // 💡 백엔드에도 '읽음' 처리 신호를 보내어 갱신되도록 합니다.
     apiFetch(`/detect/admin/logs/${logId}/read/`, { method: 'PATCH' }).catch(() => {});
   }, []);
 
@@ -750,19 +589,8 @@ export default function HomeScreen() {
     }
   };
 
-  const sortedLogs = [...logs].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
   return (
     <div style={styles.container}>
-      <style>{`
-        button, div[role="button"] { -webkit-tap-highlight-color: transparent !important; }
-        button:focus, button:active, button:focus-visible,
-        div[role="button"]:focus, div[role="button"]:active, div[role="button"]:focus-visible {
-          outline: none !important;
-          box-shadow: none !important;
-        }
-      `}</style>
-
       {/* ── Sidebar ── */}
       <aside style={styles.sidebar}>
         <button type="button" style={styles.sidebarLogo} onClick={() => navigate('/home')}>
@@ -780,9 +608,9 @@ export default function HomeScreen() {
           <button type="button" style={styles.sidebarIconBtn}>⚙️</button>
           <button type="button" style={{ ...styles.sidebarIconBtn, position: 'relative' }}>
             🔔
-            {localUnreadCount > 0 && (
+            {unreadCount > 0 && (
               <div style={styles.notifBadge}>
-                <span style={styles.notifBadgeText}>{localUnreadCount > 99 ? '99+' : localUnreadCount}</span>
+                <span style={styles.notifBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</span>
               </div>
             )}
           </button>
@@ -864,20 +692,19 @@ export default function HomeScreen() {
         {/* ── Alert Panel ── */}
         <aside style={styles.alertPanel}>
           <div style={styles.alertPanelHeader}>
-            <span style={styles.alertPanelTitle}>⚠ 실시간 위험 알림</span>
-            {localUnreadCount > 0 && (
-              <span style={styles.alertBadge}>{localUnreadCount > 99 ? '99+' : localUnreadCount}</span>
+            <span style={styles.alertPanelTitle}>⚠ 알림 로그</span>
+            {unreadCount > 0 && (
+              <span style={styles.alertBadge}>{unreadCount > 99 ? '99+' : unreadCount}</span>
             )}
           </div>
-          
           <div style={styles.alertList}>
-            {sortedLogs.length === 0 ? (
+            {logs.length === 0 ? (
               <div style={styles.alertEmpty}>
-                <span style={{ fontSize: 32 }}>✅</span>
-                <span style={styles.alertEmptyText}>새로운 알림이 없습니다.</span>
+                <span style={{ fontSize: 28 }}>✅</span>
+                <span style={styles.alertEmptyText}>알림 없음</span>
               </div>
             ) : (
-              sortedLogs.map(log => (
+              logs.map(log => (
                 <AlertRowComponent
                   key={log.id}
                   log={log}
@@ -1286,12 +1113,12 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: 'transparent',
   },
 
-  // ✨ Alert Panel 
+  // Alert panel
   alertPanel: {
-    width: 260,
+    width: 220,
     flexShrink: 0,
-    backgroundColor: '#F8F9FA',
-    borderLeft: '1px solid #E8E9EB',
+    backgroundColor: '#FFFFFF',
+    borderLeft: '1px solid #F0F1F3',
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
@@ -1301,27 +1128,24 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '24px 20px 16px',
-    backgroundColor: '#FFFFFF',
-    borderBottom: '1px solid #E8E9EB',
+    padding: '20px 16px 12px',
+    borderBottom: '1px solid #F0F1F3',
     flexShrink: 0,
-    boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-    zIndex: 10,
   },
   alertPanelTitle: {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 700,
-    fontSize: 15,
-    color: '#1F2024',
+    fontSize: 14,
+    color: '#DC2626',
   },
   alertBadge: {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 700,
-    fontSize: 11,
+    fontSize: 10,
     color: '#FFFFFF',
     backgroundColor: '#DC2626',
-    borderRadius: 12,
-    padding: '3px 8px',
+    borderRadius: 10,
+    padding: '2px 7px',
     minWidth: 16,
     textAlign: 'center',
   },
@@ -1330,80 +1154,66 @@ const styles: Record<string, React.CSSProperties> = {
     overflowY: 'auto',
     display: 'flex',
     flexDirection: 'column',
-    padding: '16px',
-    gap: '12px',
   },
 
-  // ✨ Chunky Alert Card Styles
+  // Alert card
   alertCard: {
-    padding: '16px',
+    padding: '10px 14px',
     display: 'flex',
     flexDirection: 'column',
-    gap: 8,
+    gap: 3,
     cursor: 'pointer',
-    border: '1px solid',
-    borderLeft: '5px solid',
-    borderRadius: '12px',
+    border: 'none',
+    borderLeft: '3px solid',
+    borderBottom: '1px solid #F0F1F3',
     textAlign: 'left',
     width: '100%',
     boxSizing: 'border-box',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-    transition: 'all 0.2s ease',
   },
   alertTopRow: {
     display: 'flex',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 2,
   },
   alertTime: {
     fontFamily: 'Inter, sans-serif',
-    fontWeight: 600,
-    fontSize: 11,
+    fontWeight: 500,
+    fontSize: 10,
     color: '#8F9098',
   },
   alertUnreadDot: {
-    width: 8,
-    height: 8,
+    width: 7,
+    height: 7,
     borderRadius: '50%',
     backgroundColor: '#DC2626',
     flexShrink: 0,
-    boxShadow: '0 0 0 2px #FFF5F5',
   },
   alertSite: {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 700,
-    fontSize: 15,
-  },
-  alertBottomRow: {
-    display: 'flex', 
-    justifyContent: 'space-between', 
-    alignItems: 'flex-end',
-    marginTop: 2,
+    fontSize: 12,
+    color: '#1F2024',
   },
   alertType: {
     fontFamily: 'Inter, sans-serif',
-    fontWeight: 600,
-    fontSize: 13,
-  },
-  alertActionText: {
-    fontFamily: 'Inter, sans-serif',
-    fontWeight: 700,
+    fontWeight: 500,
     fontSize: 11,
-    color: '#006FFD',
+    color: '#DC2626',
   },
   alertEmpty: {
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
-    padding: '60px 0',
+    gap: 8,
+    padding: '40px 0',
   },
   alertEmptyText: {
     fontFamily: 'Inter, sans-serif',
-    fontWeight: 600,
-    fontSize: 14,
+    fontWeight: 500,
+    fontSize: 12,
     color: '#8F9098',
   },
 
@@ -1440,6 +1250,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 700,
     fontSize: 18,
+    color: '#DC2626',
     display: 'block',
     marginBottom: 4,
   },
@@ -1465,6 +1276,12 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     gap: 10,
+  },
+  modalSectionLabel: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 700,
+    fontSize: 14,
+    color: '#1F2024',
   },
   modalInfoRow: {
     display: 'flex',
