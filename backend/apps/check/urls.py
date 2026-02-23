@@ -12,4 +12,5 @@ urlpatterns = [
     path("approve/", approve_check, name="approve_check"),
     path("pass/<int:worksession_id>/", check_pass, name="check_pass"),
     path("admin/request/<int:videolog_id>/", manual_check, name="manual_check"),
+    path("admin/", check_admin, name="check_admin"),
 ]

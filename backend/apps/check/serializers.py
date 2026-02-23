@@ -100,3 +100,27 @@ class ManualCheckResponseSerializer(serializers.Serializer):
 
     original_image = serializers.CharField(allow_null=True)
     created_at = serializers.DateTimeField()
+
+class CheckAdminRequestSerializer(serializers.Serializer):
+    worksession_ids = serializers.ListField(child=serializers.IntegerField())
+
+class WorkerSimpleSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+
+class ComplianceCheckSerializer(serializers.Serializer):
+    HELMET = serializers.BooleanField(allow_null=True)
+    VEST = serializers.BooleanField(allow_null=True)
+    SHOES = serializers.BooleanField(allow_null=True)
+
+class WorkerComplianceSerializer(serializers.Serializer):
+    worker = WorkerSimpleSerializer()
+    checks = ComplianceCheckSerializer()
+
+class WorkSessionComplianceSerializer(serializers.Serializer):
+    worksession_id = serializers.IntegerField()
+    worksession_name = serializers.CharField()
+    workers = WorkerComplianceSerializer(many=True)
+
+class ManualCheckResponseSerializer(serializers.Serializer):
+    worksessions = WorkSessionComplianceSerializer(many=True)

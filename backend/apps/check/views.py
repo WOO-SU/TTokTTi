@@ -12,7 +12,7 @@ from .models import Compliance, Photo
 from ..detect.models import VideoLog, VideoLogRead
 from .serializers import *
 
-from ..worksession.models import WorkSession
+from ..worksession.models import WorkSession, WorkSessionMember
 # temporary measure. if two redis queues are needed,, pull the client code .
 import os
 import redis
@@ -401,3 +401,78 @@ def manual_check(request, videolog_id=None):
     }
 
     return Response({"ok": True, "data": data}, status=200)
+
+@swagger_auto_schema(
+    method="post",
+    request_body=CheckAdminRequestSerializer,
+    responses={
+        200: ManualCheckResponseSerializer,
+        403: UploadResultResponseSerializer,
+        404: UploadResultResponseSerializer,
+    }
+)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def check_admin(request):
+    if not request.user.is_manager:
+        return Response(
+            {"ok": False, "detail": "Only managers can access this API"},
+            status=403
+        )
+
+    serializer = CheckAdminRequestSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    worksession_ids = serializer.validated_data["worksession_ids"]
+
+    worksessions = WorkSession.objects.filter(id__in=worksession_ids)
+
+    result = []
+
+    for ws in worksessions:
+        members = (
+            WorkSessionMember.objects
+            .select_related("user")
+            .filter(
+                worksession=ws,
+                role=WorkSessionMember.RoleChoices.WORKER
+            )
+        )
+
+        worker_results = []
+
+        for member in members:
+            compliances = Compliance.objects.filter(
+                worksession=ws,
+                employee=member.user
+            )
+
+            checks = {
+                "HELMET": None,
+                "VEST": None,
+                "SHOES": None,
+            }
+
+            for c in compliances:
+                checks[c.category] = c.is_complied if c.is_complied is not None else False
+
+            worker_results.append({
+                "worker": {
+                    "id": member.user.id,
+                    "name": member.user.name,
+                },
+                "checks": checks,
+            })
+
+        result.append({
+            "worksession_id": ws.id,
+            "worksession_name": ws.name,
+            "workers": worker_results,
+        })
+
+    return Response(
+        {
+            "worksessions": result
+        },
+        status=200
+    )
