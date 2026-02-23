@@ -333,30 +333,62 @@ def check_pass(request, worksession_id):
         "passed": passed
     })
 
-# @swagger_auto_schema(
-#     method="get",
-#     responses={
-#         200: ManualCheckResponseSerializer,
-#         403: ManualCheckResponseSerializer,
-#     }
-# )
-# @api_view(["GET"])
-# @permission_classes([IsAuthenticated])
-# def manual_check(request):
-#     """
-#     "/api/check/admin/request": 관리자 수동 점검 요청 조회
-#     """
-#     if request.user.is_manager == False:
-#         return Response(
-#             {"ok": False, "detail": "Only managers can access manual check requests"},
-#             status=403
-#         )
+@swagger_auto_schema(
+    method="get",
+    responses={
+        200: ,
+        403: UploadResultResponseSerializer,
+        404: UploadResultResponseSerializer,
+    }
+)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def manual_check(request, videolog_id=None):
+    """
+    "/api/check/admin/request/{videolog_id}": 관리자 수동 점검 요청 조회
+    """
+    if not request.user.is_manager:
+        return Response(
+            {"ok": False, "detail": "Only managers can access manual check requests"},
+            status=403
+        )
 
-#     pending_logs = VideoLog.objects.filter(
-#         source=VideoLog.SourceChoices.MANUAL,
-#         status=VideoLog.StatusChoices.PENDING
-#     ).select_related("compliance", "compliance__employee")
+    log = VideoLog.objects.select_related(
+        "worksession",
+        "compliance",
+        "compliance__employee",
+    ).filter(
+        id=videolog_id,
+        source=VideoLog.SourceChoices.MANUAL
+    ).first()
 
-#     serializer = ManualCheckSerializer(pending_logs, many=True)
+    if not log or not log.compliance:
+        return Response(
+            {"ok": False, "detail": "Manual check request not found"},
+            status=404
+        )
 
-#     return Response({"ok": True, "data": serializer.data}, status=200)
+    compliance = log.compliance
+    employee = compliance.employee
+    worksession = log.worksession
+
+    data = {
+        "videolog_id": log.id,
+        "status": log.status,
+
+        "employee": {
+            "id": employee.id,
+            "name": employee.name,
+        },
+
+        "worksession": {
+            "id": worksession.id,
+            "name": worksession.name,
+        },
+
+        "category": compliance.category,
+        "original_image": compliance.original_image,
+        "created_at": log.created_at,
+    }
+
+    return Response({"ok": True, "data": data}, status=200)
