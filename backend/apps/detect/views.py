@@ -219,6 +219,7 @@ def bodycam_risk(request):
         {"ok": True, "data": serializer.data},
         status=200
     )
+    
 @swagger_auto_schema(
     method="get",
     responses={200: CheckLogsResponseSerializer(many=True)}
