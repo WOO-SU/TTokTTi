@@ -1,6 +1,6 @@
 # vision/rules/base.py
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 import time
 
 @dataclass
@@ -9,7 +9,7 @@ class RuleContext:
     frame: "object"  # np.ndarray
     state: "object"  # StateBuffer
     task: "object"   # TaskState
-    keypoints: Dict[str, any]  # keypoint dict (from movenet)
+    keypoints: Optional[Dict[str, Any]] = None  # ✅ default
 
 @dataclass
 class Event:
@@ -24,10 +24,18 @@ class Rule:
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         raise NotImplementedError
         
-class Debounce: # 함수 추가 구현 필요함
+# vision_fullcam/rules/base.py (Debounce만 교체)
+
+from typing import Optional, Dict
+
+class Debounce:
     """
     condition이 duration만큼 참이면 fire.
     fire 이후 cooldown 동안 재발화 방지.
+
+    - check(now, cond): (단일) 디바운스
+    - setdefault(key, debounce): (key별) 디바운스 저장/획득
+    - fire_immediate(now): 즉시 1회 발화 + cooldown 적용
     """
     def __init__(self, duration_sec: float, cooldown_sec: float):
         self.duration = duration_sec
@@ -35,9 +43,14 @@ class Debounce: # 함수 추가 구현 필요함
         self.start_ts: Optional[float] = None
         self.cool_until: float = 0.0
 
-    def check(self, now: float, cond: bool) -> bool: # 조건 판별을 함수 내부에서 함
+        # key별로 디바운스를 들고 있을 수 있게(필요할 때만 사용)
+        self._per_key: Dict[int, "Debounce"] = {}
+
+    # --- 단일 디바운스 ---
+    def check(self, now: float, cond: bool) -> bool:
         if now < self.cool_until:
             return False
+
         if cond:
             if self.start_ts is None:
                 self.start_ts = now
@@ -47,26 +60,18 @@ class Debounce: # 함수 추가 구현 필요함
                 return True
         else:
             self.start_ts = None
-        return False
-
-    def hit(self, track_id: int, now: float) -> bool: # 조건 판별을 밖에서 한 후에 호출
-        s = self.state.get(track_id)
-
-        if s is None:
-            self.state[track_id] = {
-                "start": now,
-                "last_fire": 0.0
-            }
-            return False
-
-        # 쿨다운 중이면 무시
-        if now - s["last_fire"] < self.cooldown_sec:
-            return False
-
-        # 연속 유지 시간 체크
-        if now - s["start"] >= self.active_sec:
-            s["last_fire"] = now
-            s["start"] = now  # 재감지 방지
-            return True
 
         return False
+
+    def fire_immediate(self, now: float) -> bool:
+        if now < self.cool_until:
+            return False
+        self.start_ts = None
+        self.cool_until = now + self.cooldown
+        return True
+
+    # --- key별 디바운스 ---
+    def setdefault(self, key: int, db: "Debounce") -> "Debounce":
+        if key not in self._per_key:
+            self._per_key[key] = db
+        return self._per_key[key]
