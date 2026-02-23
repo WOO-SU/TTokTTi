@@ -7,44 +7,43 @@ import useUnreadAlertCount from '../hooks/useUnreadAlertCount';
 
 // ── Types ──
 
-type RiskGrade = 'Low' | 'Medium' | 'High' | 'Critical';
-
-type Hazard = {
-  id: string;
-  title: string;
-  evidence_from_image: string;
-  expected_accident: string;
-  likelihood_L_1_5: number;
-  severity_S_1_5: number;
-  risk_R_1_25: number;
-  risk_grade: RiskGrade;
-  mitigations_before_work: string[];
-  residual_likelihood_L_1_5: number;
-  residual_severity_S_1_5: number;
-  residual_risk_R_1_25: number;
-  residual_risk_grade: RiskGrade;
+type ComplianceStat = {
+  total: number;
+  complied: number;
+  not_complied: number;
+  unknown: number;
 };
 
-type AdminReport = {
-  scene_summary: {
-    work_environment: string;
-    work_height_or_location: string;
-    observed_safety_facilities: string[];
-    needs_verification: string[];
-  };
-  hazards: Hazard[];
-  overall: {
-    overall_max_R: number;
-    overall_grade: RiskGrade;
-    work_permission: string;
-    urgent_fix_before_work: string[];
-  };
-  version: string;
+type RiskHighlight = {
+  time_range?: string;
+  risk_type?: string;
+  evidence?: string;
+  [key: string]: any;
 };
 
-type PhotoItem = {
-  blobName: string;
-  url: string;
+type ActionItems = {
+  immediate?: string[];
+  preventive?: string[];
+  follow_up?: string[];
+};
+
+type PostWorkReportData = {
+  report_title?: string;
+  worksession_summary?: any;
+  video_summary?: any;
+  risk_highlights?: RiskHighlight[];
+  risk_statistics?: any;
+  compliance_summary?: {
+    helmet?: ComplianceStat;
+    vest?: ComplianceStat;
+    shoes?: ComplianceStat;
+  };
+  before_after_summary?: {
+    before_photos?: string[];
+    after_photos?: string[];
+  };
+  action_items?: ActionItems;
+  generated_at?: string;
 };
 
 type WorkerDetail = {
@@ -70,9 +69,9 @@ type WorkspaceRisk = {
   startTime: string;
   workStatus: '작업 전' | '작업 중' | '작업 끝';
   members: { id: number; name: string }[];
-  assessmentId: number | null;
-  photos: PhotoItem[];
-  adminReport: AdminReport | null;
+  reportId: number | null;
+  reportVersion: number | null;
+  postWorkReport: PostWorkReportData | null;
 };
 
 // ── Data ──
@@ -87,19 +86,6 @@ const sidebarItems = [
 ];
 
 
-const GRADE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  Low: { bg: '#ECFDF5', text: '#059669', border: '#A7F3D0' },
-  Medium: { bg: '#FFF7ED', text: '#D97706', border: '#FDE68A' },
-  High: { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA' },
-  Critical: { bg: '#FEF2F2', text: '#991B1B', border: '#F87171' },
-};
-
-const PERMISSION_COLORS: Record<string, { bg: string; text: string }> = {
-  '작업 가능': { bg: '#ECFDF5', text: '#059669' },
-  '개선조치 후 작업': { bg: '#FFF7ED', text: '#D97706' },
-  '조치 전 작업 금지': { bg: '#FEF2F2', text: '#DC2626' },
-};
-
 const workStatusColors: Record<string, { bg: string; text: string }> = {
   '작업 전': { bg: '#F0F1F3', text: '#71727A' },
   '작업 중': { bg: '#E7F4E8', text: '#298A3E' },
@@ -113,22 +99,13 @@ const STATUS_MAP: Record<string, '작업 전' | '작업 중' | '작업 끝'> = {
 };
 
 
+const COMPLIANCE_LABEL: Record<string, string> = {
+  helmet: '안전모',
+  vest: '안전 조끼',
+  shoes: '안전화',
+};
+
 // ── Helpers ──
-
-function getGradeStyle(grade: string) {
-  return GRADE_COLORS[grade] ?? GRADE_COLORS.Medium;
-}
-
-function getPermissionStyle(permission: string) {
-  return PERMISSION_COLORS[permission] ?? PERMISSION_COLORS['개선조치 후 작업'];
-}
-
-function fetchImageUrl(blobName: string): Promise<string> {
-  return apiFetch(`/risk/media/sas?blob_name=${encodeURIComponent(blobName)}`)
-    .then(res => res.ok ? res.json() : null)
-    .then(data => data?.url?.download_url ?? '')
-    .catch(() => '');
-}
 
 function formatSessionTime(isoStr: string): string {
   const d = new Date(isoStr);
@@ -144,156 +121,167 @@ function convertSession(session: WorkSessionCard): WorkspaceRisk {
     startTime: formatSessionTime(session.starts_at),
     workStatus: STATUS_MAP[session.status] ?? '작업 전',
     members: (session.workers_detail ?? []).map(w => ({ id: w.employee_id, name: w.name })),
-    assessmentId: null,
-    photos: [],
-    adminReport: null,
+    reportId: null,
+    reportVersion: null,
+    postWorkReport: null,
   };
 }
 
 // ── Sub Components ──
 
-function PhotoCard({ index, url }: { index: number; url: string }) {
+function ComplianceStatRow({ label, stat }: { label: string; stat: ComplianceStat }) {
+  const rate = stat.total > 0 ? Math.round((stat.complied / stat.total) * 100) : 0;
+  const color = rate >= 80 ? '#059669' : rate >= 50 ? '#D97706' : '#DC2626';
   return (
-    <div style={styles.photoCard}>
-      <div style={styles.photoCardHeader}>
-        <span style={{ fontSize: 16 }}>📷</span>
-        <span style={styles.photoCardLabel}>사진 {index + 1}</span>
-      </div>
-      <img src={url} alt={`현장 사진 ${index + 1}`} style={styles.photoImage} />
+    <div style={styles.reportRow}>
+      <span style={styles.reportLabel}>{label}</span>
+      <span style={{ ...styles.reportValue, color, fontWeight: 700 }}>
+        {stat.complied}/{stat.total} ({rate}%)
+      </span>
     </div>
   );
 }
 
-function IntegratedAssessmentView({ report }: { report: AdminReport }) {
-  const overall = report.overall;
-  const scene = report.scene_summary;
-  const hazards = report.hazards;
-  const gs = getGradeStyle(overall.overall_grade);
-  const ps = getPermissionStyle(overall.work_permission);
+function PostWorkReportView({ report }: { report: PostWorkReportData }) {
+  const highlights = report.risk_highlights ?? [];
+  const compliance = report.compliance_summary;
+  const actions = report.action_items;
+  const riskStats = report.risk_statistics;
+  const wsSummary = report.worksession_summary;
 
   return (
     <div style={styles.assessmentContainer}>
-      {/* 종합 등급 & 작업 허가 */}
-      <div style={styles.assessmentHeader}>
-        <span style={{ ...styles.overallGradeBadge, backgroundColor: gs.bg, color: gs.text, borderColor: gs.border }}>
-          종합 등급: {overall.overall_grade} (R={overall.overall_max_R})
-        </span>
-        <span style={{ ...styles.permissionBadgeLarge, backgroundColor: ps.bg, color: ps.text }}>
-          {overall.work_permission}
-        </span>
-      </div>
-
-      {/* 현장 요약 (scene_summary) */}
-      <div style={styles.reportSection}>
-        <h4 style={styles.reportSectionTitle}>현장 요약</h4>
-        <div style={styles.reportSectionBody}>
-          <div style={styles.reportRow}>
-            <span style={styles.reportLabel}>작업 환경</span>
-            <span style={styles.reportValue}>{scene.work_environment}</span>
-          </div>
-          <div style={styles.reportRow}>
-            <span style={styles.reportLabel}>작업 위치/높이</span>
-            <span style={styles.reportValue}>{scene.work_height_or_location}</span>
-          </div>
-          {scene.observed_safety_facilities.length > 0 && (
-            <div style={styles.reportRow}>
-              <span style={styles.reportLabel}>확인된 안전시설</span>
-              <span style={styles.reportValue}>{scene.observed_safety_facilities.join(', ')}</span>
-            </div>
-          )}
-          {scene.needs_verification.length > 0 && (
-            <div style={styles.reportRow}>
-              <span style={styles.reportLabel}>추가 확인 필요</span>
-              <span style={{ ...styles.reportValue, color: '#D97706' }}>{scene.needs_verification.join(', ')}</span>
-            </div>
+      {/* 보고서 제목 */}
+      {report.report_title && (
+        <div style={styles.assessmentHeader}>
+          <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 15, color: '#1F2024' }}>
+            {report.report_title}
+          </span>
+          {report.generated_at && (
+            <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 11, color: '#8F9098' }}>
+              {new Date(report.generated_at).toLocaleString('ko-KR')}
+            </span>
           )}
         </div>
-      </div>
+      )}
 
-      {/* 위험 요소 (hazards) */}
-      {hazards.length > 0 && (
+      {/* 작업 개요 */}
+      {wsSummary && (
         <div style={styles.reportSection}>
-          <h4 style={styles.reportSectionTitle}>위험 요소 ({hazards.length}건)</h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {hazards.map((h) => {
-              const hgs = getGradeStyle(h.risk_grade);
-              const rgs = getGradeStyle(h.residual_risk_grade);
-              return (
-                <div key={h.id} style={styles.hazardCard}>
-                  <div style={styles.hazardHeader}>
-                    <span style={styles.hazardTitle}>{h.title}</span>
-                    <span style={{ ...styles.hazardGradeBadge, backgroundColor: hgs.bg, color: hgs.text, borderColor: hgs.border }}>
-                      {h.risk_grade} (R={h.risk_R_1_25})
-                    </span>
-                  </div>
-                  <div style={styles.hazardBody}>
-                    <div style={styles.reportRow}>
-                      <span style={styles.reportLabel}>이미지 근거</span>
-                      <span style={styles.reportValue}>{h.evidence_from_image}</span>
-                    </div>
-                    <div style={styles.reportRow}>
-                      <span style={styles.reportLabel}>예상 사고</span>
-                      <span style={styles.reportValue}>{h.expected_accident}</span>
-                    </div>
-                    <div style={styles.reportRow}>
-                      <span style={styles.reportLabel}>위험도 (L x S)</span>
-                      <span style={styles.reportValue}>{h.likelihood_L_1_5} x {h.severity_S_1_5} = {h.risk_R_1_25}</span>
-                    </div>
-                    {h.mitigations_before_work.length > 0 && (
-                      <div style={styles.reportRow}>
-                        <span style={styles.reportLabel}>작업 전 조치</span>
-                        <ul style={styles.mitigationList}>
-                          {h.mitigations_before_work.map((m, i) => (
-                            <li key={i} style={styles.mitigationItem}>{m}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    <div style={styles.reportRow}>
-                      <span style={styles.reportLabel}>잔여 위험도</span>
-                      <span style={styles.reportValue}>
-                        {h.residual_likelihood_L_1_5} x {h.residual_severity_S_1_5} = {h.residual_risk_R_1_25}{' '}
-                        <span style={{ ...styles.hazardGradeBadgeInline, backgroundColor: rgs.bg, color: rgs.text }}>
-                          {h.residual_risk_grade}
-                        </span>
-                      </span>
-                    </div>
-                  </div>
+          <h4 style={styles.reportSectionTitle}>작업 개요</h4>
+          <div style={styles.reportSectionBody}>
+            {typeof wsSummary === 'string' ? (
+              <p style={styles.passageParagraph}>{wsSummary}</p>
+            ) : (
+              Object.entries(wsSummary).map(([key, val]) => (
+                <div key={key} style={styles.reportRow}>
+                  <span style={styles.reportLabel}>{key}</span>
+                  <span style={styles.reportValue}>{typeof val === 'string' ? val : JSON.stringify(val)}</span>
                 </div>
-              );
-            })}
+              ))
+            )}
           </div>
         </div>
       )}
 
-      {/* 종합 판단 (overall) */}
-      <div style={styles.reportSection}>
-        <h4 style={styles.reportSectionTitle}>종합 판단</h4>
-        <div style={styles.reportSectionBody}>
-          <div style={styles.reportRow}>
-            <span style={styles.reportLabel}>최대 위험 점수</span>
-            <span style={styles.reportValue}>{overall.overall_max_R}</span>
+      {/* 위험 하이라이트 */}
+      {highlights.length > 0 && (
+        <div style={styles.reportSection}>
+          <h4 style={styles.reportSectionTitle}>위험 하이라이트 ({highlights.length}건)</h4>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {highlights.map((h, i) => (
+              <div key={i} style={styles.hazardCard}>
+                <div style={styles.hazardBody}>
+                  {h.risk_type && (
+                    <div style={styles.reportRow}>
+                      <span style={styles.reportLabel}>위험 유형</span>
+                      <span style={{ ...styles.reportValue, color: '#DC2626', fontWeight: 700 }}>{h.risk_type}</span>
+                    </div>
+                  )}
+                  {h.time_range && (
+                    <div style={styles.reportRow}>
+                      <span style={styles.reportLabel}>시간대</span>
+                      <span style={styles.reportValue}>{h.time_range}</span>
+                    </div>
+                  )}
+                  {h.evidence && (
+                    <div style={styles.reportRow}>
+                      <span style={styles.reportLabel}>근거</span>
+                      <span style={styles.reportValue}>{h.evidence}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
-          <div style={styles.reportRow}>
-            <span style={styles.reportLabel}>종합 등급</span>
-            <span style={{ ...styles.reportValue, fontWeight: 700, color: gs.text }}>{overall.overall_grade}</span>
-          </div>
-          <div style={styles.reportRow}>
-            <span style={styles.reportLabel}>작업 허가</span>
-            <span style={{ ...styles.reportValue, fontWeight: 700, color: ps.text }}>{overall.work_permission}</span>
-          </div>
-          {overall.urgent_fix_before_work.length > 0 && (
-            <div style={styles.reportRow}>
-              <span style={styles.reportLabel}>긴급 조치 사항</span>
-              <ul style={styles.mitigationList}>
-                {overall.urgent_fix_before_work.map((item, i) => (
-                  <li key={i} style={{ ...styles.mitigationItem, color: '#DC2626' }}>{item}</li>
-                ))}
-              </ul>
-            </div>
-          )}
         </div>
-      </div>
+      )}
+
+      {/* 위험 통계 */}
+      {riskStats && (
+        <div style={styles.reportSection}>
+          <h4 style={styles.reportSectionTitle}>위험 통계</h4>
+          <div style={styles.reportSectionBody}>
+            {typeof riskStats === 'object' && Object.entries(riskStats).map(([key, val]) => (
+              <div key={key} style={styles.reportRow}>
+                <span style={styles.reportLabel}>{key}</span>
+                <span style={styles.reportValue}>{typeof val === 'object' ? JSON.stringify(val) : String(val)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 안전장비 준수 현황 */}
+      {compliance && (
+        <div style={styles.reportSection}>
+          <h4 style={styles.reportSectionTitle}>안전장비 준수 현황</h4>
+          <div style={styles.reportSectionBody}>
+            {Object.entries(compliance).map(([key, stat]) => (
+              stat && <ComplianceStatRow key={key} label={COMPLIANCE_LABEL[key] ?? key} stat={stat} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 조치사항 */}
+      {actions && (
+        <div style={styles.reportSection}>
+          <h4 style={styles.reportSectionTitle}>조치사항</h4>
+          <div style={styles.reportSectionBody}>
+            {(actions.immediate ?? []).length > 0 && (
+              <div style={styles.reportRow}>
+                <span style={{ ...styles.reportLabel, color: '#DC2626' }}>즉시 조치</span>
+                <ul style={styles.mitigationList}>
+                  {actions.immediate!.map((item, i) => (
+                    <li key={i} style={{ ...styles.mitigationItem, color: '#DC2626' }}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {(actions.preventive ?? []).length > 0 && (
+              <div style={styles.reportRow}>
+                <span style={{ ...styles.reportLabel, color: '#D97706' }}>예방 조치</span>
+                <ul style={styles.mitigationList}>
+                  {actions.preventive!.map((item, i) => (
+                    <li key={i} style={styles.mitigationItem}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {(actions.follow_up ?? []).length > 0 && (
+              <div style={styles.reportRow}>
+                <span style={styles.reportLabel}>추적 관리</span>
+                <ul style={styles.mitigationList}>
+                  {actions.follow_up!.map((item, i) => (
+                    <li key={i} style={styles.mitigationItem}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -308,7 +296,8 @@ function WorkspaceRiskCard({
   onToggle: () => void;
 }) {
   const sc = workStatusColors[workspace.workStatus] ?? workStatusColors['작업 전'];
-  const report = workspace.adminReport;
+  const report = workspace.postWorkReport;
+  const hasReport = report !== null;
 
   return (
     <div style={styles.workspaceCard}>
@@ -318,13 +307,13 @@ function WorkspaceRiskCard({
           <span style={{ ...styles.workStatusBadge, backgroundColor: sc.bg, color: sc.text }}>
             {workspace.workStatus}
           </span>
-          {report && (
+          {hasReport && (
             <span style={{
               ...styles.riskBadge,
-              backgroundColor: getPermissionStyle(report.overall.work_permission).bg,
-              color: getPermissionStyle(report.overall.work_permission).text,
+              backgroundColor: '#ECFDF5',
+              color: '#059669',
             }}>
-              {report.overall.work_permission}
+              보고서 v{workspace.reportVersion ?? 1}
             </span>
           )}
         </div>
@@ -350,13 +339,50 @@ function WorkspaceRiskCard({
 
       {isExpanded && (
         <div style={styles.workspaceCardBody}>
+          {/* 작업 전후 사진 */}
           <div style={styles.photosSection}>
-            <span style={styles.sectionLabel}>현장 사진 (직원 촬영)</span>
-            {workspace.photos.length > 0 ? (
-              <div style={styles.photosGrid}>
-                {workspace.photos.map((photo, i) => (
-                  <PhotoCard key={photo.blobName} index={i} url={photo.url} />
-                ))}
+            <span style={styles.sectionLabel}>작업 전후 사진</span>
+            {report?.before_after_summary ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {(report.before_after_summary.before_photos ?? []).length > 0 && (
+                  <div>
+                    <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 13, color: '#71727A', marginBottom: 6, display: 'block' }}>작업 전</span>
+                    <div style={styles.photosGrid}>
+                      {report.before_after_summary.before_photos!.map((path, i) => (
+                        <div key={i} style={styles.photoCard}>
+                          <div style={styles.photoCardHeader}>
+                            <span style={{ fontSize: 16 }}>📷</span>
+                            <span style={styles.photoCardLabel}>Before {i + 1}</span>
+                          </div>
+                          <img src={path} alt={`작업 전 ${i + 1}`} style={styles.photoImage} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(report.before_after_summary.after_photos ?? []).length > 0 && (
+                  <div>
+                    <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 13, color: '#71727A', marginBottom: 6, display: 'block' }}>작업 후</span>
+                    <div style={styles.photosGrid}>
+                      {report.before_after_summary.after_photos!.map((path, i) => (
+                        <div key={i} style={styles.photoCard}>
+                          <div style={styles.photoCardHeader}>
+                            <span style={{ fontSize: 16 }}>📷</span>
+                            <span style={styles.photoCardLabel}>After {i + 1}</span>
+                          </div>
+                          <img src={path} alt={`작업 후 ${i + 1}`} style={styles.photoImage} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(report.before_after_summary.before_photos ?? []).length === 0 &&
+                 (report.before_after_summary.after_photos ?? []).length === 0 && (
+                  <div style={styles.noAssessment}>
+                    <span style={{ fontSize: 28, color: '#C5C6CC' }}>📷</span>
+                    <span style={styles.noAssessmentText}>등록된 사진이 없습니다.</span>
+                  </div>
+                )}
               </div>
             ) : (
               <div style={styles.noAssessment}>
@@ -366,15 +392,16 @@ function WorkspaceRiskCard({
             )}
           </div>
 
+          {/* 위험성 평가 결과 */}
           <div style={styles.riskSection}>
             <span style={styles.sectionLabel}>위험성 평가 결과</span>
             {report ? (
-              <IntegratedAssessmentView report={report} />
+              <PostWorkReportView report={report} />
             ) : (
               <div style={styles.noAssessment}>
                 <span style={{ fontSize: 32 }}>📋</span>
-                <span style={styles.noAssessmentText}>아직 위험성 평가가 진행되지 않았습니다.</span>
-                <span style={styles.noAssessmentHint}>직원이 현장 사진을 업로드하면 AI 기반 위험성 평가가 자동으로 수행됩니다.</span>
+                <span style={styles.noAssessmentText}>아직 보고서가 생성되지 않았습니다.</span>
+                <span style={styles.noAssessmentHint}>보고서 작성 메뉴에서 보고서를 생성해 주세요.</span>
               </div>
             )}
           </div>
@@ -399,84 +426,30 @@ export default function WorkerRiskScreen() {
 
   const fetchData = useCallback(async () => {
     try {
-      // 1. Fetch today's worksessions (same API as HomeScreen)
+      // 1. Fetch today's worksessions
       const wsRes = await apiFetch('/worksession/admin/today/');
       if (!wsRes.ok) return;
       const sessions: WorkSessionCard[] = await wsRes.json();
       if (!Array.isArray(sessions)) return;
 
-      // 2. For each session, try to fetch risk assessment & photos
+      // 2. For each session, fetch latest PostWorkReport
       const results = await Promise.all(
         sessions.map(async (session): Promise<WorkspaceRisk> => {
           const base = convertSession(session);
 
           try {
-            // Get latest assessment for this worksession
-            const latestRes = await apiFetch(`/risk/latest/${session.id}`);
-            if (!latestRes.ok) return base;
-            const latestData = await latestRes.json();
-            if (!latestData.exists) return base;
+            const reportRes = await apiFetch(`/report/${session.id}/latest`);
+            if (!reportRes.ok) return base; // 404 = 아직 보고서 없음
 
-            const assessmentId = latestData.assessment_id;
+            const data = await reportRes.json();
+            if (data.status !== 'OK' || !data.report) return base;
 
-            // Get admin report detail
-            const reportRes = await apiFetch(`/risk/admin/${assessmentId}`);
-            if (!reportRes.ok) return { ...base, assessmentId };
-            let reportData: any;
-            try {
-              reportData = await reportRes.json();
-            } catch {
-              return { ...base, assessmentId };
-            }
-            if (!reportData?.report) return { ...base, assessmentId };
-
-            const images: { id: number; blob_name: string; created_at: string }[] = reportData.images ?? [];
-            const rpt = reportData.report;
-            const adminReport: AdminReport = {
-              scene_summary: {
-                work_environment: rpt.scene_summary?.work_environment ?? '',
-                work_height_or_location: rpt.scene_summary?.work_height_or_location ?? '',
-                observed_safety_facilities: rpt.scene_summary?.observed_safety_facilities ?? [],
-                needs_verification: rpt.scene_summary?.needs_verification ?? [],
-              },
-              hazards: (rpt.hazards ?? []).map((h: any) => ({
-                id: h.id ?? '',
-                title: h.title ?? '',
-                evidence_from_image: h.evidence_from_image ?? '',
-                expected_accident: h.expected_accident ?? '',
-                likelihood_L_1_5: h.likelihood_L_1_5 ?? 0,
-                severity_S_1_5: h.severity_S_1_5 ?? 0,
-                risk_R_1_25: h.risk_R_1_25 ?? 0,
-                risk_grade: h.risk_grade ?? 'Low',
-                mitigations_before_work: h.mitigations_before_work ?? [],
-                residual_likelihood_L_1_5: h.residual_likelihood_L_1_5 ?? 0,
-                residual_severity_S_1_5: h.residual_severity_S_1_5 ?? 0,
-                residual_risk_R_1_25: h.residual_risk_R_1_25 ?? 0,
-                residual_risk_grade: h.residual_risk_grade ?? 'Low',
-              })),
-              overall: {
-                overall_max_R: rpt.overall?.overall_max_R ?? 0,
-                overall_grade: rpt.overall?.overall_grade ?? 'Low',
-                work_permission: rpt.overall?.work_permission ?? '작업 가능',
-                urgent_fix_before_work: rpt.overall?.urgent_fix_before_work ?? [],
-              },
-              version: rpt.version ?? '',
+            return {
+              ...base,
+              reportId: data.report_id ?? null,
+              reportVersion: data.report_version ?? null,
+              postWorkReport: data.report as PostWorkReportData,
             };
-
-            // Fetch SAS URLs for all images
-            const photos: PhotoItem[] = [];
-            for (const img of images) {
-              try {
-                const url = await fetchImageUrl(img.blob_name);
-                if (url) {
-                  photos.push({ blobName: img.blob_name, url });
-                }
-              } catch {
-                // skip failed images
-              }
-            }
-
-            return { ...base, assessmentId, photos, adminReport };
           } catch {
             return base;
           }
@@ -786,6 +759,50 @@ const styles: Record<string, React.CSSProperties> = {
   passageParagraph: {
     fontFamily: 'Inter, sans-serif', fontWeight: 400, fontSize: 14, color: '#3A3B40',
     lineHeight: '1.8', margin: '0 0 12px 0', textAlign: 'justify' as const,
+  },
+
+  // Report Sections
+  reportSection: {
+    backgroundColor: '#FFFFFF', borderRadius: 12, border: '1px solid #E8E9EB',
+    overflow: 'hidden',
+  },
+  reportSectionTitle: {
+    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 14, color: '#1F2024',
+    margin: 0, padding: '14px 20px', backgroundColor: '#F8F9FA',
+    borderBottom: '1px solid #E8E9EB',
+  },
+  reportSectionBody: {
+    padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12,
+  },
+  reportRow: {
+    display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: 12,
+  },
+  reportLabel: {
+    fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 13, color: '#71727A',
+    minWidth: 100, flexShrink: 0,
+  },
+  reportValue: {
+    fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: 13, color: '#1F2024',
+    flex: 1, lineHeight: '1.5',
+  },
+
+  // Hazard / Highlight Card
+  hazardCard: {
+    backgroundColor: '#FFF9F0', borderRadius: 10, border: '1px solid #FDE68A',
+    overflow: 'hidden',
+  },
+  hazardBody: {
+    padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10,
+  },
+
+  // Lists
+  mitigationList: {
+    margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4,
+    flex: 1,
+  },
+  mitigationItem: {
+    fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: 13, color: '#3A3B40',
+    lineHeight: '1.5',
   },
 
   // No Assessment
