@@ -205,7 +205,11 @@ export default function EmployeeDetailScreen() {
             {/* Profile Card */}
             <div style={styles.profileCard}>
               <div style={styles.avatarCircle}>
-                <img src={employee.photo || defaultAvatar} alt="avatar" style={styles.avatarImg} />
+                <img
+                  src={employee.username.startsWith('manager') ? managerImg : defaultAvatar}
+                  alt="avatar"
+                  style={styles.avatarImg}
+                />
               </div>
               <div style={styles.profileName}>{employee.name}</div>
               <div style={styles.profileUsername}>@{employee.username}</div>
@@ -575,7 +579,7 @@ const styles: Record<string, React.CSSProperties> = {
   avatarImg: {
     width: '100%',
     height: '100%',
-    objectFit: 'cover' as const,
+    objectFit: 'contain' as const,
   },
   profileName: {
     fontFamily: 'Inter, sans-serif',

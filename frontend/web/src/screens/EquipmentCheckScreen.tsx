@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../api/client';
 import managerImg from '../assets/manager.jpg';
+import workerImg from '../assets/safety-character.png';
 import useUnreadAlertCount from '../hooks/useUnreadAlertCount';
 
 // ── Types ──
@@ -289,9 +290,11 @@ export default function SafetyRegulationScreen() {
                         type="button"
                         style={styles.groupMember}
                         onClick={() => navigate(`/employee/${member.employee_id}`, { state: { siteName: ws.name } })}>
-                        <span style={{ ...styles.memberAvatar, backgroundColor: getMemberColor(idx) }}>
-                          {member.name[0]}{member.name[member.name.length - 1]}
-                        </span>
+                        <img
+                          src={workerImg}
+                          alt={member.name}
+                          style={styles.memberAvatar}
+                        />
                         <span style={styles.memberNameLink}>{member.name}</span>
                       </button>
                     ))}
@@ -369,9 +372,11 @@ export default function SafetyRegulationScreen() {
                                   return (
                                     <div key={member.employee_id} style={styles.memberStatusRow}>
                                       <div style={styles.memberStatusLeft}>
-                                        <span style={{ ...styles.memberAvatarSmall, backgroundColor: getMemberColor(idx) }}>
-                                          {member.name[0]}{member.name[member.name.length - 1]}
-                                        </span>
+                                        <img
+                                          src={workerImg}
+                                          alt={member.name}
+                                          style={styles.memberAvatarSmall}
+                                        />
                                         <span style={styles.memberStatusName}>{member.name}</span>
                                       </div>
                                       <div style={styles.memberStatusRight}>
@@ -720,12 +725,8 @@ const styles: Record<string, React.CSSProperties> = {
     width: 28,
     height: 28,
     borderRadius: '50%',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: 700,
+    objectFit: 'contain' as const,
+    backgroundColor: '#F0F1F3',
     flexShrink: 0,
   },
   memberNameLink: {
@@ -859,12 +860,8 @@ const styles: Record<string, React.CSSProperties> = {
     width: 24,
     height: 24,
     borderRadius: '50%',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    color: '#FFFFFF',
-    fontSize: 9,
-    fontWeight: 700,
+    objectFit: 'contain' as const,
+    backgroundColor: '#F0F1F3',
     flexShrink: 0,
   },
   memberStatusName: {

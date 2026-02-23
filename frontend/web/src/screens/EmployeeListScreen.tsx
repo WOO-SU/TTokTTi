@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../api/client';
 import managerImg from '../assets/manager.jpg';
+import workerImg from '../assets/safety-character.png';
 import useUnreadAlertCount from '../hooks/useUnreadAlertCount';
 
 type EmployeeInfo = {
@@ -234,14 +235,11 @@ export default function EmployeeListScreen() {
                   >
                     <td style={styles.td}>
                       <div style={styles.tableAvatar}>
-                        {emp.photo ? (
-                          <img src={emp.photo} alt="" style={styles.tableAvatarImg} />
-                        ) : (
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C5C6CC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                            <circle cx="12" cy="7" r="4" />
-                          </svg>
-                        )}
+                        <img
+                          src={emp.username.startsWith('manager') ? managerImg : workerImg}
+                          alt=""
+                          style={styles.tableAvatarImg}
+                        />
                       </div>
                     </td>
                     <td style={styles.tdName}>{emp.name}</td>
@@ -619,7 +617,7 @@ const styles: Record<string, React.CSSProperties> = {
   tableAvatarImg: {
     width: '100%',
     height: '100%',
-    objectFit: 'cover' as const,
+    objectFit: 'contain' as const,
   },
   deleteBtn: {
     fontFamily: 'Inter, sans-serif',
