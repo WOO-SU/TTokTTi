@@ -12,6 +12,7 @@ class Config:
     BACKEND_URL = os.getenv("BACKEND_URL", "http://100.120.43.34:8000")
     API_LOGIN = "/api/user/login/"
     API_CHECK_UPLOAD = "/api/check/upload/"
+    JETSON_API_KEY = os.getenv("JETSON_API_KEY", "jetson-special-key-2024")
 
     # Jetson 서비스 계정
     SERVICE_USER = os.getenv("SERVICE_USER", "jetson")
