@@ -58,7 +58,8 @@ type AutoCheckDetail = {
 
 const COMPLIANCE_LABEL: Record<string, string> = {
   HELMET: '안전모',
-  VEST: '안전 조끼',
+  VEST: '안전조끼',
+  GLOVE: '안전장갑',
   SHOES: '안전화',
 };
 
