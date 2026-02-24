@@ -1,46 +1,80 @@
-# vision/rules/ppe_rules.py
 from typing import List
 from vision_fullcam.rules.base import Rule, RuleContext, Event, Debounce
 from vision_fullcam.config import Config
 
+_MIN_HIST        = 10
+_CHECK_WIN       = 15
+_MISS_RATIO_THRESH = 0.7
+
+
+def _miss_ratio(hist: list, window: int) -> float:
+    recent = hist[-window:]
+    return recent.count(False) / len(recent)
+
+
 class HelmetNotWornRule(Rule):
     name = "helmet_not_worn"
-    def __init__(self, cfg: Config):
-        self.db = Debounce(cfg.ppe_missing_sec, cfg.cooldown_sec) # cfg의 debounce -> 프레임 단위 초 
 
-    def is_active(self, ctx):
+    def __init__(self, cfg: Config):
+        self.cfg = cfg
+        self._db_pool = Debounce(0, 0)
+
+    def is_active(self, ctx: RuleContext) -> bool:
         return ctx.state.has_person()
-    
+
     def evaluate(self, ctx: RuleContext) -> List[Event]:
-        now = ctx.timestamp
+        now    = ctx.timestamp
         events = []
-        # MVP: "헬멧이 화면에 있나"가 아니라 "사람별 헬멧"로 가야 맞음.
-        # 일단은 state.persons[*].helmet_hist에 외부에서 업데이트된다고 가정.
-        for p in ctx.state.persons.values():
-            if len(p.helmet_hist) < 10:
+
+        for person in ctx.state.persons.values():
+            hist = list(person.helmet_hist)
+            if len(hist) < _MIN_HIST:
                 continue
-            recent = list(p.helmet_hist)[-10:]
-            miss_ratio = recent.count(False) / len(recent)
-            if self.db.check(now, miss_ratio > 0.7):
-                events.append(Event(self.name, "medium", p.id, now, {"miss_ratio": miss_ratio}))
+
+            ratio = _miss_ratio(hist, _CHECK_WIN)
+            db = self._db_pool.setdefault(
+                person.id,
+                Debounce(self.cfg.ppe_missing_sec, self.cfg.cooldown_sec)
+            )
+
+            if db.check(now, ratio > _MISS_RATIO_THRESH):
+                events.append(Event(
+                    self.name, "medium", person.id, now,
+                    {"miss_ratio": round(ratio, 2)}
+                ))
+
         return events
+
 
 class SafetyVestNotWornRule(Rule):
     name = "safety_vest_not_worn"
+
     def __init__(self, cfg: Config):
-        self.db = Debounce(cfg.ppe_missing_sec, cfg.cooldown_sec)
-    
-    def is_active(self, ctx):
+        self.cfg = cfg
+        self._db_pool = Debounce(0, 0)
+
+    def is_active(self, ctx: RuleContext) -> bool:
         return ctx.state.has_person()
 
     def evaluate(self, ctx: RuleContext) -> List[Event]:
-        now = ctx.timestamp
+        now    = ctx.timestamp
         events = []
-        for p in ctx.state.persons.values():
-            if len(p.vest_hist) < 10:
+
+        for person in ctx.state.persons.values():
+            hist = list(person.vest_hist)
+            if len(hist) < _MIN_HIST:
                 continue
-            recent = list(p.vest_hist)[-10:]
-            miss_ratio = recent.count(False) / len(recent)
-            if self.db.check(now, miss_ratio > 0.7):
-                events.append(Event(self.name, "medium", p.id, now, {"miss_ratio": miss_ratio}))
+
+            ratio = _miss_ratio(hist, _CHECK_WIN)
+            db = self._db_pool.setdefault(
+                person.id,
+                Debounce(self.cfg.ppe_missing_sec, self.cfg.cooldown_sec)
+            )
+
+            if db.check(now, ratio > _MISS_RATIO_THRESH):
+                events.append(Event(
+                    self.name, "medium", person.id, now,
+                    {"miss_ratio": round(ratio, 2)}
+                ))
+
         return events

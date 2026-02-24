@@ -27,6 +27,7 @@ class Config:
     top_step_sec: float = 1.0
     body_tilt_sec: float = 1.2
     outtrigger_missing_sec: float = 2.5
+    outtrigger_not_deployed_sec: float = 1.5
     cooldown_sec: float = 15.0
 
     # ===== thresholds =====
