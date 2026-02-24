@@ -38,20 +38,3 @@ class SafetyVestNotWornRule(Rule):
             if self.db.check(now, miss_ratio > 0.7):
                 events.append(Event(self.name, "medium", p.id, now, {"miss_ratio": miss_ratio}))
         return events
-
-class SafetyShoesNotWornRule(Rule):
-    name = "safety_shoes_not_worn"
-    def __init__(self, cfg: Config):
-        self.db = Debounce(cfg.ppe_missing_sec, cfg.cooldown_sec)
-
-    def evaluate(self, ctx: RuleContext) -> List[Event]:
-        now = ctx.timestamp
-        events = []
-        for p in ctx.state.persons.values():
-            if len(p.shoes_hist) < 10:
-                continue
-            recent = list(p.shoes_hist)[-10:]
-            miss_ratio = recent.count(False) / len(recent)
-            if self.db.check(now, miss_ratio > 0.7):
-                events.append(Event(self.name, "low", p.id, now, {"miss_ratio": miss_ratio}))
-        return events

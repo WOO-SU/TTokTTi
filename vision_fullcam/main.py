@@ -21,7 +21,6 @@ from vision_fullcam.rules.base import RuleContext
 from vision_fullcam.rules.ppe_rules import (
     HelmetNotWornRule,
     SafetyVestNotWornRule,
-    SafetyShoesNotWornRule,
 )
 from vision_fullcam.rules.worker_count import InsufficientWorkerCountRule
 from vision_fullcam.rules.ladder_rules import (
@@ -97,13 +96,12 @@ def _handle_keys(detector, task: TaskState, key: int):
         ord("0"): ("normal",             "normal"),
         ord("1"): ("no_helmet",          "no_helmet (2s -> helmet_not_worn)"),
         ord("2"): ("no_vest",            "no_vest   (2s -> safety_vest_not_worn)"),
-        ord("3"): ("no_shoes",           "no_shoes  (2s -> safety_shoes_not_worn)"),
-        ord("4"): ("one_person",         "one_person(5s -> insufficient_worker_count)"),
-        ord("5"): ("ladder_move",        "ladder_move(-> ladder_movement_with_person)"),
-        ord("6"): ("tilted_ladder",      "tilted_ladder(1s -> ladder_tilt)"),
-        ord("7"): ("outtrigger_missing", "outtrigger_missing(2.5s -> outtrigger_not_deployed, task required=True)"),
-        ord("8"): ("outtrigger_deployed","outtrigger_deployed(정상 상태)"),
-        ord("9"): ("vehicle_proximity",  "vehicle_proximity(0.6s -> vehicle_proximity)"),
+        ord("3"): ("one_person",         "one_person(5s -> insufficient_worker_count)"),
+        ord("4"): ("ladder_move",        "ladder_move(-> ladder_movement_with_person)"),
+        ord("5"): ("tilted_ladder",      "tilted_ladder(1s -> ladder_tilt)"),
+        ord("6"): ("outtrigger_missing", "outtrigger_missing(2.5s -> outtrigger_not_deployed, task required=True)"),
+        ord("7"): ("outtrigger_deployed","outtrigger_deployed(정상 상태)"),
+        ord("8"): ("vehicle_proximity",  "vehicle_proximity(0.6s -> vehicle_proximity)"),
     }
 
     if key in mapping:
@@ -175,7 +173,6 @@ def main():
         # PPE
         HelmetNotWornRule(cfg),
         SafetyVestNotWornRule(cfg),
-        SafetyShoesNotWornRule(cfg),
 
         # people
         InsufficientWorkerCountRule(cfg),
@@ -192,13 +189,12 @@ def main():
         print("0: normal")
         print("1: no_helmet (2s -> helmet_not_worn)")
         print("2: no_vest   (2s -> safety_vest_not_worn)")
-        print("3: no_shoes  (2s -> safety_shoes_not_worn)")
-        print("4: one_person(5s -> insufficient_worker_count)")
-        print("5: ladder_move (-> ladder_movement_with_person)")
-        print("6: tilted_ladder (1s -> ladder_tilt)")
-        print("7: outtrigger_missing (2.5s -> outtrigger_not_deployed, task required=True)")
-        print("8: outtrigger_deployed (정상 상태)")
-        print("9: vehicle_proximity (0.6s -> vehicle_proximity)")
+        print("3: one_person(5s -> insufficient_worker_count)")
+        print("4: ladder_move (-> ladder_movement_with_person)")
+        print("5: tilted_ladder (1s -> ladder_tilt)")
+        print("6: outtrigger_missing (2.5s -> outtrigger_not_deployed, task required=True)")
+        print("7: outtrigger_deployed (정상 상태)")
+        print("8: vehicle_proximity (0.6s -> vehicle_proximity)")
         print("t: toggle outtrigger_required")
         print("h: toggle expected_height_m (2.0 <-> 4.0)")
         print("ESC: quit")
