@@ -61,6 +61,9 @@ export default function PhotoResultView({
                     </View>
                 </View>
             )}
+            {!showControls && (
+                <View style={[styles.bottomSection, { paddingBottom: insets.bottom + 16, height: insets.bottom + 80 }]} />
+            )}
         </View>
     );
 }

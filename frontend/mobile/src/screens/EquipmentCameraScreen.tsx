@@ -9,6 +9,7 @@ import {
   StatusBar,
   Image,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Camera } from 'react-native-vision-camera';
@@ -54,6 +55,8 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
   const [isUploading, setIsUploading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isFailed, setIsFailed] = useState(false);
+  const [complianceId, setComplianceId] = useState<number | null>(null);
+  const [manualRequested, setManualRequested] = useState(false);
 
   const cameraRef = useRef<Camera>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -116,6 +119,8 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
     setIsUploading(false);
     setIsSuccess(false);
     setIsFailed(false);
+    setComplianceId(null);
+    setManualRequested(false);
   }, []);
 
   // 선택 버튼 → 업로드 + 탐지 요청 + 폴링
@@ -124,10 +129,11 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
     try {
       setIsUploading(true);
       setIsFailed(false);
-      const { upload_url, blob_name } = await getSasToken();
+      const { upload_url, blob_name } = await getSasToken('image/jpeg', 'compliance');
       await uploadToBlob(upload_url, photoPath);
-      const complianceId = await requestDetection(blob_name, title, worksession_id);
-      startPolling(complianceId);
+      const cId = await requestDetection(blob_name, title, worksession_id);
+      setComplianceId(cId);
+      startPolling(cId);
     } catch (err) {
       console.error('handleConfirm error:', err);
       setIsUploading(false);
@@ -181,6 +187,24 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
               <View style={styles.resultCardOverlay}>
                 <Image source={getFailureImage()} style={styles.failureImage} resizeMode="contain" />
                 <Text style={styles.resultText}>❌ {getFailureMessage()}{`\n`}다시 촬영해주세요</Text>
+                {complianceId && !manualRequested && (
+                  <TouchableOpacity
+                    style={styles.manualRequestButton}
+                    onPress={async () => {
+                      try {
+                        await requestManualCheck(worksession_id, complianceId);
+                        setManualRequested(true);
+                        Alert.alert('요청 완료', '관리자에게 수동 확인을 요청했습니다.');
+                      } catch {
+                        Alert.alert('요청 실패', '다시 시도해주세요.');
+                      }
+                    }}>
+                    <Text style={styles.manualRequestText}>수동 확인 요청</Text>
+                  </TouchableOpacity>
+                )}
+                {manualRequested && (
+                  <Text style={styles.manualRequestedText}>✅ 수동 확인 요청됨</Text>
+                )}
               </View>
             )}
           </PhotoResultView>
@@ -392,5 +416,27 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     position: 'absolute',
     transform: [{ rotate: '-45deg' }],
+  },
+  manualRequestButton: {
+    marginTop: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#FFB800',
+    backgroundColor: '#FFFFFF',
+  },
+  manualRequestText: {
+    fontFamily: 'Noto Sans KR',
+    fontWeight: '600',
+    fontSize: 15,
+    color: '#FFB800',
+  },
+  manualRequestedText: {
+    marginTop: 8,
+    fontFamily: 'Noto Sans KR',
+    fontWeight: '500',
+    fontSize: 14,
+    color: '#71727A',
   },
 });

@@ -77,3 +77,6 @@ vision_fullcam/data/*
 *.pt
 *.mp4
 *.avi
+*.npy
+best_saved_model/
+trans_model.py

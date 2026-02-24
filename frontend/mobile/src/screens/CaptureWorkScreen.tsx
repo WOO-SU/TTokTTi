@@ -36,7 +36,7 @@ export default function CaptureWorkScreen() {
     const route = useRoute<RouteProp<HomeStackParamList, 'CaptureWork'>>();
     const { worksession_id } = route.params;
     const insets = useSafeAreaInsets();
-    const [screenState, setScreenState] = useState<ScreenState>('idle');
+    const [screenState, setScreenState] = useState<ScreenState>('camera');
     const [photoPath, setPhotoPath] = useState<string | null>(null);
 
     const cameraRef = useRef<Camera>(null);
@@ -66,7 +66,7 @@ export default function CaptureWorkScreen() {
         }
         setScreenState('sending');
         try {
-            const { upload_url, blob_name } = await getSasToken();
+            const { upload_url, blob_name } = await getSasToken('image/jpeg', 'target');
             await uploadToBlob(upload_url, photoPath);
             // 업로드 성공 후 백엔드 DB에 기록 요청
             await requestTargetPhoto(blob_name, worksession_id, 'BEFORE');
@@ -91,80 +91,62 @@ export default function CaptureWorkScreen() {
 
             <TopHeader title="작업물 촬영" />
 
-            {/* Idle State */}
-            {screenState === 'idle' && (
-                <View style={styles.idleContent}>
-                    <Text style={styles.idleTitle}>작업물 상태를 촬영합니다</Text>
-                    <Text style={styles.idleSubtitle}>현장 사진을 촬영해주세요</Text>
-                    <TouchableOpacity
-                        style={styles.startCameraButton}
-                        activeOpacity={0.8}
-                        onPress={handleStartCamera}>
-                        <Text style={styles.startCameraButtonText}>촬영 시작</Text>
-                    </TouchableOpacity>
-                </View>
-            )}
-
             {/* Camera & Preview States */}
-            {screenState !== 'idle' && (
-                <>
-                    <View style={styles.cameraPreview}>
-                        {screenState === 'camera' && (
-                            <BaseCamera
-                                ref={cameraRef}
-                                isActive={true}
-                                photo={true}
-                                guideText="작업물 상태를 촬영하세요"
-                                onCapture={handleCapture}
-                            />
-                        )}
-                        {screenState === 'preview' && photoPath && (
-                            <PhotoResultView
-                                photoPath={photoPath}
-                                onRetake={handleRetake}
-                                onConfirm={handleSend}
-                                confirmText="사진 보내기"
-                            />
-                        )}
-                        {screenState === 'sending' && photoPath && (
-                            <PhotoResultView
-                                photoPath={photoPath}
-                                onRetake={handleRetake}
-                                onConfirm={handleSend}
-                                confirmText="사진 보내기"
-                                showControls={false}
-                            >
-                                <View style={styles.resultOverlay}>
-                                    <ActivityIndicator size="large" color="#FFB800" />
-                                    <Text style={styles.resultOverlayText}>업로드 중...</Text>
-                                </View>
-                            </PhotoResultView>
-                        )}
-                        {screenState === 'sent' && photoPath && (
-                            <PhotoResultView
-                                photoPath={photoPath}
-                                onRetake={handleRetake}
-                                onConfirm={handleDone}
-                                confirmText="확인"
-                            >
-                                <View style={styles.resultOverlay}>
-                                    <LargeCheckIcon />
-                                    <Text style={styles.resultOverlayText}>전송 완료</Text>
-                                </View>
-                            </PhotoResultView>
-                        )}
-                    </View>
+            <View style={styles.cameraPreview}>
+                {screenState === 'camera' && (
+                    <BaseCamera
+                        ref={cameraRef}
+                        isActive={true}
+                        photo={true}
+                        guideText="작업물 상태를 촬영하세요"
+                        onCapture={handleCapture}
+                    />
+                )}
+                {screenState === 'preview' && photoPath && (
+                    <PhotoResultView
+                        photoPath={photoPath}
+                        onRetake={handleRetake}
+                        onConfirm={handleSend}
+                        confirmText="사진 보내기"
+                    />
+                )}
+                {screenState === 'sending' && photoPath && (
+                    <PhotoResultView
+                        photoPath={photoPath}
+                        onRetake={handleRetake}
+                        onConfirm={handleSend}
+                        confirmText="사진 보내기"
+                        isConfirming={true}
+                    >
+                        <View style={styles.resultOverlay}>
+                            <ActivityIndicator size="large" color="#FFB800" />
+                            <Text style={styles.resultOverlayText}>업로드 중...</Text>
+                        </View>
+                    </PhotoResultView>
+                )}
+                {screenState === 'sent' && photoPath && (
+                    <PhotoResultView
+                        photoPath={photoPath}
+                        onRetake={handleRetake}
+                        onConfirm={handleDone}
+                        confirmText="확인"
+                    >
+                        <View style={styles.resultOverlay}>
+                            <LargeCheckIcon />
+                            <Text style={styles.resultOverlayText}>전송 완료</Text>
+                        </View>
+                    </PhotoResultView>
+                )}
+            </View>
 
-                    {/* Bottom Spacer Section to match EquipmentCameraScreen Layout */}
-                    {screenState === 'camera' && (
-                        <View
-                            style={[
-                                styles.bottomSection,
-                                { height: insets.bottom + 16 },
-                            ]}
-                        />
-                    )}
-                </>
+            {/* Bottom Spacer */}
+            {screenState === 'camera' && (
+                <View
+                    style={[
+                        styles.bottomSection,
+                        { height: insets.bottom + 16 },
+                    ]}
+                />
             )}
         </View>
     );

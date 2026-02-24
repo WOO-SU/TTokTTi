@@ -79,13 +79,10 @@ export default function LoginScreen({ navigation }: Props) {
             resizeMode="contain"
           />
         </View>
+        <Text style={styles.logoText}>TTok TTi</Text>
 
         {/* Login Options */}
         <View style={[styles.loginOptions, { paddingBottom: insets.bottom + 40 }]}>
-          {/* Welcome Title */}
-          <Text style={styles.welcomeTitle}>Welcome!</Text>
-
-          {/* Login Form */}
           <View style={styles.loginSection}>
             <View style={styles.form}>
               {/* Email Field */}
@@ -211,14 +208,23 @@ const styles = StyleSheet.create({
   },
   heroImageWrapper: {
     width: SCREEN_WIDTH,
-    height: 251,
+    height: 200,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F3D261',
+    overflow: 'hidden',
   },
   heroImage: {
-    width: '100%',
-    height: '100%',
+    width: '80%',
+    height: 300,
+  },
+  logoText: {
+    fontFamily: 'Noto Sans KR',
+    fontWeight: '800',
+    fontSize: 28,
+    color: '#000000',
+    textAlign: 'center',
+    marginTop: 4,
   },
   loginOptions: {
     paddingHorizontal: 24,

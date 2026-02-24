@@ -11,7 +11,8 @@ class IssueUploadSASView(APIView):
     def post(self, request):
         filename = request.data.get("filename")  # optional
         content_type = request.data.get("content_type")  # optional
-        payload = make_upload_sas(filename=filename, content_type=content_type)
+        container = request.data.get("container")  # optional (compliance, target, assessment 등)
+        payload = make_upload_sas(filename=filename, content_type=content_type, container=container)
         return Response(payload, status=status.HTTP_200_OK)
 
 class IssueDownloadSASView(APIView):
