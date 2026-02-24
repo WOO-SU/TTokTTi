@@ -1,0 +1,57 @@
+name: Deploy Backend to Azure Container Apps
+
+on:
+  push:
+    branches:
+      - main  # Or 'dev', depending on when you want to trigger this
+    paths:
+      - 'backend/**' # Only run if backend code changes
+
+env:
+  ACR_LOGIN_SERVER: riskpulseacr.azurecr.io # Replace with your ACR name
+  IMAGE_NAME: riskpulse-backend
+  CONTAINER_APP_NAME: api-riskpulse
+  RESOURCE_GROUP: rg-riskpulse
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Get the code
+      - name: Checkout GitHub Actions
+        uses: actions/checkout@v3
+
+      # 2. Log into Azure
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # 3. Log into your Azure Container Registry
+      - name: Log in to ACR
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      # 4. Build and Push the Docker Image
+      - name: Build and push container image to ACR
+        run: |
+          # Go to the backend directory where the Dockerfile is
+          cd backend
+          
+          # Build the image and tag it with the Github SHA (unique ID)
+          docker build -t ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
+          
+          # Push it to ACR
+          docker push ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      # 5. Deploy to Azure Container Apps
+      - name: Deploy to Azure Container Apps
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          resourceGroup: ${{ env.RESOURCE_GROUP }}
+          containerAppName: ${{ env.CONTAINER_APP_NAME }}
+          imageToDeploy: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
