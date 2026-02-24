@@ -202,7 +202,7 @@ const styles: Record<string, React.CSSProperties> = {
     margin: 0,
   },
   termsLink: {
-    color: '#006FFD',
+    color: '#FFB800',
     fontWeight: 600,
     cursor: 'pointer',
   },

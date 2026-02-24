@@ -92,7 +92,7 @@ const sidebarItems = [
 const workStatusColors: Record<string, { bg: string; text: string }> = {
   '작업 전': { bg: '#F0F1F3', text: '#71727A' },
   '작업 중': { bg: '#E7F4E8', text: '#298A3E' },
-  '작업 끝': { bg: '#EAF2FF', text: '#006FFD' },
+  '작업 끝': { bg: '#FFF8E1', text: '#FFB800' },
 };
 
 const STATUS_MAP: Record<string, '작업 전' | '작업 중' | '작업 끝'> = {
@@ -505,7 +505,7 @@ export default function WorkerRiskScreen() {
           <span style={styles.logoText}>TTokTTi</span>
         </button>
         <div style={styles.sidebarIcons}>
-          <button type="button" style={{ ...styles.sidebarIconBtn, ...(isProfileActive ? { backgroundColor: '#006FFD', boxShadow: '0 2px 8px rgba(0,111,253,0.3)' } : {}) }} onClick={() => navigate('/profile')}>👤</button>
+          <button type="button" style={{ ...styles.sidebarIconBtn, ...(isProfileActive ? { backgroundColor: '#FFB800', boxShadow: '0 2px 8px rgba(255,184,0,0.3)' } : {}) }} onClick={() => navigate('/profile')}>👤</button>
           <button type="button" style={styles.sidebarIconBtn}>⚙️</button>
           <button type="button" style={{ ...styles.sidebarIconBtn, position: 'relative' }}>
             🔔
@@ -617,9 +617,9 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '10px 8px', borderRadius: 8, background: 'none', border: 'none',
     cursor: 'pointer', width: '100%', textAlign: 'left',
   },
-  sidebarNavItemActive: { backgroundColor: '#EAF2FF' },
+  sidebarNavItemActive: { backgroundColor: '#FFF8E1' },
   sidebarNavLabel: { fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: 14, color: '#71727A' },
-  sidebarNavLabelActive: { color: '#006FFD', fontWeight: 600 },
+  sidebarNavLabelActive: { color: '#FFB800', fontWeight: 600 },
   logoutBtn: {
     fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 13, color: '#71727A',
     padding: '8px 16px', borderRadius: 8, background: 'none', border: '1px solid #E8E9EB', cursor: 'pointer',
@@ -650,7 +650,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   sectionBadge: {
     fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 12, color: '#FFFFFF',
-    backgroundColor: '#006FFD', borderRadius: 12, padding: '2px 10px',
+    backgroundColor: '#FFB800', borderRadius: 12, padding: '2px 10px',
   },
 
   // Loading
@@ -659,7 +659,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 12, padding: '60px 0',
   },
   spinner: {
-    width: 28, height: 28, border: '3px solid #E8E9EB', borderTopColor: '#006FFD',
+    width: 28, height: 28, border: '3px solid #E8E9EB', borderTopColor: '#FFB800',
     borderRadius: '50%', animation: 'spin 0.8s linear infinite',
   },
   loadingText: {
@@ -708,7 +708,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex', flexDirection: 'row', alignItems: 'center',
   },
   memberName: {
-    fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 13, color: '#006FFD',
+    fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 13, color: '#FFB800',
   },
   expandArrow: {
     fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#8F9098', marginLeft: 4,

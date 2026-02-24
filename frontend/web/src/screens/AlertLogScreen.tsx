@@ -370,7 +370,7 @@ export default function AlertLogScreen() {
         <div style={styles.sidebarIcons}>
           <button
             type="button"
-            style={{ ...styles.sidebarIconBtn, ...(isProfileActive ? { backgroundColor: '#006FFD', boxShadow: '0 2px 8px rgba(0,111,253,0.3)' } : {}) }}
+            style={{ ...styles.sidebarIconBtn, ...(isProfileActive ? { backgroundColor: '#FFB800', boxShadow: '0 2px 8px rgba(255,184,0,0.3)' } : {}) }}
             onClick={() => navigate('/profile')}>
             👤
           </button>
@@ -434,7 +434,7 @@ export default function AlertLogScreen() {
                 {f === 'ALL' ? '전체' : f === 'AUTO' ? '자동 감지' : '수동 요청'}
                 <span style={{
                   ...styles.filterCount,
-                  backgroundColor: filter === f ? '#006FFD' : '#E8E9EB',
+                  backgroundColor: filter === f ? '#FFB800' : '#E8E9EB',
                   color: filter === f ? '#FFFFFF' : '#71727A',
                 }}>
                   {f === 'ALL' ? logs.length : logs.filter(l => l.source === f).length}
@@ -648,14 +648,14 @@ const styles: Record<string, React.CSSProperties> = {
     width: '100%',
     textAlign: 'left',
   },
-  sidebarNavItemActive: { backgroundColor: '#EAF2FF' },
+  sidebarNavItemActive: { backgroundColor: '#FFF8E1' },
   sidebarNavLabel: {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 500,
     fontSize: 14,
     color: '#71727A',
   },
-  sidebarNavLabelActive: { color: '#006FFD', fontWeight: 600 },
+  sidebarNavLabelActive: { color: '#FFB800', fontWeight: 600 },
   logoutBtn: {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 600,
@@ -727,8 +727,8 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 6,
   },
   filterBtnActive: {
-    color: '#006FFD',
-    borderColor: '#006FFD',
+    color: '#FFB800',
+    borderColor: '#FFB800',
     backgroundColor: '#F8FAFF',
   },
   filterCount: {
@@ -775,9 +775,9 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 600,
     fontSize: 11,
-    color: '#006FFD',
+    color: '#FFB800',
     backgroundColor: 'transparent',
-    border: '1.5px solid #006FFD',
+    border: '1.5px solid #FFB800',
     borderRadius: 6,
     padding: '4px 12px',
     cursor: 'pointer',

@@ -107,7 +107,7 @@ const statusTextMap: Record<string, string> = {
 const workStatusColors: Record<string, { bg: string; text: string }> = {
   READY: { bg: '#F0F1F3', text: '#71727A' },
   IN_PROGRESS: { bg: '#E7F4E8', text: '#298A3E' },
-  DONE: { bg: '#EAF2FF', text: '#006FFD' },
+  DONE: { bg: '#FFF8E1', text: '#FFB800' },
 };
 
 function formatTime(isoStr: string): string {
@@ -264,7 +264,7 @@ export default function WorkSessionDetailScreen() {
                       {summary.risk_report.overall && (
                         <div style={styles.riskRow}>
                           <div style={styles.riskRowLeft}>
-                            <span style={{ ...styles.riskLevelBadge, backgroundColor: '#EAF2FF', color: '#006FFD' }}>
+                            <span style={{ ...styles.riskLevelBadge, backgroundColor: '#FFF8E1', color: '#FFB800' }}>
                               종합
                             </span>
                             <span style={styles.riskItem}>종합 평가</span>
@@ -504,7 +504,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 600,
     fontSize: 13,
-    color: '#006FFD',
+    color: '#FFB800',
     background: 'none',
     border: 'none',
     cursor: 'pointer',
@@ -540,7 +540,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 600,
     fontSize: 13,
-    color: '#006FFD',
+    color: '#FFB800',
     background: 'none',
     border: 'none',
     cursor: 'pointer',
@@ -579,9 +579,9 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
   },
   tabBtnActive: {
-    color: '#006FFD',
+    color: '#FFB800',
     fontWeight: 700,
-    borderBottom: '2px solid #006FFD',
+    borderBottom: '2px solid #FFB800',
   },
   tabContent: {
     flex: 1,

@@ -44,7 +44,7 @@ const equipmentItems: EquipmentItem[] = [
   { category: 'SHOES', label: '안전장갑 착용', icon: '🧤' },
 ];
 
-const MEMBER_COLORS = ['#006FFD', '#E87C5D', '#22A06B', '#8F9098', '#7B61FF', '#E85DBF', '#FF6B35', '#9B59B6'];
+const MEMBER_COLORS = ['#FFB800', '#E87C5D', '#22A06B', '#8F9098', '#7B61FF', '#E85DBF', '#FF6B35', '#9B59B6'];
 
 function getMemberColor(index: number): string {
   return MEMBER_COLORS[index % MEMBER_COLORS.length];
@@ -189,7 +189,7 @@ export default function SafetyRegulationScreen() {
         </button>
 
         <div style={styles.sidebarIcons}>
-          <button type="button" style={{ ...styles.sidebarIconBtn, ...(isProfileActive ? { backgroundColor: '#006FFD', boxShadow: '0 2px 8px rgba(0,111,253,0.3)' } : {}) }} onClick={() => navigate('/profile')}>👤</button>
+          <button type="button" style={{ ...styles.sidebarIconBtn, ...(isProfileActive ? { backgroundColor: '#FFB800', boxShadow: '0 2px 8px rgba(255,184,0,0.3)' } : {}) }} onClick={() => navigate('/profile')}>👤</button>
           <button type="button" style={styles.sidebarIconBtn}>⚙️</button>
           <button type="button" style={{ ...styles.sidebarIconBtn, position: 'relative' }}>
             🔔
@@ -251,7 +251,7 @@ export default function SafetyRegulationScreen() {
                 </div>
                 <span style={{
                   ...styles.summaryCount,
-                  color: done === total && total > 0 ? '#22A06B' : '#006FFD',
+                  color: done === total && total > 0 ? '#22A06B' : '#FFB800',
                 }}>
                   {done}/{total}
                 </span>
@@ -323,7 +323,7 @@ export default function SafetyRegulationScreen() {
                       <div style={{
                         ...styles.progressBarFill,
                         width: `${groupPct}%`,
-                        backgroundColor: groupDone === totalChecks && totalChecks > 0 ? '#22A06B' : '#006FFD',
+                        backgroundColor: groupDone === totalChecks && totalChecks > 0 ? '#22A06B' : '#FFB800',
                       }} />
                     </div>
                     <span style={{
@@ -357,8 +357,8 @@ export default function SafetyRegulationScreen() {
                                 <span style={styles.equipmentLabel}>{eq.label}</span>
                                 <span style={{
                                   ...styles.equipmentBadge,
-                                  backgroundColor: allDone ? '#E8F5E9' : '#EAF2FF',
-                                  color: allDone ? '#22A06B' : '#006FFD',
+                                  backgroundColor: allDone ? '#E8F5E9' : '#FFF8E1',
+                                  color: allDone ? '#22A06B' : '#FFB800',
                                 }}>
                                   {done}/{total}
                                 </span>
@@ -372,7 +372,7 @@ export default function SafetyRegulationScreen() {
                                 <div style={{
                                   ...styles.progressBarFill,
                                   width: `${pct}%`,
-                                  backgroundColor: allDone ? '#22A06B' : '#006FFD',
+                                  backgroundColor: allDone ? '#22A06B' : '#FFB800',
                                 }} />
                               </div>
                             </div>
@@ -406,8 +406,8 @@ export default function SafetyRegulationScreen() {
                                           type="button"
                                           style={{
                                             ...styles.checkbox,
-                                            backgroundColor: isChecked ? '#006FFD' : '#FFFFFF',
-                                            borderColor: isChecked ? '#006FFD' : '#C5C6CC',
+                                            backgroundColor: isChecked ? '#FFB800' : '#FFFFFF',
+                                            borderColor: isChecked ? '#FFB800' : '#C5C6CC',
                                           }}
                                           onClick={() => toggleCompliance(key)}
                                         >
@@ -558,7 +558,7 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: 'left',
   },
   sidebarNavItemActive: {
-    backgroundColor: '#EAF2FF',
+    backgroundColor: '#FFF8E1',
   },
   sidebarNavLabel: {
     fontFamily: 'Inter, sans-serif',
@@ -567,7 +567,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#71727A',
   },
   sidebarNavLabelActive: {
-    color: '#006FFD',
+    color: '#FFB800',
     fontWeight: 600,
   },
   logoutBtn: {
@@ -747,7 +747,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 600,
     fontSize: 13,
-    color: '#006FFD',
+    color: '#FFB800',
   },
   groupProgressRow: {
     display: 'flex',

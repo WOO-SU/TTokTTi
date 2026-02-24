@@ -97,7 +97,7 @@ function persistReadAlertIds(ids: Set<number>) {
 const workStatusColors: Record<string, { bg: string; text: string }> = {
   'READY': { bg: '#F0F1F3', text: '#71727A' },
   'IN_PROGRESS': { bg: '#E7F4E8', text: '#298A3E' },
-  'DONE': { bg: '#EAF2FF', text: '#006FFD' },
+  'DONE': { bg: '#FFF8E1', text: '#FFB800' },
 };
 
 const statusTextMap: Record<string, string> = {
@@ -486,8 +486,8 @@ function WorkSiteCardComponent({
               type="button"
               style={{
                 ...styles.expandReportBtn,
-                color: card.report ? '#006FFD' : '#8F9098',
-                borderColor: card.report ? '#006FFD' : '#C5C6CC',
+                color: card.report ? '#FFB800' : '#8F9098',
+                borderColor: card.report ? '#FFB800' : '#C5C6CC',
               }}
               onClick={(e) => {
                 e.stopPropagation();
@@ -518,7 +518,7 @@ function AlertRowComponent({
   const description = getAlertDescription(log);
   const statusInfo = log.status ? STATUS_LABEL[log.status] : null;
 
-  const bgColor = isRead ? '#FFFFFF' : (isManual ? '#F4F8FF' : '#FFF5F5');
+  const bgColor = isRead ? '#FFFFFF' : (isManual ? '#EAF2FF' : '#FFF5F5');
   const borderColor = isRead ? '#E8E9EB' : (isManual ? '#006FFD' : '#DC2626');
   const titleColor = isRead ? '#71727A' : '#1F2024';
   const descColor = isRead ? '#8F9098' : (isManual ? '#006FFD' : '#DC2626');
@@ -552,7 +552,7 @@ function AlertRowComponent({
           {!isRead && <span style={{
             ...styles.alertUnreadDot,
             backgroundColor: isManual ? '#006FFD' : '#DC2626',
-            boxShadow: isManual ? '0 0 0 2px #EAF2FF' : '0 0 0 2px #FFF5F5',
+            boxShadow: isManual ? '0 0 0 2px #FFF8E1' : '0 0 0 2px #FFF5F5',
           }} />}
         </div>
       </div>
@@ -765,7 +765,7 @@ export default function HomeScreen() {
         <div style={styles.sidebarIcons}>
           <button
             type="button"
-            style={{ ...styles.sidebarIconBtn, ...(isProfileActive ? { backgroundColor: '#006FFD', boxShadow: '0 2px 8px rgba(0,111,253,0.3)' } : {}) }}
+            style={{ ...styles.sidebarIconBtn, ...(isProfileActive ? { backgroundColor: '#FFB800', boxShadow: '0 2px 8px rgba(255,184,0,0.3)' } : {}) }}
             onClick={() => navigate('/profile')}>
             👤
           </button>
@@ -1013,14 +1013,14 @@ const styles: Record<string, React.CSSProperties> = {
     width: '100%',
     textAlign: 'left',
   },
-  sidebarNavItemActive: { backgroundColor: '#EAF2FF' },
+  sidebarNavItemActive: { backgroundColor: '#FFF8E1' },
   sidebarNavLabel: {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 500,
     fontSize: 14,
     color: '#71727A',
   },
-  sidebarNavLabelActive: { color: '#006FFD', fontWeight: 600 },
+  sidebarNavLabelActive: { color: '#FFB800', fontWeight: 600 },
   logoutBtn: {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 600,
@@ -1093,7 +1093,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     fontSize: 12,
     color: '#FFFFFF',
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 12,
     padding: '2px 10px',
   },
@@ -1203,7 +1203,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 600,
     fontSize: 13,
-    color: '#006FFD',
+    color: '#FFB800',
     background: 'none',
     border: 'none',
     cursor: 'pointer',
@@ -1219,9 +1219,9 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 600,
     fontSize: 13,
-    color: '#006FFD',
+    color: '#FFB800',
     backgroundColor: '#FFFFFF',
-    border: '1.5px solid #006FFD',
+    border: '1.5px solid #FFB800',
     borderRadius: 8,
     padding: '7px 0',
     cursor: 'pointer',
@@ -1382,7 +1382,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 700,
     fontSize: 11,
-    color: '#006FFD',
+    color: '#FFB800',
   },
   alertEmpty: {
     display: 'flex',
@@ -1529,7 +1529,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     fontSize: 14,
     color: '#FFFFFF',
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     border: 'none',
     borderRadius: 10,
     padding: '14px 0',
