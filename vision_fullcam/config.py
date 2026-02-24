@@ -8,7 +8,7 @@ class Config:
     use_fake_detector: bool = False
     yolo_model_path: str = "yolov8n.pt"
     camera_index= "vision_fullcam/사다리추락.mp4"
-    show_window: bool = False
+    show_window: bool = True
     output_dir: str =  str(Path(__file__).resolve().parent / "data")
 
     # ===== task defaults =====

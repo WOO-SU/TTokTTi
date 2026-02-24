@@ -39,6 +39,8 @@ from vision_fullcam.rules.vehicle_rules import VehicleProximityRule
 from vision_fullcam.events.clip_buffer import ClipBuffer
 from vision_fullcam.events.emitter import EventEmitter
 
+from vision_fullcam.ui.draw import draw_tracked, draw_events
+
 def build_detector(cfg: Config):
     if getattr(cfg, "use_fake_detector", False):
         return FakeDetector(fps=cfg.fps_monitor)
@@ -223,6 +225,8 @@ def main():
             ]
             tracked = tracker.update(tracked_input)
 
+            draw_tracked(frame, tracked)
+
             # 3) state update
             now = time.time()
             state.update(tracked,frame, now)
@@ -242,6 +246,9 @@ def main():
             for rule in rules:
                 if rule.is_active(ctx):
                     events.extend(rule.evaluate(ctx))
+            
+            if events:
+                draw_events(frame, events)
 
             # 7) emit
             if events:
