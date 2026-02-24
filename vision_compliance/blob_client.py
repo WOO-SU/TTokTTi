@@ -30,15 +30,12 @@ class BlobClient:
 
     def upload(self, image_bytes: bytes, prefix: str = "detected") -> str:
         """탐지 결과 이미지를 Blob에 업로드하고 blob_name 반환"""
-        filename = f"{uuid.uuid4().hex}.jpg"
-        # compliance 컨테이너에 detected/ 폴더로 업로드
+        filename = f"{prefix}_{uuid.uuid4().hex}.jpg"
         container = self._svc.get_container_client("compliance")
-        blob_name = f"{prefix}/{filename}"
-        blob = container.get_blob_client(blob_name)
+        blob = container.get_blob_client(filename)
         blob.upload_blob(
             io.BytesIO(image_bytes),
             overwrite=True,
             content_settings=ContentSettings(content_type="image/jpeg"),
         )
-        # DB에 저장할 때는 container/prefix/filename 형태로 반환
-        return f"compliance/{blob_name}"
+        return f"compliance/{filename}"

@@ -132,7 +132,7 @@ export default function CaptureWorkScreen() {
                                 onRetake={handleRetake}
                                 onConfirm={handleSend}
                                 confirmText="사진 보내기"
-                                showControls={false}
+                                isConfirming={true}
                             >
                                 <View style={styles.resultOverlay}>
                                     <ActivityIndicator size="large" color="#FFB800" />
