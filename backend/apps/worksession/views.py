@@ -208,7 +208,7 @@ def get_worksession_summary(request, worksession_id):
         )
 
     risk_report = RiskReport.objects.filter(
-        worksession=worksession
+        assessment__worksession=worksession
     ).first()
 
     workers = (

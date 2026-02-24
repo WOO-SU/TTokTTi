@@ -28,6 +28,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const saved = getSavedUser();
       if (saved) {
         setUser(saved);
+      } else {
+        // 토큰은 있지만 유저 정보가 localStorage에 없는 경우 (이전 로그인)
+        try {
+          const payload = JSON.parse(atob(access.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+          setUser({ userName: payload.user_name ?? '', userId: payload.user_id ?? null });
+        } catch {
+          setUser({ userName: '', userId: null });
+        }
       }
     }
     setLoading(false);

@@ -125,7 +125,7 @@ const styles: Record<string, React.CSSProperties> = {
   resetButton: {
     width: '100%',
     height: 48,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 12,
     display: 'flex',
     justifyContent: 'center',

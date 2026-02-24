@@ -59,7 +59,7 @@ jobs:
           env-vars: |
             DB_NAME=riskpulse_db
             DB_USER=user
-            DB_PASSWORD=${{ secrets.DB_PASSWORD }
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY}}
 
             REDIS_HOST="redis"

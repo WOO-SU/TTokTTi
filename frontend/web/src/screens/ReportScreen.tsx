@@ -327,7 +327,7 @@ export default function ReportScreen() {
         </button>
 
         <div style={styles.sidebarIcons}>
-          <button type="button" style={{ ...styles.sidebarIconBtn, ...(isProfileActive ? { backgroundColor: '#006FFD', boxShadow: '0 2px 8px rgba(0,111,253,0.3)' } : {}) }} onClick={() => navigate('/profile')}>👤</button>
+          <button type="button" style={{ ...styles.sidebarIconBtn, ...(isProfileActive ? { backgroundColor: '#FFB800', boxShadow: '0 2px 8px rgba(255,184,0,0.3)' } : {}) }} onClick={() => navigate('/profile')}>👤</button>
           <button type="button" style={styles.sidebarIconBtn}>⚙️</button>
           <button type="button" style={{ ...styles.sidebarIconBtn, position: 'relative' as const }}>
             🔔
@@ -911,7 +911,7 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: 'left' as const,
   },
   sidebarNavItemActive: {
-    backgroundColor: '#EAF2FF',
+    backgroundColor: '#FFF8E1',
   },
   sidebarNavLabel: {
     fontFamily: 'Inter, sans-serif',
@@ -920,7 +920,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#71727A',
   },
   sidebarNavLabelActive: {
-    color: '#006FFD',
+    color: '#FFB800',
     fontWeight: 600,
   },
 
@@ -1008,8 +1008,8 @@ const styles: Record<string, React.CSSProperties> = {
     transition: 'border-color 0.15s',
   },
   teamCardSelected: {
-    borderColor: '#006FFD',
-    backgroundColor: '#F5F9FF',
+    borderColor: '#FFB800',
+    backgroundColor: '#FFF8E1',
   },
   teamCardHeader: {
     display: 'flex',
@@ -1051,7 +1051,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 500,
     fontSize: 11,
-    color: '#006FFD',
+    color: '#FFB800',
     marginTop: 2,
   },
 
@@ -1162,7 +1162,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '12px 28px',
     borderRadius: 10,
     border: 'none',
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     fontFamily: 'Inter, sans-serif',
     fontWeight: 600,
     fontSize: 15,
@@ -1173,8 +1173,8 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 600,
     fontSize: 13,
-    color: '#006FFD',
-    backgroundColor: '#EAF2FF',
+    color: '#FFB800',
+    backgroundColor: '#FFF8E1',
     padding: '4px 12px',
     borderRadius: 8,
   },
@@ -1212,7 +1212,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: 32,
     height: 32,
     border: '3px solid #E8E9EB',
-    borderTopColor: '#006FFD',
+    borderTopColor: '#FFB800',
     borderRadius: '50%',
     animation: 'spin 0.8s linear infinite',
   },
@@ -1433,7 +1433,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 700,
     fontSize: 28,
-    color: '#006FFD',
+    color: '#FFB800',
   },
   complianceBar: {
     width: '100%',
