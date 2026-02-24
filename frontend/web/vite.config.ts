@@ -7,7 +7,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://backend:8000',
+        target: 'https://api-riskpulse.delightfulglacier-38eeee86.koreacentral.azurecontainerapps.io',
         changeOrigin: true,
       },
     },
