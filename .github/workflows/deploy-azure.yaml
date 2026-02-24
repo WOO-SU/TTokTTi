@@ -51,23 +51,25 @@ jobs:
 
       # 5. Deploy to Azure Container Apps
       - name: Deploy to Azure Container Apps
-        uses: azure/container-apps-deploy-action@v1
+        uses: azure/CLI@v1
         with:
-          resourceGroup: ${{ env.RESOURCE_GROUP }}
-          containerAppName: ${{ env.CONTAINER_APP_NAME }}
-          imageToDeploy: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-
-          environmentVariables: >-
-            DB_NAME=riskpulse_db
-            DB_USER=user
-            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-            DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY}}
-            REDIS_HOST="redis"
-            REDIS_PORT="6379"
-            AZURE_STORAGE_ACCOUNT_NAME=striskpulse
-            AZURE_STORAGE_ACCOUNT_KEY=${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
-            AZURE_BLOB_CONTAINER=images
-            AZURE_SAS_TTL_MINUTES=10
-            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
-            OPENAI_MODEL=gpt-4o-mini
-            MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }} 
+          inlineScript: |
+            az containerapp update \
+              --name ${{ env.CONTAINER_APP_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --image ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+              --set-env-vars \
+                "DB_NAME=riskpulse_db" \
+                "DB_USER=${{ secrets.DB_USER }}" \
+                "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" \
+                "MYSQL_HOST=${{ secrets.MYSQL_HOST }}" \
+                "MYSQL_PORT=3306" \
+                "DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}" \
+                "REDIS_HOST=${{ secrets.REDIS_HOST }}" \
+                "REDIS_PORT=6380" \
+                "AZURE_STORAGE_ACCOUNT_NAME=striskpulse" \
+                "AZURE_STORAGE_ACCOUNT_KEY=${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}" \
+                "AZURE_BLOB_CONTAINER=images" \
+                "AZURE_SAS_TTL_MINUTES=10" \
+                "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" \
+                "OPENAI_MODEL=gpt-4o-mini"
