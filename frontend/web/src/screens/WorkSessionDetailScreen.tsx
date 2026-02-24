@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { apiFetch } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import managerImg from '../assets/manager.jpg';
 
 // ── Types ──
@@ -155,6 +156,7 @@ const PHOTO_LABEL: Record<string, string> = {
 export default function WorkSessionDetailScreen() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
   const { id } = useParams<{ id: string }>();
   const sessionId = Number(id ?? 1);
 
@@ -193,6 +195,11 @@ export default function WorkSessionDetailScreen() {
 
   const sc = workStatusColors[cardStatus] ?? workStatusColors.READY;
 
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+
   return (
     <div style={styles.container}>
       {/* ── Sidebar ── */}
@@ -219,9 +226,12 @@ export default function WorkSessionDetailScreen() {
       <main style={styles.main}>
         {/* Header */}
         <div style={styles.header}>
-          <button type="button" style={styles.backBtn} onClick={() => navigate('/home')}>
-            ← 홈으로
-          </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <button type="button" style={styles.backBtn} onClick={() => navigate('/home')}>
+              ← 홈으로
+            </button>
+            <button type="button" style={styles.logoutBtn} onClick={handleLogout}>Logout</button>
+          </div>
           <div style={styles.headerInfo}>
             <h1 style={styles.headerTitle}>{siteName}</h1>
             <div style={styles.headerMeta}>
@@ -639,6 +649,17 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     padding: 0,
     alignSelf: 'flex-start',
+  },
+  logoutBtn: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
+    fontSize: 13,
+    color: '#71727A',
+    padding: '8px 16px',
+    borderRadius: 8,
+    background: 'none',
+    border: '1px solid #E8E9EB',
+    cursor: 'pointer',
   },
   headerInfo: {
     display: 'flex',
