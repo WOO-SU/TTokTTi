@@ -49,11 +49,15 @@ class SafetyAnalyzer:
                 "If everything is safe, reply only with 'SAFE'."
             )
 
+            # NOTE: If you ever want to test pure scene description, you can temporarily 
+            # swap `prompt` for `prompt_debug` in the completions call below.
             prompt_debug = (
                 f"Safety Rules Context: {rag_context}\n"
                 "You are viewing the last 3 seconds of a worker's bodycam. "
-                "Describe The current situation, based on the video and the context."    
+                "Describe the current situation, based on the video and the context."    
             )
+
+            logger.info(f"[vLLM REQUEST] detect_danger | Checking {len(frames)} frames against RAG context: '{rag_context}'")
 
             response = await self.client.chat.completions.create(
                 model=self.model_name,
@@ -68,19 +72,9 @@ class SafetyAnalyzer:
             message = response.choices[0].message
             result_text = message.content[0].get("text", "").strip() if isinstance(message.content, list) else str(message.content).strip()
 
-<<<<<<< Updated upstream
-            # 3. Handle edge cases where content is returned as a list of dicts
-            if isinstance(message.content, list):
-                result_text = message.content[0].get("text", "").strip()
-            else:
-                result_text = str(message.content).strip()
+            # DEBUG LOGGING: Print exactly what vLLM spat out
+            logger.info(f"[vLLM OUTPUT] detect_danger | {result_text}")
 
-            # For debugging
-            print(f"[vLLM OUTPUT]: {result_text}")
-                
-            # 4. Standardize empty text fallbacks
-=======
->>>>>>> Stashed changes
             if not result_text:
                 return {"is_danger": False, "details": "SAFE - Empty text returned."}
 
@@ -94,6 +88,9 @@ class SafetyAnalyzer:
         """Slow Loop (Blocking): Determines broad action context from recent frames."""
         try:
             prompt = "In two words or less, what physical task is the worker performing across these frames?"
+            
+            logger.info(f"[vLLM REQUEST] detect_action | Analyzing {len(frames)} frames...")
+
             response = await self.client.chat.completions.create(
                 model=self.model_name,
                 messages=[{"role": "user", "content": self._build_multi_frame_content(prompt, frames)}],
@@ -103,13 +100,18 @@ class SafetyAnalyzer:
             )
 
             message = response.choices[0].message
-            return message.content[0].get("text", "").strip() if isinstance(message.content, list) else str(message.content).strip()
+            result_text = message.content[0].get("text", "").strip() if isinstance(message.content, list) else str(message.content).strip()
+            
+            # DEBUG LOGGING: Print the recognized action
+            logger.info(f"[vLLM OUTPUT] detect_action | Recognized Action: '{result_text}'")
+
+            return result_text
 
         except Exception as e:
             logger.error(f"Action Detection Error: {e}")
             return "general work"
 
-    async def answer_question(self, image_b64: str, question: str, recent_context: str) -> str:
+    async def answer_question(self, frames: List[str], question: str, recent_context: str) -> AsyncGenerator[str, None]:
         """
         Asynchronous streaming via AsyncOpenAI to yield text chunks immediately.
         """
@@ -121,6 +123,8 @@ class SafetyAnalyzer:
                 "Provide a clear, conversational answer directly addressing the user based on the timeline and chronological frames."
             )
             
+            logger.info(f"[vLLM REQUEST] answer_question | Streaming answer for: '{question}'")
+
             response = await self.client.chat.completions.create(
                 model=self.model_name,
                 messages=[{
@@ -131,9 +135,15 @@ class SafetyAnalyzer:
                 stream=True # Mixed streaming toggled ON
             )
 
+            full_answer = ""
             async for chunk in response:
                 if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
-                    yield chunk.choices[0].delta.content
+                    chunk_text = chunk.choices[0].delta.content
+                    full_answer += chunk_text
+                    yield chunk_text
+            
+            # DEBUG LOGGING: Log the fully constructed answer once the stream ends
+            logger.info(f"[vLLM OUTPUT] answer_question COMPLETE | {full_answer}")
 
         except Exception as e:
             logger.error(f"Inference Error in answer_question: {e}")

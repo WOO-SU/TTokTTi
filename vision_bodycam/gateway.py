@@ -11,17 +11,13 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 
-# Configure Logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 REDIS_URL = "redis://localhost:6379"
-GPU_API_KEY = os.getenv("GPU_API_KEY", "your_secure_gpu_key")
 redis_client: redis.Redis | None = None
 
-# --- CPU-Bound Image Bouncer Logic ---
 def enforce_image_resolution(b64_string: str, max_width=360, max_height=360) -> str:
-    """Synchronous CPU-bound task to resize images."""
     try:
         prefix = ""
         raw_b64 = b64_string
@@ -48,18 +44,15 @@ def enforce_image_resolution(b64_string: str, max_width=360, max_height=360) -> 
 
     except Exception as e:
         logger.error(f"Image Optimization Error: {e}")
-        return b64_string # Fallback to original if corrupted
-# ---------------------------------------
+        return b64_string 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Manage global resources like Redis connection pools."""
     global redis_client
     redis_client = redis.from_url(REDIS_URL, decode_responses=True)
     logger.info("Connected to Redis pool.")
     yield
     await redis_client.aclose()
-    logger.info("Redis connection closed.")
 
 app = FastAPI(lifespan=lifespan)
 
@@ -79,41 +72,34 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
     pubsub = redis_client.pubsub()
     listener_task = None
 
-    # Task A: Listen for Alerts/Answers from Worker (via Redis)
     async def listen_for_results():
         await pubsub.subscribe(f"alerts:{client_id}")
         try:
             async for message in pubsub.listen():
                 if message["type"] == "message":
+                    # --- [VINCI INTEGRATION] Gateway Streaming ---
+                    # Now handles fragmented JSON streams seamlessly.
                     await websocket.send_text(message["data"])
         except asyncio.CancelledError:
-            logger.info(f"PubSub listener for {client_id} cancelled.")
+            pass
         except Exception as e:
             logger.error(f"PubSub Error for {client_id}: {e}")
 
     listener_task = asyncio.create_task(listen_for_results())
 
-    # Task B: Receive Video/Questions from Phone
     try:
         while True:
             data_text = await websocket.receive_text()
             data_json: Dict[str, Any] = json.loads(data_text)
             
-            # 1. EXTRACT THE IMAGE BASE64
-            # Handle both simple frames {"data": "base64"} and questions {"data": {"data": "base64", "text": "..."}}
             b64_string = data_json.get("image")
             
-            
-            # 2. OFFLOAD RESIZING TO A BACKGROUND THREAD
             if b64_string:
-                # asyncio.to_thread prevents the heavy image math from blocking FastAPI's event loop
                 optimized_b64 = await asyncio.to_thread(
                     enforce_image_resolution, b64_string, 448, 448
                 )
-                
                 data_json["image"] = optimized_b64
 
-            # Wrap data with client_id for the worker
             payload = json.dumps({"client_id": client_id, "data": data_json})
             msg_type = data_json.get("type", "").upper()
 
@@ -125,7 +111,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 await redis_client.ltrim("video_frames", 0, 49) 
 
     except WebSocketDisconnect:
-        logger.info(f"Client {client_id} gracefully disconnected.")
+        logger.info(f"Client {client_id} disconnected.")
     except Exception as e:
         logger.error(f"WebSocket Error for {client_id}: {e}")    
     finally:
