@@ -176,18 +176,7 @@ export default function ProfileScreen() {
               <span style={styles.usernameLabel}>{profile?.username ?? user?.userName}</span>
               <div style={styles.avatarRow}>
                 <div style={styles.avatarCircle}>
-                  {profile?.photo ? (
-                    <img src={profile.photo} alt="avatar" style={styles.avatarImg} />
-                  ) : (
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#C5C6CC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                      <circle cx="12" cy="7" r="4" />
-                    </svg>
-                  )}
-                </div>
-                <div style={styles.avatarActions}>
-                  <button type="button" style={styles.uploadBtn}>{'\uC0AC\uC9C4 \uC62C\uB9AC\uAE30'}</button>
-                  <button type="button" style={styles.removeBtn}>{'\uC9C0\uC6B0\uAE30'}</button>
+                  <img src={managerImg} alt="avatar" style={styles.avatarImg} />
                 </div>
               </div>
             </div>
@@ -349,8 +338,8 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 0,
   },
   sidebarIconBtnActive: {
-    backgroundColor: '#006FFD',
-    boxShadow: '0 2px 8px rgba(0,111,253,0.3)',
+    backgroundColor: '#FFB800',
+    boxShadow: '0 2px 8px rgba(255,184,0,0.3)',
   },
   notifBadge: {
     position: 'absolute',
@@ -412,7 +401,7 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: 'left',
   },
   sidebarNavItemActive: {
-    backgroundColor: '#EAF2FF',
+    backgroundColor: '#FFF8E1',
   },
   sidebarNavLabel: {
     fontFamily: 'Inter, sans-serif',
@@ -421,7 +410,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#71727A',
   },
   sidebarNavLabelActive: {
-    color: '#006FFD',
+    color: '#FFB800',
     fontWeight: 600,
   },
   logoutBtn: {
@@ -444,7 +433,8 @@ const styles: Record<string, React.CSSProperties> = {
     paddingRight: 32,
     display: 'flex',
     flexDirection: 'column',
-    alignItems: 'center',
+    // 💡 변경: 메인 컨테이너에서 강제 중앙 정렬(alignItems: 'center') 제거 
+    // 내부 content에서 margin: 0 auto로 직접 제어
     overflow: 'auto',
   },
   header: {
@@ -454,7 +444,6 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     width: '100%',
-    maxWidth: 680,
   },
   headerTitle: {
     fontFamily: 'Inter, sans-serif',
@@ -485,7 +474,8 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 20,
     maxWidth: 680,
     width: '100%',
-    alignSelf: 'center',
+    // 💡 핵심 추가: 좌우 여백을 auto로 설정하여 화면을 넓게 쓰더라도 프로필 카드 영역이 중앙에 오도록 유지합니다.
+    margin: '0 auto', 
     paddingBottom: 40,
   },
 
@@ -506,11 +496,13 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     fontSize: 18,
     color: '#1F2024',
+    textAlign: 'center', // 💡 사용자 이름 텍스트 중앙 정렬
   },
   avatarRow: {
     display: 'flex',
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center', // 💡 아바타 이미지 중앙 정렬
     gap: 24,
   },
   avatarCircle: {
@@ -529,34 +521,6 @@ const styles: Record<string, React.CSSProperties> = {
     height: '100%',
     objectFit: 'cover',
   },
-  avatarActions: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 6,
-    alignItems: 'flex-start',
-  },
-  uploadBtn: {
-    fontFamily: 'Inter, sans-serif',
-    fontWeight: 600,
-    fontSize: 13,
-    color: '#006FFD',
-    padding: '8px 20px',
-    borderRadius: 8,
-    background: 'none',
-    border: '1.5px solid #006FFD',
-    cursor: 'pointer',
-  },
-  removeBtn: {
-    fontFamily: 'Inter, sans-serif',
-    fontWeight: 500,
-    fontSize: 12,
-    color: '#8F9098',
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    padding: '2px 4px',
-  },
-
   // Info card
   sectionTitle: {
     fontFamily: 'Inter, sans-serif',
@@ -628,7 +592,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     fontSize: 14,
     color: '#FFFFFF',
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     padding: '12px 28px',
     borderRadius: 10,
     border: 'none',
@@ -639,7 +603,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     fontSize: 14,
     color: '#FFFFFF',
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     padding: '12px 28px',
     borderRadius: 10,
     border: 'none',

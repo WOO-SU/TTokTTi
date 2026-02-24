@@ -464,7 +464,7 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: 'left',
   },
   sidebarNavItemActive: {
-    backgroundColor: '#EAF2FF',
+    backgroundColor: '#FFF8E1',
   },
   sidebarNavLabel: {
     fontFamily: 'Inter, sans-serif',
@@ -473,7 +473,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#71727A',
   },
   sidebarNavLabelActive: {
-    color: '#006FFD',
+    color: '#FFB800',
     fontWeight: 600,
   },
   logoutBtn: {
@@ -514,7 +514,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 500,
     fontSize: 13,
-    color: '#006FFD',
+    color: '#FFB800',
     background: 'none',
     border: 'none',
     cursor: 'pointer',
@@ -717,7 +717,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     fontSize: 14,
     color: '#FFFFFF',
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     padding: '12px 28px',
     borderRadius: 10,
     border: 'none',
@@ -728,7 +728,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     fontSize: 14,
     color: '#FFFFFF',
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     padding: '12px 28px',
     borderRadius: 10,
     border: 'none',

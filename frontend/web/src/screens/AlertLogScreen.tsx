@@ -19,6 +19,26 @@ type AdminLog = {
   compliance_category?: string | null;
 };
 
+type ManualCheckDetail = {
+  videolog_id: number;
+  status: string | null;
+  employee: { id: number; name: string };
+  worksession: { id: number; name: string };
+  category: string;
+  original_image: string | null;
+  created_at: string;
+};
+
+type AutoCheckDetail = {
+  videolog_id: number;
+  status: string | null;
+  workers: { id: number; name: string }[];
+  worksession: { id: number; name: string };
+  risk_type: { name: string };
+  original_video: string | null;
+  created_at: string;
+};
+
 const COMPLIANCE_LABEL: Record<string, string> = {
   HELMET: '안전모',
   VEST: '안전 조끼',
@@ -88,8 +108,36 @@ function LogDetailModal({
   onApprove: (logId: number, approval: boolean) => void;
   approving: boolean;
 }) {
+  const [manualDetail, setManualDetail] = useState<ManualCheckDetail | null>(null);
+  const [autoDetail, setAutoDetail] = useState<AutoCheckDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  useEffect(() => {
+    setDetailLoading(true);
+    if (log.source === 'MANUAL') {
+      apiFetch(`/check/admin/request/${log.id}/`)
+        .then(res => res.json())
+        .then(json => {
+          if (json.ok && json.data) setManualDetail(json.data);
+        })
+        .catch(() => {})
+        .finally(() => setDetailLoading(false));
+    } else {
+      apiFetch(`/detect/admin/request/${log.id}/`)
+        .then(res => res.json())
+        .then(json => {
+          if (json.ok && json.data) setAutoDetail(json.data);
+        })
+        .catch(() => {})
+        .finally(() => setDetailLoading(false));
+    }
+  }, [log.id, log.source]);
+
   const isManual = log.source === 'MANUAL';
-  const statusInfo = log.status ? STATUS_LABEL[log.status] : null;
+  const currentStatus = isManual
+    ? (manualDetail?.status ?? log.status)
+    : (autoDetail?.status ?? log.status);
+  const statusInfo = currentStatus ? STATUS_LABEL[currentStatus] : null;
 
   return (
     <div style={styles.modalBackdrop} onClick={onClose}>
@@ -127,22 +175,81 @@ function LogDetailModal({
           </div>
         </div>
 
+        {detailLoading && (
+          <div style={{ padding: '16px 24px', textAlign: 'center', color: '#8F9098', fontSize: 13 }}>
+            상세 정보를 불러오는 중...
+          </div>
+        )}
+
         <div style={styles.modalInfoRow}>
           <div style={styles.modalInfoItem}>
             <span style={styles.modalInfoLabel}>작업 현장</span>
-            <span style={styles.modalInfoValue}>{log.worksession_name}</span>
+            <span style={styles.modalInfoValue}>
+              {(isManual ? manualDetail?.worksession.name : autoDetail?.worksession.name) ?? log.worksession_name}
+            </span>
           </div>
           <div style={styles.modalInfoItem}>
             <span style={styles.modalInfoLabel}>{isManual ? '점검 항목' : '위험 유형'}</span>
             <span style={styles.modalInfoValue}>
               {isManual
-                ? (log.compliance_category ? COMPLIANCE_LABEL[log.compliance_category] ?? log.compliance_category : '-')
-                : (log.risk_type_name ?? '-')}
+                ? (COMPLIANCE_LABEL[manualDetail?.category ?? log.compliance_category ?? ''] ?? manualDetail?.category ?? log.compliance_category ?? '-')
+                : (autoDetail?.risk_type.name ?? log.risk_type_name ?? '-')}
             </span>
           </div>
         </div>
 
-        {isManual && log.status === 'PENDING' && (
+        {/* AUTO: 작업자 목록 */}
+        {!isManual && autoDetail?.workers && autoDetail.workers.length > 0 && (
+          <div style={{ padding: '0 24px 16px' }}>
+            <div style={styles.modalInfoItem}>
+              <span style={styles.modalInfoLabel}>현장 작업자</span>
+              <span style={styles.modalInfoValue}>
+                {autoDetail.workers.map(w => w.name).join(', ')}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* AUTO: 영상 */}
+        {!isManual && autoDetail?.original_video && (
+          <div style={{ padding: '0 24px 16px' }}>
+            <div style={styles.modalInfoItem}>
+              <span style={styles.modalInfoLabel}>감지 영상</span>
+              <video
+                src={autoDetail.original_video}
+                controls
+                style={{ width: '100%', borderRadius: 8, marginTop: 8, maxHeight: 260, backgroundColor: '#000' }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* MANUAL: 요청 작업자 */}
+        {isManual && manualDetail?.employee && (
+          <div style={{ padding: '0 24px 16px' }}>
+            <div style={styles.modalInfoItem}>
+              <span style={styles.modalInfoLabel}>요청 작업자</span>
+              <span style={styles.modalInfoValue}>{manualDetail.employee.name}</span>
+            </div>
+          </div>
+        )}
+
+        {/* MANUAL: 촬영 이미지 */}
+        {isManual && manualDetail?.original_image && (
+          <div style={{ padding: '0 24px 16px' }}>
+            <div style={styles.modalInfoItem}>
+              <span style={styles.modalInfoLabel}>촬영 이미지</span>
+              <img
+                src={manualDetail.original_image}
+                alt="점검 이미지"
+                style={{ width: '100%', borderRadius: 8, marginTop: 8, maxHeight: 240, objectFit: 'contain', backgroundColor: '#F0F1F3' }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* MANUAL: 수락/거절 */}
+        {isManual && currentStatus === 'PENDING' && (
           <div style={styles.modalApprovalRow}>
             <button
               type="button"
@@ -161,7 +268,7 @@ function LogDetailModal({
           </div>
         )}
 
-        {isManual && log.status && log.status !== 'PENDING' && (
+        {isManual && currentStatus && currentStatus !== 'PENDING' && (
           <div style={{ padding: '0 24px 24px', textAlign: 'center' }}>
             <span style={{
               fontFamily: 'Inter, sans-serif',
@@ -263,7 +370,7 @@ export default function AlertLogScreen() {
         <div style={styles.sidebarIcons}>
           <button
             type="button"
-            style={{ ...styles.sidebarIconBtn, ...(isProfileActive ? { backgroundColor: '#006FFD', boxShadow: '0 2px 8px rgba(0,111,253,0.3)' } : {}) }}
+            style={{ ...styles.sidebarIconBtn, ...(isProfileActive ? { backgroundColor: '#FFB800', boxShadow: '0 2px 8px rgba(255,184,0,0.3)' } : {}) }}
             onClick={() => navigate('/profile')}>
             👤
           </button>
@@ -327,7 +434,7 @@ export default function AlertLogScreen() {
                 {f === 'ALL' ? '전체' : f === 'AUTO' ? '자동 감지' : '수동 요청'}
                 <span style={{
                   ...styles.filterCount,
-                  backgroundColor: filter === f ? '#006FFD' : '#E8E9EB',
+                  backgroundColor: filter === f ? '#FFB800' : '#E8E9EB',
                   color: filter === f ? '#FFFFFF' : '#71727A',
                 }}>
                   {f === 'ALL' ? logs.length : logs.filter(l => l.source === f).length}
@@ -541,14 +648,14 @@ const styles: Record<string, React.CSSProperties> = {
     width: '100%',
     textAlign: 'left',
   },
-  sidebarNavItemActive: { backgroundColor: '#EAF2FF' },
+  sidebarNavItemActive: { backgroundColor: '#FFF8E1' },
   sidebarNavLabel: {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 500,
     fontSize: 14,
     color: '#71727A',
   },
-  sidebarNavLabelActive: { color: '#006FFD', fontWeight: 600 },
+  sidebarNavLabelActive: { color: '#FFB800', fontWeight: 600 },
   logoutBtn: {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 600,
@@ -620,8 +727,8 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 6,
   },
   filterBtnActive: {
-    color: '#006FFD',
-    borderColor: '#006FFD',
+    color: '#FFB800',
+    borderColor: '#FFB800',
     backgroundColor: '#F8FAFF',
   },
   filterCount: {
@@ -668,9 +775,9 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 600,
     fontSize: 11,
-    color: '#006FFD',
+    color: '#FFB800',
     backgroundColor: 'transparent',
-    border: '1.5px solid #006FFD',
+    border: '1.5px solid #FFB800',
     borderRadius: 6,
     padding: '4px 12px',
     cursor: 'pointer',
