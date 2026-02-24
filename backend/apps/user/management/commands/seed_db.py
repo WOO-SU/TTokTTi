@@ -629,6 +629,47 @@ class Command(BaseCommand):
                             "read_at": log.created_at + timedelta(minutes=random.randint(1, 60)),
                         }
                     )
+        
+        for session in WorkSession.objects.filter(
+            status=WorkSession.StatusChoices.IN_PROGRESS
+        ):
+
+            non_compliances = Compliance.objects.filter(
+                worksession=session,
+                is_complied=False,
+            )
+
+            if not non_compliances.exists():
+                continue
+
+            session_managers = list(
+                User.objects.filter(
+                    work_sessions__worksession=session,
+                    work_sessions__role__in=[
+                        WorkSessionMember.RoleChoices.HEAD,
+                        WorkSessionMember.RoleChoices.RELATED,
+                    ]
+                ).distinct()
+            )
+
+            if not session_managers:
+                continue
+
+            for compliance in non_compliances:
+
+                videolog = VideoLog.objects.create(
+                    worksession=session,
+                    source=VideoLog.SourceChoices.MANUAL,
+                    compliance=compliance,
+                    status=VideoLog.StatusChoices.PENDING,
+                )
+
+                for manager in session_managers:
+                    VideoLogRead.objects.create(
+                        videolog=videolog,
+                        manager=manager,
+                        is_read=False,
+                    )
         self.stdout.write(self.style.SUCCESS("✅ apps.detect seeding completed"))
 
         # ------------------------------------------------------------------
