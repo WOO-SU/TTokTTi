@@ -148,6 +148,7 @@ export default function SafetyRegulationScreen() {
         const json = await res.json();
         if (Array.isArray(json)) {
           setWorkSessions(json);
+          // Only expand the first group if nothing is currently expanded
           setExpandedGroupId(prev => prev ?? (json.length > 0 ? (json[0] as WorkSessionCard).id : null));
           await fetchComplianceData(json as WorkSessionCard[]);
         }
@@ -175,8 +176,35 @@ export default function SafetyRegulationScreen() {
     setExpandedEquipment(prev => (prev === key ? null : key));
   };
 
-  const toggleCompliance = (key: string) => {
-    setCompliance(prev => ({ ...prev, [key]: !prev[key] }));
+  // 💡 핵심 변경: 체크박스 토글 시 서버에 상태를 저장합니다.
+  const toggleCompliance = async (
+    key: string,
+    wsId: number,
+    empId: number,
+    category: string
+  ) => {
+    // 1. 프론트엔드 상태를 즉시 업데이트 (Optimistic UI Update)
+    const newValue = !compliance[key];
+    setCompliance(prev => ({ ...prev, [key]: newValue }));
+
+    try {
+      // 2. 백엔드에 변경된 상태(체크 여부) 저장 요청 전송
+      // ※ API 엔드포인트와 요청 바디 구조는 실제 백엔드 구현에 맞게 조정이 필요할 수 있습니다.
+      await apiFetch('/check/admin/update/', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          worksession_id: wsId,
+          employee_id: empId,
+          category: category,
+          is_complied: newValue,
+        }),
+      });
+    } catch (error) {
+      console.error("Failed to update compliance on server:", error);
+      // 실패 시 원래 상태로 되돌림 (Rollback)
+      setCompliance(prev => ({ ...prev, [key]: !newValue }));
+      alert("체크 상태 저장에 실패했습니다.");
+    }
   };
 
   return (
@@ -409,7 +437,7 @@ export default function SafetyRegulationScreen() {
                                             backgroundColor: isChecked ? '#FFB800' : '#FFFFFF',
                                             borderColor: isChecked ? '#FFB800' : '#C5C6CC',
                                           }}
-                                          onClick={() => toggleCompliance(key)}
+                                          onClick={() => toggleCompliance(key, ws.id, member.employee_id, eq.category)}
                                         >
                                           {isChecked && (
                                             <svg width="14" height="10" viewBox="0 0 14 10" fill="none">

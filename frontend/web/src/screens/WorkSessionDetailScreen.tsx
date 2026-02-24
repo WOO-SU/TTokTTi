@@ -50,10 +50,26 @@ type SummaryData = {
   photos: PhotoItem[];
 };
 
-const riskLevelColor: Record<string, { bg: string; text: string }> = {
-  높음: { bg: '#FFEAEA', text: '#D32F2F' },
-  중간: { bg: '#FFF4E5', text: '#E8900C' },
-  낮음: { bg: '#E7F4E8', text: '#298A3E' },
+const riskGradeColor: Record<string, { bg: string; text: string }> = {
+  Critical: { bg: '#FFEAEA', text: '#D32F2F' },
+  High: { bg: '#FFEAEA', text: '#D32F2F' },
+  Medium: { bg: '#FFF4E5', text: '#E8900C' },
+  Low: { bg: '#E7F4E8', text: '#298A3E' },
+};
+
+const riskGradeLabel: Record<string, string> = {
+  Critical: '심각',
+  High: '높음',
+  Medium: '중간',
+  Low: '낮음',
+};
+
+const HAZARD_LABEL: Record<string, string> = {
+  FALL: '추락',
+  DROPPING: '낙하·비래',
+  ELECTRIC: '감전',
+  PINCH: '끼임',
+  ERGO: '인체공학',
 };
 
 type TabKey = 'risk' | 'equipment' | 'logs' | 'photos';
@@ -150,15 +166,24 @@ export default function WorkSessionDetailScreen() {
   const [activeTab, setActiveTab] = useState<TabKey>('risk');
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchSummary = useCallback(async () => {
+    setError(null);
     try {
       const res = await apiFetch(`/worksession/summary/${sessionId}/`);
       if (res.ok) {
         const json = await res.json();
         setSummary(json);
+      } else {
+        const text = await res.text();
+        console.error('[WorkSessionDetail] API error:', res.status, text);
+        setError(`API 오류 (${res.status})`);
       }
-    } catch { /* ignore */ }
+    } catch (e) {
+      console.error('[WorkSessionDetail] fetch error:', e);
+      setError('네트워크 오류');
+    }
     setLoading(false);
   }, [sessionId]);
 
@@ -247,6 +272,11 @@ export default function WorkSessionDetailScreen() {
             <div style={styles.emptyState}>
               <span style={styles.emptyText}>데이터를 불러오는 중...</span>
             </div>
+          ) : error ? (
+            <div style={styles.emptyState}>
+              <span style={{ fontSize: 32 }}>⚠️</span>
+              <span style={styles.emptyText}>{error}</span>
+            </div>
           ) : (
             <>
               {/* ── 위험성 평가 결과 ── */}
@@ -260,54 +290,153 @@ export default function WorkSessionDetailScreen() {
                     </div>
                   ) : (
                     <div style={styles.riskList}>
-                      {/* Overall */}
-                      {summary.risk_report.overall && (
-                        <div style={styles.riskRow}>
-                          <div style={styles.riskRowLeft}>
-                            <span style={{ ...styles.riskLevelBadge, backgroundColor: '#FFF8E1', color: '#FFB800' }}>
-                              종합
-                            </span>
-                            <span style={styles.riskItem}>종합 평가</span>
+                      {/* ── 종합 평가 카드 ── */}
+                      {summary.risk_report.overall && (() => {
+                        const o = summary.risk_report!.overall;
+                        const grade = o.overall_grade ?? 'Low';
+                        const gc = riskGradeColor[grade] ?? riskGradeColor.Low;
+                        return (
+                          <div style={{ ...styles.overallCard, borderLeft: `4px solid ${gc.text}` }}>
+                            <div style={styles.overallHeader}>
+                              <span style={styles.overallTitle}>종합 평가</span>
+                              <span style={{ ...styles.riskLevelBadge, backgroundColor: gc.bg, color: gc.text }}>
+                                {riskGradeLabel[grade] ?? grade}
+                              </span>
+                            </div>
+                            <div style={styles.overallBody}>
+                              <div style={styles.overallMetric}>
+                                <span style={styles.overallMetricLabel}>위험 점수</span>
+                                <span style={{ ...styles.overallMetricValue, color: gc.text }}>{o.overall_max_R ?? '-'}</span>
+                              </div>
+                              <div style={styles.overallMetric}>
+                                <span style={styles.overallMetricLabel}>작업 허가</span>
+                                <span style={styles.overallMetricValue}>{o.work_permission ?? '-'}</span>
+                              </div>
+                            </div>
+                            {Array.isArray(o.urgent_fix_before_work) && o.urgent_fix_before_work.length > 0 && (
+                              <div style={styles.urgentBox}>
+                                <span style={styles.urgentTitle}>⚠️ 작업 전 필수 조치</span>
+                                <ul style={styles.urgentList}>
+                                  {o.urgent_fix_before_work.map((item: string, i: number) => (
+                                    <li key={i} style={styles.urgentItem}>{item}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
                           </div>
-                          <span style={styles.riskDesc}>
-                            {typeof summary.risk_report.overall === 'string'
-                              ? summary.risk_report.overall
-                              : JSON.stringify(summary.risk_report.overall)}
-                          </span>
-                        </div>
+                        );
+                      })()}
+
+                      {/* ── 현장 요약 ── */}
+                      {summary.risk_report.scene_summary && (() => {
+                        const s = summary.risk_report!.scene_summary;
+                        return (
+                          <div style={styles.sceneCard}>
+                            <span style={styles.sceneCardTitle}>🏗️ 현장 환경</span>
+                            <div style={styles.sceneGrid}>
+                              {s.work_environment && (
+                                <div style={styles.sceneItem}>
+                                  <span style={styles.sceneLabel}>작업 환경</span>
+                                  <span style={styles.sceneValue}>{s.work_environment}</span>
+                                </div>
+                              )}
+                              {s.work_height_or_location && (
+                                <div style={styles.sceneItem}>
+                                  <span style={styles.sceneLabel}>작업 위치/높이</span>
+                                  <span style={styles.sceneValue}>{s.work_height_or_location}</span>
+                                </div>
+                              )}
+                            </div>
+                            {Array.isArray(s.observed_safety_facilities) && s.observed_safety_facilities.length > 0 && (
+                              <div style={styles.sceneItem}>
+                                <span style={styles.sceneLabel}>확인된 안전 시설</span>
+                                <div style={styles.tagRow}>
+                                  {s.observed_safety_facilities.map((f: string, i: number) => (
+                                    <span key={i} style={styles.tagGreen}>{f}</span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {Array.isArray(s.needs_verification) && s.needs_verification.length > 0 && (
+                              <div style={styles.sceneItem}>
+                                <span style={styles.sceneLabel}>확인 필요 항목</span>
+                                <div style={styles.tagRow}>
+                                  {s.needs_verification.map((v: string, i: number) => (
+                                    <span key={i} style={styles.tagOrange}>{v}</span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+
+                      {/* ── 위험 요소 목록 ── */}
+                      {Array.isArray(summary.risk_report.hazards) && summary.risk_report.hazards.length > 0 && (
+                        <>
+                          <span style={{ ...styles.sectionTitle, fontSize: 15, marginTop: 8 }}>위험 요소 상세</span>
+                          {summary.risk_report.hazards.map((h: any, i: number) => {
+                            const grade = h.risk_grade ?? 'Low';
+                            const gc = riskGradeColor[grade] ?? riskGradeColor.Low;
+                            const residualGrade = h.residual_risk_grade ?? 'Low';
+                            const rgc = riskGradeColor[residualGrade] ?? riskGradeColor.Low;
+                            return (
+                              <div key={i} style={{ ...styles.hazardCard, borderLeft: `4px solid ${gc.text}` }}>
+                                <div style={styles.hazardHeader}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <span style={{ ...styles.riskLevelBadge, backgroundColor: gc.bg, color: gc.text }}>
+                                      {riskGradeLabel[grade] ?? grade}
+                                    </span>
+                                    <span style={styles.hazardTitle}>
+                                      {HAZARD_LABEL[h.id] ?? h.id} — {h.title}
+                                    </span>
+                                  </div>
+                                  <span style={styles.hazardScore}>R = {h.risk_R_1_25 ?? '-'}</span>
+                                </div>
+                                <div style={styles.hazardBody}>
+                                  {h.evidence_from_image && (
+                                    <div style={styles.hazardRow}>
+                                      <span style={styles.hazardLabel}>이미지 근거</span>
+                                      <span style={styles.hazardValue}>{h.evidence_from_image}</span>
+                                    </div>
+                                  )}
+                                  {h.expected_accident && (
+                                    <div style={styles.hazardRow}>
+                                      <span style={styles.hazardLabel}>예상 사고</span>
+                                      <span style={styles.hazardValue}>{h.expected_accident}</span>
+                                    </div>
+                                  )}
+                                  <div style={styles.hazardRow}>
+                                    <span style={styles.hazardLabel}>위험도 (L×S)</span>
+                                    <span style={styles.hazardValue}>
+                                      {h.likelihood_L_1_5 ?? '-'} × {h.severity_S_1_5 ?? '-'} = {h.risk_R_1_25 ?? '-'}
+                                    </span>
+                                  </div>
+                                  {Array.isArray(h.mitigations_before_work) && h.mitigations_before_work.length > 0 && (
+                                    <div style={styles.hazardRow}>
+                                      <span style={styles.hazardLabel}>개선 대책</span>
+                                      <ul style={styles.mitigationList}>
+                                        {h.mitigations_before_work.map((m: string, j: number) => (
+                                          <li key={j} style={styles.mitigationItem}>{m}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                  <div style={styles.hazardRow}>
+                                    <span style={styles.hazardLabel}>잔여 위험도</span>
+                                    <span style={styles.hazardValue}>
+                                      {h.residual_likelihood_L_1_5 ?? '-'} × {h.residual_severity_S_1_5 ?? '-'} = {h.residual_risk_R_1_25 ?? '-'}
+                                      <span style={{ ...styles.riskLevelBadge, backgroundColor: rgc.bg, color: rgc.text, marginLeft: 8, fontSize: 10 }}>
+                                        {riskGradeLabel[residualGrade] ?? residualGrade}
+                                      </span>
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </>
                       )}
-                      {/* Scene Summary */}
-                      {summary.risk_report.scene_summary && (
-                        <div style={styles.riskRow}>
-                          <div style={styles.riskRowLeft}>
-                            <span style={{ ...styles.riskLevelBadge, backgroundColor: '#FFF4E5', color: '#E8900C' }}>
-                              현장
-                            </span>
-                            <span style={styles.riskItem}>현장 요약</span>
-                          </div>
-                          <span style={styles.riskDesc}>
-                            {typeof summary.risk_report.scene_summary === 'string'
-                              ? summary.risk_report.scene_summary
-                              : JSON.stringify(summary.risk_report.scene_summary)}
-                          </span>
-                        </div>
-                      )}
-                      {/* Hazards */}
-                      {Array.isArray(summary.risk_report.hazards) && summary.risk_report.hazards.map((h: any, i: number) => (
-                        <div key={i} style={styles.riskRow}>
-                          <div style={styles.riskRowLeft}>
-                            <span style={{ ...styles.riskLevelBadge, backgroundColor: '#FFEAEA', color: '#D32F2F' }}>
-                              위험
-                            </span>
-                            <span style={styles.riskItem}>
-                              {typeof h === 'string' ? h : (h.name ?? h.title ?? `위험 요소 ${i + 1}`)}
-                            </span>
-                          </div>
-                          <span style={styles.riskDesc}>
-                            {typeof h === 'string' ? '' : (h.description ?? h.detail ?? JSON.stringify(h))}
-                          </span>
-                        </div>
-                      ))}
                     </div>
                   )}
                 </div>
@@ -620,25 +749,7 @@ const styles: Record<string, React.CSSProperties> = {
   riskList: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 10,
-  },
-  riskRow: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    border: '1px solid #E8E9EB',
-    padding: '14px 20px',
-    display: 'flex',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 16,
-  },
-  riskRowLeft: {
-    display: 'flex',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flexShrink: 0,
+    gap: 14,
   },
   riskLevelBadge: {
     fontFamily: 'Inter, sans-serif',
@@ -647,19 +758,215 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '3px 10px',
     borderRadius: 6,
   },
-  riskItem: {
+
+  // Overall card
+  overallCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    border: '1px solid #E8E9EB',
+    padding: '20px 24px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 16,
+  },
+  overallHeader: {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  overallTitle: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 700,
+    fontSize: 16,
+    color: '#1F2024',
+  },
+  overallBody: {
+    display: 'flex',
+    flexDirection: 'row',
+    gap: 32,
+  },
+  overallMetric: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+  },
+  overallMetricLabel: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 500,
+    fontSize: 12,
+    color: '#8F9098',
+  },
+  overallMetricValue: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 700,
+    fontSize: 15,
+    color: '#1F2024',
+  },
+  urgentBox: {
+    backgroundColor: '#FFF5F5',
+    borderRadius: 8,
+    padding: '12px 16px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+  },
+  urgentTitle: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 700,
+    fontSize: 13,
+    color: '#D32F2F',
+  },
+  urgentList: {
+    margin: 0,
+    paddingLeft: 18,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+  },
+  urgentItem: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 500,
+    fontSize: 13,
+    color: '#71727A',
+  },
+
+  // Scene card
+  sceneCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    border: '1px solid #E8E9EB',
+    padding: '20px 24px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 14,
+  },
+  sceneCardTitle: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 700,
+    fontSize: 15,
+    color: '#1F2024',
+  },
+  sceneGrid: {
+    display: 'flex',
+    flexDirection: 'row',
+    gap: 32,
+    flexWrap: 'wrap',
+  },
+  sceneItem: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+  },
+  sceneLabel: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
+    fontSize: 12,
+    color: '#8F9098',
+  },
+  sceneValue: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 500,
+    fontSize: 14,
+    color: '#1F2024',
+  },
+  tagRow: {
+    display: 'flex',
+    flexDirection: 'row',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  tagGreen: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
+    fontSize: 11,
+    color: '#298A3E',
+    backgroundColor: '#E7F4E8',
+    padding: '3px 10px',
+    borderRadius: 6,
+  },
+  tagOrange: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
+    fontSize: 11,
+    color: '#E8900C',
+    backgroundColor: '#FFF4E5',
+    padding: '3px 10px',
+    borderRadius: 6,
+  },
+
+  // Hazard card
+  hazardCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    border: '1px solid #E8E9EB',
+    padding: '18px 24px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 14,
+  },
+  hazardHeader: {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  hazardTitle: {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 700,
     fontSize: 14,
     color: '#1F2024',
   },
-  riskDesc: {
+  hazardScore: {
     fontFamily: 'Inter, sans-serif',
-    fontWeight: 400,
-    fontSize: 13,
+    fontWeight: 700,
+    fontSize: 14,
     color: '#71727A',
+    flexShrink: 0,
+  },
+  hazardBody: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 10,
+  },
+  hazardRow: {
+    display: 'flex',
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+  },
+  hazardLabel: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
+    fontSize: 12,
+    color: '#8F9098',
+    minWidth: 90,
+    flexShrink: 0,
+    paddingTop: 2,
+  },
+  hazardValue: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 500,
+    fontSize: 13,
+    color: '#1F2024',
     flex: 1,
-    textAlign: 'right',
+    display: 'flex',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  mitigationList: {
+    margin: 0,
+    paddingLeft: 18,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 2,
+  },
+  mitigationItem: {
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 500,
+    fontSize: 13,
+    color: '#1F2024',
   },
 
   // Equipment table
