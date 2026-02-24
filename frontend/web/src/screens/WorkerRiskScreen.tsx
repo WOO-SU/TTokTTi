@@ -441,7 +441,7 @@ export default function WorkerRiskScreen() {
           const base = convertSession(session);
 
           try {
-            // ── 1차: /risk/latest → /risk/admin/{assessment_id} ──
+            // ── 1차: /risk/latest → /risk/admin/{assessment_id} (COMPLETED 평가) ──
             let assessmentId: number | null = null;
             try {
               const latestRes = await apiFetch(`/risk/latest/${session.id}`);
@@ -453,6 +453,20 @@ export default function WorkerRiskScreen() {
               }
             } catch { /* ignore */ }
 
+            // ── 1-1: COMPLETED가 없으면 PENDING 평가 ID 조회 ──
+            if (!assessmentId) {
+              try {
+                const startRes = await apiFetch(`/risk/start/${session.id}`, { method: 'POST' });
+                if (startRes.ok) {
+                  const startData = await startRes.json();
+                  if (startData.assessment_id) {
+                    assessmentId = startData.assessment_id;
+                  }
+                }
+              } catch { /* ignore */ }
+            }
+
+            // ── 2차: /risk/admin/{assessment_id} (RiskReport 필요) ──
             if (assessmentId) {
               const reportRes = await apiFetch(`/risk/admin/${assessmentId}`);
               if (reportRes.ok) {
@@ -463,36 +477,34 @@ export default function WorkerRiskScreen() {
                     return { ...img, url };
                   })
                 );
+                const report = reportData.report;
                 return {
                   ...base,
                   assessmentId: reportData.assessment_id,
                   status: reportData.status,
                   images: imagesWithUrls,
-                  riskReport: reportData.report,
+                  riskReport: report ? {
+                    scene_summary: report.scene_summary,
+                    hazards: report.hazards ?? [],
+                    overall: report.overall,
+                    version: report.version ?? 'v1',
+                  } : null,
                   generatedAt: reportData.generated_at,
                   error: null,
                 };
               }
             }
 
-            // ── 2차 fallback: /worksession/summary/{session.id}/ ──
+            // ── 3차 fallback: /worksession/summary/{session.id}/ ──
             const summaryRes = await apiFetch(`/worksession/summary/${session.id}/`);
             if (summaryRes.ok) {
               const summaryData = await summaryRes.json();
               const riskReport = summaryData.risk_report ?? null;
               const photos: any[] = summaryData.photos ?? [];
 
-              // summary의 photos(blob_name=image) + risk_report의 images 모두 수집
-              const allBlobNames: { id: number; blob_name: string; created_at: string }[] = [];
-
-              // risk_report 쪽 이미지 (있으면)
-              if (riskReport?.images) {
-                for (const img of riskReport.images) {
-                  allBlobNames.push({ id: img.id, blob_name: img.blob_name, created_at: img.created_at ?? '' });
-                }
-              }
               // worksession photos (image 필드가 blob_name)
-              if (allBlobNames.length === 0 && photos.length > 0) {
+              const allBlobNames: { id: number; blob_name: string; created_at: string }[] = [];
+              if (photos.length > 0) {
                 for (const p of photos) {
                   if (p.image) {
                     allBlobNames.push({ id: p.id, blob_name: p.image, created_at: '' });
@@ -509,8 +521,8 @@ export default function WorkerRiskScreen() {
 
               return {
                 ...base,
-                assessmentId: riskReport?.id ?? null,
-                status: riskReport ? 'COMPLETED' : null,
+                assessmentId: assessmentId,
+                status: riskReport ? 'COMPLETED' : (assessmentId ? 'PENDING' : null),
                 images: imagesWithUrls,
                 riskReport: riskReport ? {
                   scene_summary: riskReport.scene_summary,
