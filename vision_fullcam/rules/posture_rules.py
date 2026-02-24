@@ -8,6 +8,9 @@ class ExcessiveBodyTiltRule(Rule):
     def __init__(self, cfg: Config):
         self.cfg = cfg
         self.db = {}
+    
+    def is_active(self, ctx):
+        return ctx.state.person_on_ladder()
 
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp
@@ -36,6 +39,9 @@ class TopStepUsageRule(Rule):
     name = "top_step_usage"
     def __init__(self, cfg: Config):
         self.db = Debounce(cfg.top_step_sec, cfg.cooldown_sec)
+    
+    def is_active(self, ctx):
+        return ctx.state.person_on_ladder()
 
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp

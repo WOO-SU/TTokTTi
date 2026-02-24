@@ -40,6 +40,9 @@ class LadderTiltRule(Rule):
         self.cfg = cfg
         # per-ladder debounce container
         self.db = Debounce(0.0, 0.0)
+    
+    def is_active(self, ctx):
+        return ctx.state.person_on_ladder()
 
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp
@@ -109,6 +112,9 @@ class LadderMovementWithPersonRule(Rule):
     def __init__(self, cfg: Config):
         self.cfg = cfg
         self.db = Debounce(cfg.ladder_move_sec, cfg.cooldown_sec)
+    
+    def is_active(self, ctx):
+        return ctx.state.person_on_ladder()
 
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp

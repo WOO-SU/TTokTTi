@@ -240,7 +240,8 @@ def main():
             # 6) rule evaluation
             events = []
             for rule in rules:
-                events.extend(rule.evaluate(ctx))
+                if rule.is_active(ctx):
+                    events.extend(rule.evaluate(ctx))
 
             # 7) emit
             if events:

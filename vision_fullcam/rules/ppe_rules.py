@@ -8,6 +8,9 @@ class HelmetNotWornRule(Rule):
     def __init__(self, cfg: Config):
         self.db = Debounce(cfg.ppe_missing_sec, cfg.cooldown_sec) # cfg의 debounce -> 프레임 단위 초 
 
+    def is_active(self, ctx):
+        return ctx.state.has_person()
+    
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp
         events = []
@@ -26,6 +29,9 @@ class SafetyVestNotWornRule(Rule):
     name = "safety_vest_not_worn"
     def __init__(self, cfg: Config):
         self.db = Debounce(cfg.ppe_missing_sec, cfg.cooldown_sec)
+    
+    def is_active(self, ctx):
+        return ctx.state.has_person()
 
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp

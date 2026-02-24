@@ -7,6 +7,9 @@ class InsufficientWorkerCountRule(Rule):
     name = "insufficient_worker_count"
     def __init__(self, cfg: Config):
         self.db = Debounce(cfg.worker_missing_sec, cfg.cooldown_sec)
+    
+    def is_active(self, ctx):
+        return ctx.state.person_on_ladder()
 
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         now = ctx.timestamp

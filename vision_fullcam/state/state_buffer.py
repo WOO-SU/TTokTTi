@@ -20,6 +20,26 @@ class StateBuffer:
         self.vehicles: Dict[int, VehicleState] = {}   # ✅ 추가
 
         self.ppe_observer = PPEObserver()   # ✅ 이 줄 추가
+    
+    def has_person(self):
+        return len(self.persons) > 0
+    
+    def person_on_ladder(self):
+        for person in self.persons.values():
+            px1, py1, px2, py2 = person.bbox
+            person_bottom_y = py2
+            person_center_x = (px1 + px2) / 2
+
+            for ladder in self.ladders.values():
+                lx1, ly1, lx2, ly2 = ladder.bbox
+
+                if (
+                    lx1 < person_center_x < lx2
+                    and ly1 < person_bottom_y < ly2
+                ):
+                    return True
+
+        return False
 
     def update(self, tracked: Dict[int, "Tracked"], frame, now: float):  # ✅ frame 받도록 변경
         # 1) site 요약 업데이트

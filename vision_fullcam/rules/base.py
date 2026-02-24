@@ -21,8 +21,12 @@ class Event:
 
 class Rule:
     name: str
+    def is_active(self, ctx: RuleContext) -> bool:
+        return False
+    
     def evaluate(self, ctx: RuleContext) -> List[Event]:
         raise NotImplementedError
+    
         
 # vision_fullcam/rules/base.py (Debounce만 교체)
 
