@@ -92,6 +92,21 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
             data_text = await websocket.receive_text()
             data_json: Dict[str, Any] = json.loads(data_text)
             
+            msg_type = data_json.get("type", "").upper()
+            if msg_type == "CONFIG":
+                mapping = {
+                    "worksession_id": str(data_json.get("worksession_id", "")),
+                    "risk_type_id": str(data_json.get("risk_type_id", "")),
+                    "video_path": str(data_json.get("video_path", ""))
+                }
+                # Store in Redis hash and set a 12-hour expiration
+                await redis_client.hset(f"session_meta:{client_id}", mapping=mapping)
+                await redis_client.expire(f"session_meta:{client_id}", 43200) 
+                
+                logger.info(f"Session configuration saved for {client_id}")
+                continue # Skip the rest of the loop for this message
+            # ----------------------------------------------
+
             b64_string = data_json.get("image")
             
             if b64_string:
@@ -101,7 +116,6 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 data_json["image"] = optimized_b64
 
             payload = json.dumps({"client_id": client_id, "data": data_json})
-            msg_type = data_json.get("type", "").upper()
 
             if msg_type == "QUESTION":
                 await redis_client.lpush("questions", payload)

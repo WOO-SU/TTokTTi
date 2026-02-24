@@ -62,12 +62,17 @@ async def report_to_django(user_id: str, reason: str, timestamp: str):
     """Async fire-and-forget report to backend (Lightweight Payload)"""
     async with httpx.AsyncClient() as client:
         try:
+            session_meta = await redis_client.hgetall(f"session_meta:{user_id}")
             # We removed the heavy base64 image!
             # Once your Blob storage is set up, you will just add: "image_url": blob_url
             payload = {
                 "user_id": user_id, 
                 "description": reason, 
                 "timestamp": timestamp,
+                # Inject the cached data
+                "worksession_id": session_meta.get("worksession_id"),
+                "risk_type_id": session_meta.get("risk_type_id"),
+                "video_path": session_meta.get("video_path")
             }
 
             response = await client.post(

@@ -23,6 +23,7 @@ import type { RouteProp } from '@react-navigation/native';
 import type { RootStackParamList } from '../../App';
 import TopHeader from '../components/TopHeader';
 
+import { useWorkSession } from '../context/WorkSessionContext';
 import SafetyStream, { StreamResponse } from '../api/stream'
 
 type Props = {
@@ -33,9 +34,9 @@ type Props = {
 /* ──────── Configuration ──────── */
 
 const STREAM_CONFIG = {
-  WIDTH: 480,
-  HEIGHT: 480,
-  INTERVAL_MS: 1000, // 4 fps (1000/250)
+  WIDTH: 448,
+  HEIGHT: 448,
+  INTERVAL_MS: 1000, // 1 fps (1000/250)
 };
 
 /* ──────── Main Component ──────── */
@@ -43,6 +44,8 @@ const STREAM_CONFIG = {
 export default function CameraScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { mode } = route.params;
+
+  const { workSessionId } = useWorkSession();
 
   // 스트리밍 설정 기반 포맷 선택
   const device = useCameraDevice('back');
@@ -61,9 +64,16 @@ export default function CameraScreen({ navigation, route }: Props) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    const currentSessionId = workSessionId ? String(workSessionId) : "";
     const userId = "AuthContext_user_id"
 
-    streamRef.current = new SafetyStream(userId, (data: StreamResponse) => {
+    streamRef.current = new SafetyStream(
+      userId, 
+      { 
+        worksession_id: currentSessionId, 
+        video_path: ""  
+      },
+      (data: StreamResponse) => {
       if (data.type === 'DANGER') {
         setAlertMessage(data.message || '위험이 감지되었습니다!');
         setAlertVisible(true);
