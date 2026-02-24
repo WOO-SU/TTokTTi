@@ -11,9 +11,10 @@ from rest_framework.response import Response
 from drf_yasg.utils import swagger_auto_schema
 
 from .models import WorkSession, WorkSessionMember
-from ..check.models import Compliance
+from ..detect.models import VideoLog
+from ..check.models import Compliance, Photo
 from ..report.models import PostWorkReport
-from ..risk.models import RiskAssessment
+from ..risk.models import RiskAssessment, RiskReport
 from .serializers import *
 
 @swagger_auto_schema(
@@ -181,3 +182,107 @@ def get_admin_today_worksession(request):
     
     serializer = WorkSessionCardSerializer(worksessions, many=True)
     return Response(serializer.data)
+
+@swagger_auto_schema(
+    method="get",
+    responses={200: WorkSessionSummarySerializer,
+               404: ActivateWorkSessionResponseSerializer}
+)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_worksession_summary(request, worksession_id):
+    """
+    GET /api/worksession/summary/<int:worksession_id>/
+    작업 세션 요약 정보 조회
+    """
+    # 위험성 평가 결과: RiskReport 객체
+    # 장비 점검 결과: WorkSessionMember - role=WORKER - compliance 에서 worksession과 user로 모든 카테고리에 대해 점검 통과 여부 확인
+    # 위험 감지 로그: Videolog - worksession과 source=auto로 필터링해서 위험 감지 로그 목록 반환
+    # 작업 전/후 사진: Photo - worksession으로 필터링 해서 사진 목록 반환
+
+    worksession = WorkSession.objects.filter(id=worksession_id).first()
+    if not worksession:
+        return Response(
+            {"ok": False, "detail": "WorkSession not found"},
+            status=404
+        )
+
+    risk_report = RiskReport.objects.filter(
+        worksession=worksession
+    ).first()
+
+    workers = (
+        WorkSessionMember.objects
+        .select_related("user")
+        .filter(
+            worksession=worksession,
+            role=WorkSessionMember.RoleChoices.WORKER
+        )
+    )
+
+    equipment_checks = []
+    for member in workers:
+        compliances = Compliance.objects.filter(
+            worksession=worksession,
+            employee=member.user
+        )
+
+        checks = {
+            c.category: c.is_complied if c.is_complied is not None else False
+            for c in compliances
+        }
+
+        equipment_checks.append({
+            "worker": {
+                "id": member.user.id,
+                "name": member.user.name,
+            },
+            "checks": checks,
+        })
+
+    auto_logs = VideoLog.objects.select_related(
+        "risk_type"
+    ).filter(
+        worksession=worksession,
+        source=VideoLog.SourceChoices.AUTO
+    )
+
+    auto_log_data = [
+        {
+            "id": log.id,
+            "risk_type": log.risk_type.name if log.risk_type else None,
+            "video_path": log.original_video,
+            "created_at": log.created_at,
+        }
+        for log in auto_logs
+    ]
+
+    photos = Photo.objects.filter(worksession=worksession)
+
+    photo_data = [
+        {
+            "id": photo.id,
+            "type": photo.status,
+            "image": photo.image_path,
+        }
+        for photo in photos
+    ]
+
+    return Response({
+        "worksession": {
+            "id": worksession.id,
+            "name": worksession.name,
+        },
+        "risk_report": (
+            {
+                "id": risk_report.id,
+                "scene_summary": risk_report.scene_summary,
+                "hazards": risk_report.hazards,
+                "overall": risk_report.overall,
+                "generated_at": risk_report.generated_at,
+            } if risk_report else None
+        ),
+        "equipment_checks": equipment_checks,
+        "auto_logs": auto_log_data,
+        "photos": photo_data,
+    }, status=200)

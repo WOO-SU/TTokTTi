@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from django.utils import timezone
 
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.decorators import api_view, permission_classes
@@ -8,24 +9,11 @@ from rest_framework import status
 import json
 
 from .models import Compliance, Photo
-from ..detect.models import VideoLog
-from .serializers import (
-    ComplianceSerializer, 
-    ComplianceRequestSerializer,
-    ComplianceResultSerializer, 
-    CheckUpdateResponseSerializer, 
-    UploadResultResponseSerializer, 
-    RequestDetectionResponseSerializer,
-    TargetPhotoRequestSerializer,
-    RequestCheckSerializer,
-    ApproveCheckSerializer,
-    ApproveCheckResponseSerializer,
-    CheckPassRequestSerializer,
-    CheckPassResponseSerializer
-)
+from ..detect.models import VideoLog, VideoLogRead
+from .serializers import *
 from .permissions import IsJetson
 
-from ..worksession.models import WorkSession
+from ..worksession.models import WorkSession, WorkSessionMember
 # temporary measure. if two redis queues are needed,, pull the client code .
 import os
 import redis
@@ -346,3 +334,146 @@ def check_pass(request, worksession_id):
         "ok": True,
         "passed": passed
     })
+
+@swagger_auto_schema(
+    method="get",
+    responses={
+        200: ManualCheckResponseSerializer,
+        403: UploadResultResponseSerializer,
+        404: UploadResultResponseSerializer,
+    }
+)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def manual_check(request, videolog_id=None):
+    """
+    "/api/check/admin/request/{videolog_id}": 관리자 수동 점검 요청 조회
+    """
+    if not request.user.is_manager:
+        return Response(
+            {"ok": False, "detail": "Only managers can access manual check requests"},
+            status=403
+        )
+
+    log = VideoLog.objects.select_related(
+        "worksession",
+        "compliance",
+        "compliance__employee",
+    ).filter(
+        id=videolog_id,
+        source=VideoLog.SourceChoices.MANUAL
+    ).first()
+
+    if not log or not log.compliance:
+        return Response(
+            {"ok": False, "detail": "Manual check request not found"},
+            status=404
+        )
+
+    VideoLogRead.objects.update_or_create(
+        videolog=log,
+        manager=request.user,
+        defaults={
+            "is_read": True,
+            "read_at": timezone.now(),
+        }
+    )
+    compliance = log.compliance
+    employee = compliance.employee
+    worksession = log.worksession
+
+    data = {
+        "videolog_id": log.id,
+        "status": log.status,
+
+        "employee": {
+            "id": employee.id,
+            "name": employee.name,
+        },
+
+        "worksession": {
+            "id": worksession.id,
+            "name": worksession.name,
+        },
+
+        "category": compliance.category,
+        "original_image": compliance.original_image,
+        "created_at": log.created_at,
+    }
+
+    return Response({"ok": True, "data": data}, status=200)
+
+@swagger_auto_schema(
+    method="post",
+    request_body=CheckAdminRequestSerializer,
+    responses={
+        200: ManualCheckResponseSerializer,
+        403: UploadResultResponseSerializer,
+        404: UploadResultResponseSerializer,
+    }
+)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def check_admin(request):
+    if not request.user.is_manager:
+        return Response(
+            {"ok": False, "detail": "Only managers can access this API"},
+            status=403
+        )
+
+    serializer = CheckAdminRequestSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    worksession_ids = serializer.validated_data["worksession_ids"]
+
+    worksessions = WorkSession.objects.filter(id__in=worksession_ids)
+
+    result = []
+
+    for ws in worksessions:
+        members = (
+            WorkSessionMember.objects
+            .select_related("user")
+            .filter(
+                worksession=ws,
+                role=WorkSessionMember.RoleChoices.WORKER
+            )
+        )
+
+        worker_results = []
+
+        for member in members:
+            compliances = Compliance.objects.filter(
+                worksession=ws,
+                employee=member.user
+            )
+
+            checks = {
+                "HELMET": None,
+                "VEST": None,
+                "SHOES": None,
+            }
+
+            for c in compliances:
+                checks[c.category] = c.is_complied if c.is_complied is not None else False
+
+            worker_results.append({
+                "worker": {
+                    "id": member.user.id,
+                    "name": member.user.name,
+                },
+                "checks": checks,
+            })
+
+        result.append({
+            "worksession_id": ws.id,
+            "worksession_name": ws.name,
+            "workers": worker_results,
+        })
+
+    return Response(
+        {
+            "worksessions": result
+        },
+        status=200
+    )
