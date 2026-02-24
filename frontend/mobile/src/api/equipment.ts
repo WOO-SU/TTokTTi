@@ -25,9 +25,10 @@ export type ComplianceData = {
 };
 
 /** 1단계: Blob 업로드용 SAS URL 발급 */
-export async function getSasToken(contentType?: string) {
+export async function getSasToken(contentType?: string, container?: string) {
   const res = await client.post(ENDPOINTS.SAS_UPLOAD, {
     content_type: contentType || 'image/jpeg',
+    container: container,
   });
   // 응답: { upload_url, blob_name, container, expires_at, ... }
   return res.data as {

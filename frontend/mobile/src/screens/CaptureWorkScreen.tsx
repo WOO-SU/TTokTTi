@@ -66,7 +66,7 @@ export default function CaptureWorkScreen() {
         }
         setScreenState('sending');
         try {
-            const { upload_url, blob_name } = await getSasToken();
+            const { upload_url, blob_name } = await getSasToken('image/jpeg', 'target');
             await uploadToBlob(upload_url, photoPath);
             // 업로드 성공 후 백엔드 DB에 기록 요청
             await requestTargetPhoto(blob_name, worksession_id, 'BEFORE');

@@ -124,7 +124,7 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
     try {
       setIsUploading(true);
       setIsFailed(false);
-      const { upload_url, blob_name } = await getSasToken();
+      const { upload_url, blob_name } = await getSasToken('image/jpeg', 'compliance');
       await uploadToBlob(upload_url, photoPath);
       const complianceId = await requestDetection(blob_name, title, worksession_id);
       startPolling(complianceId);

@@ -71,7 +71,7 @@ export default function EndWorkScreen({ navigation }: Props) {
     }
     setScreenState('sending');
     try {
-      const { upload_url, blob_name } = await getSasToken();
+      const { upload_url, blob_name } = await getSasToken('image/jpeg', 'target');
       await uploadToBlob(upload_url, photoPath);
       // 백엔드 DB에 'AFTER' 상태로 기록 요청
       await requestTargetPhoto(blob_name, worksession_id, 'AFTER');
