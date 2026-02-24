@@ -103,20 +103,7 @@ class SafetyAnalyzer:
             )
 
             message = response.choices[0].message
-<<<<<<< Updated upstream
-
-            if not getattr(message, 'content', None):
-                logger.warning("vLLM returned a message with no content.")
-                return "Error: The model could not process this image."
-
-            # 4. Handle edge cases where content is returned as a list of dicts
-            if isinstance(message.content, list):
-                return message.content[0].get("text", "").strip()
-
-            return str(message.content).strip()
-=======
             return message.content[0].get("text", "").strip() if isinstance(message.content, list) else str(message.content).strip()
->>>>>>> Stashed changes
 
         except Exception as e:
             logger.error(f"Action Detection Error: {e}")
