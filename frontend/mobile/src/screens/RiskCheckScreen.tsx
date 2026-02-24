@@ -169,7 +169,7 @@ const iconStyles = StyleSheet.create({
   backArrowTop: {
     width: 14,
     height: 2,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 1,
     position: 'absolute',
     transform: [{ rotate: '-45deg' }, { translateY: -5.5 }],
@@ -177,7 +177,7 @@ const iconStyles = StyleSheet.create({
   backArrowBottom: {
     width: 14,
     height: 2,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 1,
     position: 'absolute',
     transform: [{ rotate: '45deg' }, { translateY: 5.5 }],
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 48,
     borderRadius: 10,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     justifyContent: 'center',
     alignItems: 'center',
   },

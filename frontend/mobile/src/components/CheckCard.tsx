@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     cardDone: {
         backgroundColor: '#F8F9FE',
         // Premium Blue Glow
-        shadowColor: '#006FFD',
+        shadowColor: '#FFB800',
         shadowOpacity: 0.2,
         shadowRadius: 12,
         shadowOffset: { width: 0, height: 6 },
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
         borderColor: '#E8E9F1',
     },
     cardBorderDone: {
-        borderColor: '#006FFD',
+        borderColor: '#FFB800',
         borderWidth: 2,
     },
     cardImage: {
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     },
     cardLabelDone: {
         fontWeight: '700',
-        color: '#006FFD',
+        color: '#FFB800',
     },
     checkbox: {
         width: 20,
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     checkboxChecked: {
-        backgroundColor: '#006FFD',
+        backgroundColor: '#FFB800',
         borderWidth: 0,
     },
     checkboxUnchecked: {

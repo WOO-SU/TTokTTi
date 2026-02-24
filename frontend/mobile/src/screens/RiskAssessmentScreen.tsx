@@ -76,7 +76,7 @@ export default function RiskAssessmentScreen({ navigation, route }: Props) {
 
       {/* 로딩 */}
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#006FFD" />
+        <ActivityIndicator size="large" color="#FFB800" />
         <Text style={styles.loadingText}>보고서를 확인 중입니다...</Text>
       </View>
     </View>
@@ -95,7 +95,7 @@ const iconStyles = StyleSheet.create({
   backArrowTop: {
     width: 14,
     height: 2,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 1,
     position: 'absolute',
     transform: [{ rotate: '-45deg' }, { translateY: -5.5 }],
@@ -103,7 +103,7 @@ const iconStyles = StyleSheet.create({
   backArrowBottom: {
     width: 14,
     height: 2,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 1,
     position: 'absolute',
     transform: [{ rotate: '45deg' }, { translateY: 5.5 }],

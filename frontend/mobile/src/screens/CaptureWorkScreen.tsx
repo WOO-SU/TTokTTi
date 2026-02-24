@@ -135,7 +135,7 @@ export default function CaptureWorkScreen() {
                                 showControls={false}
                             >
                                 <View style={styles.resultOverlay}>
-                                    <ActivityIndicator size="large" color="#006FFD" />
+                                    <ActivityIndicator size="large" color="#FFB800" />
                                     <Text style={styles.resultOverlayText}>업로드 중...</Text>
                                 </View>
                             </PhotoResultView>
@@ -182,7 +182,7 @@ const iconStyles = StyleSheet.create({
     largeCheckShort: {
         width: 36,
         height: 8,
-        backgroundColor: '#006FFD',
+        backgroundColor: '#FFB800',
         borderRadius: 4,
         position: 'absolute',
         left: 16,
@@ -192,7 +192,7 @@ const iconStyles = StyleSheet.create({
     largeCheckLong: {
         width: 72,
         height: 8,
-        backgroundColor: '#006FFD',
+        backgroundColor: '#FFB800',
         borderRadius: 4,
         position: 'absolute',
         right: 8,
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
         width: 200,
         height: 52,
         borderRadius: 15,
-        backgroundColor: '#006FFD',
+        backgroundColor: '#FFB800',
         justifyContent: 'center',
         alignItems: 'center',
         marginTop: 8,
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         backgroundColor: '#FFFFFF',
         borderWidth: 2,
-        borderColor: '#006FFD',
+        borderColor: '#FFB800',
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -314,13 +314,13 @@ const styles = StyleSheet.create({
         fontFamily: 'Noto Sans KR',
         fontWeight: '500',
         fontSize: 16,
-        color: '#006FFD',
+        color: '#FFB800',
     },
     sendButton: {
         flex: 1,
         height: 48,
         borderRadius: 10,
-        backgroundColor: '#006FFD',
+        backgroundColor: '#FFB800',
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
         width: '100%',
         height: 48,
         borderRadius: 10,
-        backgroundColor: '#006FFD',
+        backgroundColor: '#FFB800',
         justifyContent: 'center',
         alignItems: 'center',
     },

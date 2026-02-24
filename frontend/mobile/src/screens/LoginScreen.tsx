@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Noto Sans KR',
     fontWeight: '600',
     fontSize: 12,
-    color: '#006FFD',
+    color: '#FFB800',
     textAlign: 'right',
   },
   buttonsSection: {
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     height: 48,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -300,6 +300,6 @@ const styles = StyleSheet.create({
   },
   registerLink: {
     fontWeight: '600',
-    color: '#006FFD',
+    color: '#FFB800',
   },
 });

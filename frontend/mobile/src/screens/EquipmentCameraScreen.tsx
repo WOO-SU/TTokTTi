@@ -173,7 +173,7 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
             )}
             {isUploading && !isSuccess && (
               <View style={styles.resultCardOverlay}>
-                <ActivityIndicator size="large" color="#006FFD" />
+                <ActivityIndicator size="large" color="#FFB800" />
                 <Text style={styles.resultText}>AI 분석 중...</Text>
               </View>
             )}
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#006FFD',
+    borderColor: '#FFB800',
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
@@ -298,13 +298,13 @@ const styles = StyleSheet.create({
     fontFamily: 'Noto Sans KR',
     fontWeight: '600',
     fontSize: 16,
-    color: '#006FFD',
+    color: '#FFB800',
   },
   retakeButton: {
     width: 120,
     height: 48,
     borderRadius: 12,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
     width: 153,
     height: 38,
     borderRadius: 15,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
   largeCheckShort: {
     width: 36,
     height: 8,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 4,
     position: 'absolute',
     left: 16,
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
   largeCheckLong: {
     width: 72,
     height: 8,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 4,
     position: 'absolute',
     right: 8,
@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
   xLine1: {
     width: 80,
     height: 8,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 4,
     position: 'absolute',
     transform: [{ rotate: '45deg' }],
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
   xLine2: {
     width: 80,
     height: 8,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 4,
     position: 'absolute',
     transform: [{ rotate: '-45deg' }],

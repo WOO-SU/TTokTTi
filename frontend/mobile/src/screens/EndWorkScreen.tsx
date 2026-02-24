@@ -144,7 +144,7 @@ export default function EndWorkScreen({ navigation }: Props) {
               isConfirming={true}
             >
               <View style={styles.resultCardOverlay}>
-                <ActivityIndicator size="large" color="#006FFD" />
+                <ActivityIndicator size="large" color="#FFB800" />
                 <Text style={styles.resultText}>업로드 중...</Text>
               </View>
             </PhotoResultView>
@@ -189,7 +189,7 @@ const iconStyles = StyleSheet.create({
   arrowTop: {
     width: 14,
     height: 2,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 1,
     position: 'absolute',
     transform: [{ rotate: '-45deg' }, { translateY: -5.5 }],
@@ -197,7 +197,7 @@ const iconStyles = StyleSheet.create({
   arrowBottom: {
     width: 14,
     height: 2,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 1,
     position: 'absolute',
     transform: [{ rotate: '45deg' }, { translateY: 5.5 }],
@@ -211,7 +211,7 @@ const iconStyles = StyleSheet.create({
   largeCheckShort: {
     width: 36,
     height: 8,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 4,
     position: 'absolute',
     left: 16,
@@ -221,7 +221,7 @@ const iconStyles = StyleSheet.create({
   largeCheckLong: {
     width: 72,
     height: 8,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 4,
     position: 'absolute',
     right: 8,
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     width: 200,
     height: 52,
     borderRadius: 15,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 8,

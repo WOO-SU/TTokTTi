@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   fieldFocused: {
-    borderColor: '#006FFD',
+    borderColor: '#FFB800',
   },
   input: {
     flex: 1,
@@ -252,8 +252,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#006FFD',
-    borderColor: '#006FFD',
+    backgroundColor: '#FFB800',
+    borderColor: '#FFB800',
   },
   checkmark: {
     color: '#FFFFFF',
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   termsLink: {
-    color: '#006FFD',
+    color: '#FFB800',
     fontWeight: '600',
   },
 });
