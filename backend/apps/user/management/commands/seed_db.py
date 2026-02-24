@@ -487,12 +487,22 @@ class Command(BaseCommand):
                 target_workers = []
 
             for employee_id in target_workers:
+                violated_category = None
+                if session.status == WorkSession.StatusChoices.IN_PROGRESS:
+                    violated_category = random.choice(categories)
+
                 for category in categories:
+
+                    is_violation = (
+                        session.status == WorkSession.StatusChoices.IN_PROGRESS
+                        and category == violated_category
+                    )
+
                     Compliance.objects.create(
                         employee_id=employee_id,
                         worksession=session,
                         category=category,
-                        is_complied=True,
+                        is_complied=not is_violation,
                         original_image=original_paths[category][
                             original_idx[category] % len(original_paths[category])
                         ],
@@ -501,7 +511,8 @@ class Command(BaseCommand):
                         ],
                     )
                     original_idx[category] += 1
-                    detected_idx[category] += 1
+                    if not is_violation:
+                        detected_idx[category] += 1
 
         self.stdout.write(self.style.SUCCESS("✅ apps.check seeding completed"))
 
