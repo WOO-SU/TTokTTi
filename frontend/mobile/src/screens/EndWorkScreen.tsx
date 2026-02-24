@@ -34,7 +34,7 @@ export default function EndWorkScreen({ navigation }: Props) {
   const route = useRoute<RouteProp<HomeStackParamList, 'EndWork'>>();
   const { worksession_id } = route.params;
   const insets = useSafeAreaInsets();
-  const [screenState, setScreenState] = useState<ScreenState>('idle');
+  const [screenState, setScreenState] = useState<ScreenState>('camera');
   const [photoPath, setPhotoPath] = useState<string | null>(null);
 
   const cameraRef = useRef<Camera>(null);
@@ -100,70 +100,54 @@ export default function EndWorkScreen({ navigation }: Props) {
 
       <TopHeader title="근무 마무리" />
 
-      {/* Idle State */}
-      {screenState === 'idle' && (
-        <View style={styles.idleContent}>
-          <Text style={styles.idleTitle}>근무를 마무리합니다</Text>
-          <Text style={styles.idleSubtitle}>현장 사진을 촬영해주세요</Text>
-          <TouchableOpacity
-            style={styles.startCameraButton}
-            activeOpacity={0.8}
-            onPress={handleStartCamera}>
-            <Text style={styles.startCameraButtonText}>마무리 촬영</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
       {/* Camera & Preview States */}
-      {screenState !== 'idle' && (
-        <View style={styles.cameraPreview}>
-          {screenState === 'camera' && (
-            <BaseCamera
-              ref={cameraRef}
-              isActive={true}
-              photo={true}
-              guideText="마무리 현장을 촬영하세요"
-              onCapture={handleCapture}
-            />
-          )}
+      <View style={styles.cameraPreview}>
+        {screenState === 'camera' && (
+          <BaseCamera
+            ref={cameraRef}
+            isActive={true}
+            photo={true}
+            guideText="마무리 현장을 촬영하세요"
+            onCapture={handleCapture}
+          />
+        )}
 
-          {screenState === 'preview' && photoPath && (
-            <PhotoResultView
-              photoPath={photoPath}
-              onRetake={handleRetake}
-              onConfirm={handleConfirm}
-              confirmText="전송"
-            />
-          )}
-          {screenState === 'sending' && photoPath && (
-            <PhotoResultView
-              photoPath={photoPath}
-              onRetake={handleRetake}
-              onConfirm={handleConfirm}
-              confirmText="전송"
-              isConfirming={true}
-            >
-              <View style={styles.resultCardOverlay}>
-                <ActivityIndicator size="large" color="#FFB800" />
-                <Text style={styles.resultText}>업로드 중...</Text>
-              </View>
-            </PhotoResultView>
-          )}
-          {screenState === 'sent' && photoPath && (
-            <PhotoResultView
-              photoPath={photoPath}
-              onRetake={handleRetake}
-              onConfirm={handleDone}
-              confirmText="완료"
-            >
-              <View style={styles.resultCardOverlay}>
-                <LargeCheckIcon />
-                <Text style={styles.resultText}>전송 완료</Text>
-              </View>
-            </PhotoResultView>
-          )}
-        </View>
-      )}
+        {screenState === 'preview' && photoPath && (
+          <PhotoResultView
+            photoPath={photoPath}
+            onRetake={handleRetake}
+            onConfirm={handleConfirm}
+            confirmText="전송"
+          />
+        )}
+        {screenState === 'sending' && photoPath && (
+          <PhotoResultView
+            photoPath={photoPath}
+            onRetake={handleRetake}
+            onConfirm={handleConfirm}
+            confirmText="전송"
+            isConfirming={true}
+          >
+            <View style={styles.resultCardOverlay}>
+              <ActivityIndicator size="large" color="#FFB800" />
+              <Text style={styles.resultText}>업로드 중...</Text>
+            </View>
+          </PhotoResultView>
+        )}
+        {screenState === 'sent' && photoPath && (
+          <PhotoResultView
+            photoPath={photoPath}
+            onRetake={handleRetake}
+            onConfirm={handleDone}
+            confirmText="완료"
+          >
+            <View style={styles.resultCardOverlay}>
+              <LargeCheckIcon />
+              <Text style={styles.resultText}>전송 완료</Text>
+            </View>
+          </PhotoResultView>
+        )}
+      </View>
 
       {screenState === 'camera' && (
         <View
