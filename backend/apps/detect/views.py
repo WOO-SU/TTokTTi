@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.utils.dateparse import parse_datetime
 from django.db.models import OuterRef, Subquery, Value, BooleanField
 from django.db.models.functions import Coalesce
+from django.utils import timezone
 
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.decorators import api_view, permission_classes
@@ -9,9 +10,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import *
-from ..worksession.models import WorkSession
-from .serializers import VideoSerializer, SaveVideoResponseSerializer, VideoSearchResponseSerializer, CheckLogsResponseSerializer
-
+from ..worksession.models import WorkSession, WorkSessionMember
+from .serializers import *
 @swagger_auto_schema(
     method='post',
     responses={200: SaveVideoResponseSerializer}
@@ -147,6 +147,80 @@ def search_video(request):
     })
 
 @swagger_auto_schema(
+    method='post',
+    responses={200: SaveVideoResponseSerializer}
+)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def bodycam_risk(request):
+    """
+    "/api/detect/bodycam": 바디캠 위험 감지 영상 로그 저장 (AUTO)
+    """
+    worksession_id = request.data.get("worksession_id")
+    risk_type_id = request.data.get("risk_type_id")
+    video_path = request.data.get("video_path")
+
+    # 1. Validate Payload
+    if not worksession_id:
+        return Response(
+            {"ok": False, "data": None, "detail": "worksession_id required"},
+            status=400
+        )
+
+    if not risk_type_id:
+        return Response(
+            {"ok": False, "data": None, "detail": "risk_type_id required"},
+            status=400
+        )
+
+    if not video_path:
+        return Response(
+            {"ok": False, "data": None, "detail": "video_path required"},
+            status=400
+        )
+
+    # 2. Fetch and Validate WorkSession
+    try:
+        worksession = WorkSession.objects.get(id=worksession_id)
+    except WorkSession.DoesNotExist:
+        return Response(
+            {"ok": False, "data": None, "detail": "invalid worksession_id"},
+            status=404
+        )
+
+    # 3. Fetch and Validate RiskType (Ensure it is a BODY cam risk)
+    try:
+        risk_type = RiskType.objects.get(id=risk_type_id)
+        
+        # Validation: Make sure we aren't accidentally saving a FULL cam risk here
+        if risk_type.camera_type != RiskType.CameraType.BODY:
+             return Response(
+                {"ok": False, "data": None, "detail": "provided risk_type is not a BODY cam risk"},
+                status=400
+            )
+    except RiskType.DoesNotExist:
+        return Response(
+            {"ok": False, "data": None, "detail": "invalid risk_type_id"},
+            status=404
+        )
+
+    # 4. Create VideoLog with strictly required fields based on Schema
+    video = VideoLog.objects.create(
+        worksession=worksession,
+        risk_type=risk_type,
+        original_video=video_path,
+        source=VideoLog.SourceChoices.AUTO  # Explicitly set to AUTO for AI detections
+        # Note: 'status' and 'compliance' are left empty (NULL) as per your schema for AUTO logs
+    )
+
+    serializer = VideoSerializer(video)
+
+    return Response(
+        {"ok": True, "data": serializer.data},
+        status=200
+    )
+    
+@swagger_auto_schema(
     method="get",
     responses={200: CheckLogsResponseSerializer(many=True)}
 )
@@ -208,3 +282,88 @@ def check_logs(request):
         result.append(base)
 
     return Response(result)
+
+@swagger_auto_schema(
+    method="get",
+    responses={
+        200: AutoCheckResponseSerializer,
+        403: SaveVideoResponseSerializer,
+        404: SaveVideoResponseSerializer,
+    }
+)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def auto_check(request, videolog_id=None):
+    """
+    "/api/detect/admin/request/{videolog_id}": 관리자 위험 알림 조회
+    """
+    if not request.user.is_manager:
+        return Response(
+            {"ok": False, "detail": "Only managers can access auto check"},
+            status=403
+        )
+
+    log = VideoLog.objects.select_related(
+        "worksession",
+        "risk_type",
+    ).filter(
+        id=videolog_id,
+        source=VideoLog.SourceChoices.AUTO
+    ).first()
+
+    if not log or not log.risk_type:
+        return Response(
+            {"ok": False, "detail": "Auto check not found"},
+            status=404
+        )
+
+    VideoLogRead.objects.update_or_create(
+        videolog=log,
+        manager=request.user,
+        defaults={
+            "is_read": True,
+            "read_at": timezone.now(),
+        }
+    )
+
+    worksession = log.worksession
+    risk_type = log.risk_type
+
+    workers = (
+        WorkSessionMember.objects
+        .select_related("user")
+        .filter(
+            worksession=worksession,
+            role=WorkSessionMember.RoleChoices.WORKER
+        )
+        [:2]
+    )
+
+    worker_data = [
+        {
+            "id": member.user.id,
+            "name": member.user.name,
+        }
+        for member in workers
+    ]
+
+    data = {
+        "videolog_id": log.id,
+        "status": log.status,
+
+        "workers": worker_data,
+
+        "worksession": {
+            "id": worksession.id,
+            "name": worksession.name,
+        },
+
+        "risk_type": {
+            "name": risk_type.name,
+        },
+
+        "original_video": log.original_video,
+        "created_at": log.created_at,
+    }
+
+    return Response({"ok": True, "data": data}, status=200)

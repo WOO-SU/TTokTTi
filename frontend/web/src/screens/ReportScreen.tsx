@@ -2,17 +2,10 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../api/client';
-import logoImg from '../assets/logo.png';
+import managerImg from '../assets/manager.jpg';
 import useUnreadAlertCount from '../hooks/useUnreadAlertCount';
 
 // ── Types ──
-
-type TeamMember = {
-  user_id: number;
-  username: string;
-  name: string;
-  role: '헤드관리자' | '관련자' | '근로자';
-};
 
 type PhotoEntry = {
   photo_id: number;
@@ -65,13 +58,29 @@ type ReportVersion = {
   created_at: string;
 };
 
+type WorkerDetail = {
+  employee_id: number;
+  name: string;
+  equipment_check: boolean;
+};
+
+type WorkSessionCard = {
+  id: number;
+  name: string;
+  starts_at: string;
+  ends_at: string | null;
+  status: 'READY' | 'IN_PROGRESS' | 'DONE';
+  workers_detail: WorkerDetail[];
+  risk_assessment: string;
+  report: boolean;
+};
+
 type WorkSessionTeam = {
   id: number;
   siteName: string;
   startTime: string;
   workStatus: '작업 전' | '작업 중' | '작업 끝';
   members: { id: number; name: string }[];
-  assessmentId: number | null;
 };
 
 // ── Sidebar data ──
@@ -82,43 +91,7 @@ const sidebarItems = [
   { label: '안전 장비 점검', icon: '🛡️', path: '/safety' },
   { label: '위험성 평가', icon: '👷', path: '/risk' },
   { label: '보고서 작성', icon: '✏️', path: '/report' },
-];
-
-// ── Mock team data (matches HomeScreen worksession pattern) ──
-
-const mockTeams: WorkSessionTeam[] = [
-  {
-    id: 1,
-    siteName: '봉천동 작업공간',
-    startTime: '08:30',
-    workStatus: '작업 끝',
-    members: [{ id: 1, name: '송영민' }, { id: 2, name: '임정원' }],
-    assessmentId: 1,
-  },
-  {
-    id: 2,
-    siteName: '신대방동 작업공간',
-    startTime: '08:30',
-    workStatus: '작업 중',
-    members: [{ id: 3, name: '김태호' }, { id: 4, name: '박지수' }],
-    assessmentId: null,
-  },
-  {
-    id: 3,
-    siteName: '신림동 작업공간',
-    startTime: '08:50',
-    workStatus: '작업 중',
-    members: [{ id: 5, name: '이준혁' }, { id: 6, name: '최서연' }],
-    assessmentId: null,
-  },
-  {
-    id: 4,
-    siteName: '보라매동 작업공간',
-    startTime: '09:10',
-    workStatus: '작업 끝',
-    members: [{ id: 7, name: '우수연' }, { id: 8, name: '원인영' }],
-    assessmentId: 2,
-  },
+  { label: '알림 로그 확인', icon: '🔔', path: '/alert-logs' },
 ];
 
 const statusColors: Record<string, { bg: string; text: string }> = {
@@ -127,156 +100,34 @@ const statusColors: Record<string, { bg: string; text: string }> = {
   '작업 끝': { bg: '#E3F2FD', text: '#2196F3' },
 };
 
-// ── Mock report data for 보라매동 (team 4, 작업 끝) ──
-// Follows exact backend output: services.build_input_package + views.py server-side injection
-
-const mockInputPackage: Record<number, { photos: { before: PhotoEntry[]; after: PhotoEntry[] } }> = {
-  4: {
-    photos: {
-      before: [
-        { photo_id: 101, employee_id: 7, image_path: 'worksessions/4/before/site_overview_01.jpg', created_at: '2026-02-20T09:10:00+09:00' },
-        { photo_id: 102, employee_id: 8, image_path: 'worksessions/4/before/equipment_area_01.jpg', created_at: '2026-02-20T09:12:00+09:00' },
-      ],
-      after: [
-        { photo_id: 201, employee_id: 7, image_path: 'worksessions/4/after/site_cleanup_01.jpg', created_at: '2026-02-20T16:40:00+09:00' },
-        { photo_id: 202, employee_id: 8, image_path: 'worksessions/4/after/equipment_stored_01.jpg', created_at: '2026-02-20T16:42:00+09:00' },
-      ],
-    },
-  },
+const STATUS_MAP: Record<string, '작업 전' | '작업 중' | '작업 끝'> = {
+  READY: '작업 전',
+  IN_PROGRESS: '작업 중',
+  DONE: '작업 끝',
 };
 
-const mockReports: Record<number, { report: ReportData; version: number }> = {
-  4: {
-    version: 1,
-    report: {
-      report_title: '보라매동 작업공간 — 작업일지 및 위험요소 정리 보고서',
-      generated_at: '2026-02-20T17:05:00+09:00',
+// ── Helpers ──
 
-      // ── 1) 작업 개요 (LLM 생성 구간) ──
-      worksession_summary: {
-        현장명: '보라매동 작업공간',
-        현장주소: '서울특별시 동작구 보라매로 32',
-        작업상태: 'DONE',
-        작업시작: '2026-02-20T09:10:00+09:00',
-        작업종료: '2026-02-20T16:45:00+09:00',
-        참여자: {
-          헤드관리자: [{ user_id: 7, name: '우수연' }],
-          관련자: [],
-          근로자: [{ user_id: 8, name: '원인영' }],
-        },
-      },
+function formatSessionTime(isoStr: string): string {
+  const d = new Date(isoStr);
+  const h = String(d.getHours()).padStart(2, '0');
+  const m = String(d.getMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
+}
 
-      // ── 2) 영상 기반 작업 흐름 요약 (LLM 생성 구간) ──
-      video_summary: {
-        fullcam_video: 'videos/ws4/fullcam_20260220.mp4',
-        bodycam_video: 'videos/ws4/bodycam_20260220.mp4',
-        meta: {
-          fullcam_duration_sec: null,
-          bodycam_duration_sec: null,
-        },
-        요약: '전체캠 영상에서 작업자 2명이 보라매동 현장에서 고소 작업을 수행하는 모습이 확인됨. 바디캠 영상을 통해 사다리 사용 및 전선 작업 흐름이 기록됨.',
-      },
-
-      // ── 3) 위험 하이라이트 (서버 주입: input_pkg.risk_logs.highlights) ──
-      risk_highlights: [
-        {
-          start: '2026-02-20T11:32:15+09:00',
-          end: '2026-02-20T11:33:48+09:00',
-          count: 5,
-          top_types: [
-            { risk_type_name: '고소 작업 위험', count: 3 },
-            { risk_type_name: '안전모 미착용', count: 2 },
-          ],
-          evidence_samples: [
-            { videolog_id: 1001, time: '2026-02-20T11:32:15+09:00', risk_type_name: '고소 작업 위험', camera_type: 'FULL', evidence_video: 'videos/ws4/evidence/ev_1001.mp4', source: 'AI', status: null },
-            { videolog_id: 1002, time: '2026-02-20T11:32:44+09:00', risk_type_name: '안전모 미착용', camera_type: 'BODY', evidence_video: 'videos/ws4/evidence/ev_1002.mp4', source: 'AI', status: null },
-            { videolog_id: 1003, time: '2026-02-20T11:33:10+09:00', risk_type_name: '고소 작업 위험', camera_type: 'FULL', evidence_video: null, source: 'AI', status: null },
-          ],
-          reason: '위험 로그 집중 구간',
-        },
-        {
-          start: '2026-02-20T14:05:30+09:00',
-          end: '2026-02-20T14:06:55+09:00',
-          count: 4,
-          top_types: [
-            { risk_type_name: '전선 접촉 위험', count: 2 },
-            { risk_type_name: '안전대 미착용', count: 1 },
-            { risk_type_name: '고소 작업 위험', count: 1 },
-          ],
-          evidence_samples: [
-            { videolog_id: 1010, time: '2026-02-20T14:05:30+09:00', risk_type_name: '전선 접촉 위험', camera_type: 'BODY', evidence_video: 'videos/ws4/evidence/ev_1010.mp4', source: 'AI', status: null },
-            { videolog_id: 1011, time: '2026-02-20T14:06:02+09:00', risk_type_name: '안전대 미착용', camera_type: 'FULL', evidence_video: null, source: 'MANUAL', status: 'APPROVED' },
-            { videolog_id: 1012, time: '2026-02-20T14:06:55+09:00', risk_type_name: '전선 접촉 위험', camera_type: 'BODY', evidence_video: 'videos/ws4/evidence/ev_1012.mp4', source: 'AI', status: null },
-          ],
-          reason: '위험 로그 집중 구간',
-        },
-      ],
-
-      // ── 4) 위험요소 통계 (서버 주입: input_pkg.risk_logs.stats) ──
-      risk_statistics: {
-        total: 18,
-        by_type: [
-          { risk_type_name: '고소 작업 위험', count: 7 },
-          { risk_type_name: '전선 접촉 위험', count: 4 },
-          { risk_type_name: '안전모 미착용', count: 3 },
-          { risk_type_name: '안전대 미착용', count: 2 },
-          { risk_type_name: '정리정돈 불량', count: 2 },
-        ],
-        by_camera: {
-          FULL: 10,
-          BODY: 8,
-        },
-        manual_actions: {
-          PENDING: 1,
-          APPROVED: 2,
-          REJECTED: 0,
-        },
-      },
-
-      // ── 5) 준수 결과 요약 (서버 주입: input_pkg.compliance.stats) ──
-      compliance_summary: {
-        helmet: { total: 12, complied: 10, not_complied: 2, unknown: 0 },
-        vest: { total: 12, complied: 12, not_complied: 0, unknown: 0 },
-        shoes: { total: 12, complied: 11, not_complied: 0, unknown: 1 },
-      },
-
-      // ── 6) 작업 전후 사진 (서버 주입: photos paths only) ──
-      before_after_summary: {
-        before_photos: [
-          'worksessions/4/before/site_overview_01.jpg',
-          'worksessions/4/before/equipment_area_01.jpg',
-        ],
-        after_photos: [
-          'worksessions/4/after/site_cleanup_01.jpg',
-          'worksessions/4/after/equipment_stored_01.jpg',
-        ],
-      },
-
-      // ── 7) 조치사항 (LLM 생성 구간) ──
-      action_items: {
-        immediate: [
-          '11:32 구간 고소 작업 중 안전모 미착용 건에 대해 해당 근로자(원인영) 현장 즉시 시정 완료 확인',
-          '14:05 구간 전선 접촉 위험 발생 — 작업 반경 내 활선 구간 차단 조치 필요',
-        ],
-        preventive: [
-          '고소 작업 시 안전대 체결 여부 작업 전 교차 확인 절차 도입',
-          '활선 근접 작업 시 절연 장갑 및 절연 매트 배치 기준 마련',
-          '작업 시작 전 안전모·조끼·안전화 착용 상태 사진 촬영 의무화',
-        ],
-        follow_up: [
-          '원인영 근로자 대상 고소 작업 안전 교육 이수 확인 (1주 이내)',
-          '보라매동 현장 전기 배선 현황 점검 및 위험 구간 표시 업데이트',
-        ],
-      },
-    },
-  },
-};
-
-// ── Helper: Resolve photo URL via SAS ──
+function convertSession(session: WorkSessionCard): WorkSessionTeam {
+  return {
+    id: session.id,
+    siteName: session.name,
+    startTime: formatSessionTime(session.starts_at),
+    workStatus: STATUS_MAP[session.status] ?? '작업 전',
+    members: (session.workers_detail ?? []).map(w => ({ id: w.employee_id, name: w.name })),
+  };
+}
 
 async function resolvePhotoUrl(blobName: string): Promise<string | null> {
   try {
-    const res = await apiFetch(`/risk/media/sas/?blob_name=${encodeURIComponent(blobName)}`);
+    const res = await apiFetch(`/risk/media/sas?blob_name=${encodeURIComponent(blobName)}`);
     if (!res.ok) return null;
     const data = await res.json();
     return data.url ?? null;
@@ -295,9 +146,13 @@ export default function ReportScreen() {
   const [activeSidebar, setActiveSidebar] = useState('보고서 작성');
   const isProfileActive = location.pathname === '/profile';
 
+  // Worksession teams (from API)
+  const [teams, setTeams] = useState<WorkSessionTeam[]>([]);
+  const [teamsLoading, setTeamsLoading] = useState(true);
+
   // Team selection
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
-  const selectedTeam = mockTeams.find(t => t.id === selectedTeamId) ?? null;
+  const selectedTeam = teams.find(t => t.id === selectedTeamId) ?? null;
 
   // Photos (before / after)
   const [beforePhotos, setBeforePhotos] = useState<{ path: string; url: string | null }[]>([]);
@@ -310,6 +165,22 @@ export default function ReportScreen() {
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Fetch worksession teams
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await apiFetch('/worksession/admin/today/');
+        if (res.ok) {
+          const json = await res.json();
+          if (Array.isArray(json)) {
+            setTeams(json.map(convertSession));
+          }
+        }
+      } catch { /* ignore */ }
+      setTeamsLoading(false);
+    })();
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -383,32 +254,11 @@ export default function ReportScreen() {
     }
   }, []);
 
-  // Load mock data for a team if available
-  const loadMockData = useCallback((wsId: number) => {
-    const mock = mockReports[wsId];
-    const mockPkg = mockInputPackage[wsId];
-    if (!mock) return false;
-
-    setReport(mock.report);
-    setReportVersion(mock.version);
-    setVersions([{ report_id: 1, report_version: mock.version, created_at: mock.report.generated_at }]);
-
-    if (mockPkg?.photos) {
-      setBeforePhotos(mockPkg.photos.before.map(p => ({ path: p.image_path, url: null })));
-      setAfterPhotos(mockPkg.photos.after.map(p => ({ path: p.image_path, url: null })));
-    }
-    return true;
-  }, []);
-
   // When team selection changes
   useEffect(() => {
     if (selectedTeamId) {
-      // Use mock data if available, otherwise fetch from API
-      const hasMock = loadMockData(selectedTeamId);
-      if (!hasMock) {
-        fetchLatestReport(selectedTeamId);
-        fetchVersions(selectedTeamId);
-      }
+      fetchLatestReport(selectedTeamId);
+      fetchVersions(selectedTeamId);
     } else {
       setReport(null);
       setReportVersion(null);
@@ -416,7 +266,7 @@ export default function ReportScreen() {
       setBeforePhotos([]);
       setAfterPhotos([]);
     }
-  }, [selectedTeamId, loadMockData, fetchLatestReport, fetchVersions]);
+  }, [selectedTeamId, fetchLatestReport, fetchVersions]);
 
   // Generate report
   const handleGenerate = async () => {
@@ -427,9 +277,6 @@ export default function ReportScreen() {
       const body: Record<string, unknown> = {
         worksession_id: selectedTeam.id,
       };
-      if (selectedTeam.assessmentId) {
-        body.assessment_id = selectedTeam.assessmentId;
-      }
       const res = await apiFetch('/report/generate', {
         method: 'POST',
         body: JSON.stringify(body),
@@ -475,7 +322,7 @@ export default function ReportScreen() {
       {/* ── Sidebar ── */}
       <aside style={styles.sidebar}>
         <button type="button" style={styles.sidebarLogo} onClick={() => navigate('/home')}>
-          <img src={logoImg} alt="TTokTTi" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+          <img src={managerImg} alt="TTokTTi" style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: '50%' }} />
           <span style={styles.logoText}>TTokTTi</span>
         </button>
 
@@ -531,36 +378,46 @@ export default function ReportScreen() {
           <div style={styles.teamPanel}>
             <h3 style={styles.panelTitle}>팀별 작업 세션</h3>
             <div style={styles.teamList}>
-              {mockTeams.map(team => {
-                const isSelected = selectedTeamId === team.id;
-                const sc = statusColors[team.workStatus] ?? statusColors['작업 전'];
-                return (
-                  <button
-                    key={team.id}
-                    type="button"
-                    style={{ ...styles.teamCard, ...(isSelected ? styles.teamCardSelected : {}) }}
-                    onClick={() => setSelectedTeamId(team.id)}
-                  >
-                    <div style={styles.teamCardHeader}>
-                      <span style={styles.teamCardName}>{team.siteName}</span>
-                      <span style={{ ...styles.statusBadge, backgroundColor: sc.bg, color: sc.text }}>
-                        {team.workStatus}
-                      </span>
-                    </div>
-                    <div style={styles.teamCardMeta}>
-                      <span style={styles.teamCardTime}>{team.startTime}</span>
-                      <span style={styles.teamCardMembers}>
-                        {team.members.map(m => m.name).join(', ')}
-                      </span>
-                    </div>
-                    {versions.length > 0 && isSelected && (
-                      <div style={styles.versionInfo}>
-                        v{versions[0].report_version} | {versions.length}개 버전
+              {teamsLoading ? (
+                <div style={{ textAlign: 'center', padding: 20 }}>
+                  <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#8F9098' }}>로딩 중...</span>
+                </div>
+              ) : teams.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 20 }}>
+                  <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#8F9098' }}>오늘 예정된 작업이 없습니다.</span>
+                </div>
+              ) : (
+                teams.map(team => {
+                  const isSelected = selectedTeamId === team.id;
+                  const sc = statusColors[team.workStatus] ?? statusColors['작업 전'];
+                  return (
+                    <button
+                      key={team.id}
+                      type="button"
+                      style={{ ...styles.teamCard, ...(isSelected ? styles.teamCardSelected : {}) }}
+                      onClick={() => setSelectedTeamId(team.id)}
+                    >
+                      <div style={styles.teamCardHeader}>
+                        <span style={styles.teamCardName}>{team.siteName}</span>
+                        <span style={{ ...styles.statusBadge, backgroundColor: sc.bg, color: sc.text }}>
+                          {team.workStatus}
+                        </span>
                       </div>
-                    )}
-                  </button>
-                );
-              })}
+                      <div style={styles.teamCardMeta}>
+                        <span style={styles.teamCardTime}>{team.startTime}</span>
+                        <span style={styles.teamCardMembers}>
+                          {team.members.length > 0 ? team.members.map(m => m.name).join(', ') : '작업자 미지정'}
+                        </span>
+                      </div>
+                      {versions.length > 0 && isSelected && (
+                        <div style={styles.versionInfo}>
+                          v{versions[0].report_version} | {versions.length}개 버전
+                        </div>
+                      )}
+                    </button>
+                  );
+                })
+              )}
             </div>
           </div>
 
@@ -654,7 +511,7 @@ export default function ReportScreen() {
                     onClick={handleGenerate}
                     disabled={generating}
                   >
-                    {generating ? '보고서 생성 중...' : '보고서 생성 (AI)'}
+                    {generating ? '보고서 생성 중...' : '보고서 생성'}
                   </button>
                   {reportVersion && (
                     <span style={styles.versionBadge}>v{reportVersion}</span>
@@ -902,7 +759,6 @@ function ActionItemsView({ items }: { items: ActionItems }) {
   const hasAny = items.immediate?.length || items.preventive?.length || items.follow_up?.length;
   if (!hasAny) return <p style={styles.noData}>조치사항 없음</p>;
 
-  // Build a single flowing narrative from the structured action items
   const paragraphs: string[] = [];
 
   if (items.immediate?.length) {

@@ -124,5 +124,17 @@ class FakeDetector:
         # - outtrigger_deployed: outtrigger det 넣어서 정상 상태 확인
         if self.mode == "outtrigger_deployed":
             dets.append(Detection("outtrigger", outtrigger))
+        
+                # =========================
+        # 5) vehicle bbox (테스트용)
+        # =========================
+        if self.mode == "vehicle_near":
+            # person1 근처에 차량 bbox를 붙여서 proximity 룰이 잘 걸리게 함
+            # (사람 중심과 차량 중심의 거리(px)가 작아지도록)
+            vx1 = min(w - 1, person1[2] + int(0.02 * w))
+            vy1 = int(0.55 * h)
+            vx2 = min(w - 1, vx1 + int(0.25 * w))
+            vy2 = min(h - 1, vy1 + int(0.25 * h))
+            dets.append(Detection("vehicle", (vx1, vy1, vx2, vy2), score=0.95))
 
         return dets

@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../api/client';
-import logoImg from '../assets/logo.png';
+import managerImg from '../assets/manager.jpg';
+import workerImg from '../assets/safety-character.png';
 import useUnreadAlertCount from '../hooks/useUnreadAlertCount';
 
 type EmployeeInfo = {
@@ -33,6 +34,7 @@ const sidebarItems = [
   { label: '안전 장비 점검', icon: '🛡️', path: '/safety' },
   { label: '위험성 평가', icon: '👷', path: '/risk' },
   { label: '보고서 작성', icon: '✏️', path: '/report' },
+  { label: '알림 로그 확인', icon: '🔔', path: '/alert-logs' },
 ];
 
 const emptyForm: RegisterForm = {
@@ -61,7 +63,7 @@ export default function EmployeeListScreen() {
 
   const fetchEmployees = useCallback(async () => {
     try {
-      const res = await apiFetch('/user/user/');
+      const res = await apiFetch('/user/');
       if (res.ok) {
         const data: EmployeeInfo[] = await res.json();
         setEmployees(data);
@@ -80,7 +82,7 @@ export default function EmployeeListScreen() {
   const handleDelete = async (id: number, name: string) => {
     if (!window.confirm(`"${name}" 직원을 삭제하시겠습니까?`)) return;
     try {
-      const res = await apiFetch(`/user/user/${id}/`, { method: 'DELETE' });
+      const res = await apiFetch(`/user/${id}/`, { method: 'DELETE' });
       if (res.ok) {
         setEmployees(prev => prev.filter(e => e.id !== id));
       }
@@ -102,7 +104,7 @@ export default function EmployeeListScreen() {
       if (!body.phone) delete body.phone;
       if (!body.address) delete body.address;
 
-      const res = await apiFetch('/user/user/', {
+      const res = await apiFetch('/user/', {
         method: 'POST',
         body: JSON.stringify(body),
       });
@@ -140,7 +142,7 @@ export default function EmployeeListScreen() {
       {/* Sidebar */}
       <aside style={styles.sidebar}>
         <button type="button" style={styles.sidebarLogo} onClick={() => navigate('/home')}>
-          <img src={logoImg} alt="TTokTTi" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+          <img src={managerImg} alt="TTokTTi" style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: '50%' }} />
           <span style={styles.logoText}>TTokTTi</span>
         </button>
 
@@ -233,14 +235,11 @@ export default function EmployeeListScreen() {
                   >
                     <td style={styles.td}>
                       <div style={styles.tableAvatar}>
-                        {emp.photo ? (
-                          <img src={emp.photo} alt="" style={styles.tableAvatarImg} />
-                        ) : (
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C5C6CC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                            <circle cx="12" cy="7" r="4" />
-                          </svg>
-                        )}
+                        <img
+                          src={emp.username.startsWith('manager') ? managerImg : workerImg}
+                          alt=""
+                          style={styles.tableAvatarImg}
+                        />
                       </div>
                     </td>
                     <td style={styles.tdName}>{emp.name}</td>
@@ -618,7 +617,7 @@ const styles: Record<string, React.CSSProperties> = {
   tableAvatarImg: {
     width: '100%',
     height: '100%',
-    objectFit: 'cover' as const,
+    objectFit: 'contain' as const,
   },
   deleteBtn: {
     fontFamily: 'Inter, sans-serif',

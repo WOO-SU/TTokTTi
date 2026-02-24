@@ -48,10 +48,9 @@ class FIFOSafeCache:
             if len(self.cache) > self.capacity:
                 self.cache.popitem(last=False)
 
-client_states = {}
 FRAMES_BETWEEN_ACTION_CHECKS = 20
-memory_cache = FIFOSafeCache(capacity=100)
-MAX_FRAMES_PER_CLIENT = 5
+MAX_RECENT_FRAMES = 3
+client_memory_cache = FIFOSafeCache(capacity=100)
 
 # Initialize Logic Modules
 redis_client = redis.from_url(REDIS_URL, decode_responses=True)
@@ -63,12 +62,17 @@ async def report_to_django(user_id: str, reason: str, timestamp: str):
     """Async fire-and-forget report to backend (Lightweight Payload)"""
     async with httpx.AsyncClient() as client:
         try:
+            session_meta = await redis_client.hgetall(f"session_meta:{user_id}")
             # We removed the heavy base64 image!
             # Once your Blob storage is set up, you will just add: "image_url": blob_url
             payload = {
                 "user_id": user_id, 
                 "description": reason, 
                 "timestamp": timestamp,
+                # Inject the cached data
+                "worksession_id": session_meta.get("worksession_id"),
+                "risk_type_id": session_meta.get("risk_type_id"),
+                "video_path": session_meta.get("video_path")
             }
 
             response = await client.post(
@@ -88,94 +92,87 @@ async def report_to_django(user_id: str, reason: str, timestamp: str):
         except Exception as e:
             logger.error(f"Django Report Failed: {e}")
 
-def update_client_memory(client_id: str, image_b64: str, safety_result: Dict[str, Any]):
-    """Stores recent frames and events in the FIFO cache."""
-    client_memory = memory_cache.get(client_id) or deque(maxlen=MAX_FRAMES_PER_CLIENT)
-    # Store the image and the AI's observation of that frame
-    client_memory.append({
-        "image": image_b64,
-        "observation": safety_result.get("details", "No observation")
-    })
-    memory_cache.put(client_id, client_memory)
-
 async def process_job(queue_name, payload):
     """Handles a single job from Redis"""
     try:
         data = json.loads(payload)
         client_id = data["client_id"]
         content = data["data"]
-
         image_b64 = content.get("image")
         if not image_b64: return
 
-        # Initialize client state if new
-        if client_id not in client_states:
-            client_states[client_id] = {
+        # Load state from FIFOSafeCache
+        state = client_memory_cache.get(client_id)
+        if not state:
+            state = {
                 "frame_count": 0,
-                "current_rule": retriever.get_context("general work") # Default RAG
+                "current_rule": retriever.get_context("general work"),
+                "recent_frames": deque(maxlen=MAX_RECENT_FRAMES),
+                "memory_history": [] # Chronological actions
             }
+
+        state["frame_count"] += 1
+        state["recent_frames"].append(image_b64)
+        current_time_t = f"T+{state['frame_count']}s"
+        frames_list = list(state["recent_frames"])
+        client_memory_cache.put(client_id, state)
 
         # --- BRANCH 1: User Question (Priority) ---
         if queue_name == "questions":
             user_text = content.get("text", "What do you see?")
             logger.info(f"Processing Question for {client_id}: {user_text}")
 
-            recent_memory = memory_cache.get(client_id)
             context_text = "Recent observations: "
 
             if recent_memory:
                 context_text += " | ".join([m["observation"] for m in recent_memory])
             else:
                 context_text += "No recent context available."
-            
-            answer = await analyzer.answer_question(image_b64, user_text, context_text)
-            
-            # Send Answer Back
-            await redis_client.publish(f"alerts:{client_id}", json.dumps({
-                "type": "ANSWER",
-                "message": answer
-            }))
 
+            # --- Stream Async chunks via Redis PubSub ---
+            async for chunk in analyzer.answer_question(frames_list, user_text, context_text):
+                await redis_client.publish(f"alerts:{client_id}", json.dumps({
+                    "type": "ANSWER_CHUNK",
+                    "message": chunk
+                }))
+
+            # Signal Completion
+            await redis_client.publish(f"alerts:{client_id}", json.dumps({"type": "ANSWER_DONE"}))
+                        
+            
         elif queue_name == "video_frames":
-            state = client_states[client_id]
-            state["frame_count"] += 1
-
-            # --- THE SLOW LOOP: Action Recognition & RAG Update ---
+            # --- THE SLOW LOOP: Action Recognition & Memory Sync ---
             if state["frame_count"] % FRAMES_BETWEEN_ACTION_CHECKS == 1:
-                # 1. Ask the VLM what the worker is doing right now
-                current_action = await analyzer.detect_action(image_b64)
-                
-                # 2. Do the Vector Math / DB Lookup based on the action
+                current_action = await analyzer.detect_action(frames_list)
                 new_rule = retriever.get_context(scene_type=current_action)
-                
-                # 3. Cache the specific manual rule
                 state["current_rule"] = new_rule
-                logger.info(f"[{client_id}] Context Updated -> Action: {current_action} | Rule: {new_rule}")
-
-            # 1. Get Context
-            active_rules = state["current_rule"]
-                    
-            # 2. Run Inference
-            result = await analyzer.detect_danger(image_b64, active_rules)
-
-            update_client_memory(client_id, image_b64, result)
-            
-            # 3. If Danger, Alert & Report
-            if result["is_danger"]:
-                # Generate exact time of detection
-                now_iso = datetime.now(timezone.utc).isoformat()
                 
+                state["memory_history"].append({
+                    "timestamp": current_time_t,
+                    "action": current_action,
+                    "observation": "Monitored safely"
+                })
+                client_memory_cache.put(client_id, state)
+                logger.info(f"[{client_id}] T={current_time_t} | Action: {current_action}")
+
+            # --- THE FAST LOOP: RAG Safety Check ---
+            result = await analyzer.detect_danger(frames_list, state["current_rule"])
+
+            if result["is_danger"]:
+                now_iso = datetime.now(timezone.utc).isoformat()
                 logger.warning(f"DANGER DETECTED: {client_id} - {result['details']}")
                 
-                # A. Alert Phone (Now with timestamp)
+                # Update recent event in the timeline
+                if state["memory_history"]:
+                    state["memory_history"][-1]["observation"] = result["details"]
+                    client_memory_cache.put(client_id, state)
+
                 await redis_client.publish(f"alerts:{client_id}", json.dumps({
                     "type": "DANGER",
                     "message": "Safety Violation Detected",
                     "details": result["details"],
                     "timestamp": now_iso
                 }))
-                
-                # B. Report to Django (Update the report function to accept this timestamp)
                 asyncio.create_task(report_to_django(client_id, result["details"], now_iso))
 
     except Exception as e:
@@ -183,10 +180,7 @@ async def process_job(queue_name, payload):
 
 async def main():
     logger.info("GPU Worker Started... Waiting for Redis jobs.")
-
-    # Graceful shutdown handler
     def handle_shutdown():
-        logger.info("Shutdown signal received. Stopping worker...")
         shutdown_event.set()
 
     loop = asyncio.get_running_loop()
@@ -195,14 +189,10 @@ async def main():
 
     while not shutdown_event.is_set():
         try:
-            # Priority Pop: Check 'questions' first, then 'video_frames'
-            # brpop blocks until data is available, preventing high CPU usage
             item = await redis_client.brpop(["questions", "video_frames"], timeout=1.0)
-            
             if item:
                 queue_name, payload = item
                 await process_job(queue_name, payload)
-        
         except Exception as e:
             logger.error(f"Redis polling error: {e}")
             await asyncio.sleep(1)
