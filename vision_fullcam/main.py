@@ -24,7 +24,7 @@ from vision_fullcam.rules.ppe_rules import (
 )
 from vision_fullcam.rules.worker_count import InsufficientWorkerCountRule
 from vision_fullcam.rules.ladder_rules import (
-    LadderTiltRule,
+    LadderInstabilityRule,
     LadderMovementWithPersonRule,
 )
 from vision_fullcam.rules.height_rule import HeightLadderViolationRule
@@ -169,7 +169,7 @@ def main():
         # ladder / height
         HeightLadderViolationRule(cfg),
         LadderMovementWithPersonRule(cfg),
-        LadderTiltRule(cfg),
+        LadderInstabilityRule(cfg),
         OuttriggerNotDeployedRule(cfg),
 
         # PPE
