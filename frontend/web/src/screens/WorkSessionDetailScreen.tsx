@@ -167,6 +167,7 @@ export default function WorkSessionDetailScreen() {
 
   const [activeTab, setActiveTab] = useState<TabKey>('risk');
   const [summary, setSummary] = useState<SummaryData | null>(null);
+  const [photoUrls, setPhotoUrls] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -177,6 +178,30 @@ export default function WorkSessionDetailScreen() {
       if (res.ok) {
         const json = await res.json();
         setSummary(json);
+
+        // Fetch SAS URLs for photos
+        if (json.photos && json.photos.length > 0) {
+          const urlMap: Record<number, string> = {};
+          await Promise.all(
+            json.photos.map(async (p: PhotoItem) => {
+              if (p.image) {
+                try {
+                  const sRes = await apiFetch('/user/storage/sas/download/', {
+                    method: 'POST',
+                    body: JSON.stringify({ blob_name: p.image }),
+                  });
+                  if (sRes.ok) {
+                    const sJson = await sRes.json();
+                    urlMap[p.id] = sJson.download_url;
+                  }
+                } catch (err) {
+                  console.error(`Failed to fetch SAS for photo ${p.id}:`, err);
+                }
+              }
+            })
+          );
+          setPhotoUrls(urlMap);
+        }
       } else {
         const text = await res.text();
         console.error('[WorkSessionDetail] API error:', res.status, text);
@@ -534,12 +559,14 @@ export default function WorkSessionDetailScreen() {
                         return (
                           <div key={photo.id} style={styles.photoCard}>
                             <span style={styles.photoLabel}>{label}</span>
-                            {photo.image ? (
-                              <img src={photo.image} alt={label} style={styles.photoImg} />
+                            {photoUrls[photo.id] ? (
+                              <img src={photoUrls[photo.id]} alt={label} style={styles.photoImg} />
                             ) : (
                               <div style={styles.photoPlaceholder}>
                                 <span style={{ fontSize: 32 }}>📷</span>
-                                <span style={styles.photoPlaceholderText}>사진 없음</span>
+                                <span style={styles.photoPlaceholderText}>
+                                  {photo.image ? '사진 불러오는 중...' : '사진 없음'}
+                                </span>
                               </div>
                             )}
                           </div>
