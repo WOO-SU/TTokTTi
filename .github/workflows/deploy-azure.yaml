@@ -61,16 +61,12 @@ jobs:
             DB_USER=user
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY}}
-
             REDIS_HOST="redis"
             REDIS_PORT="6379"
-
             AZURE_STORAGE_ACCOUNT_NAME=striskpulse
             AZURE_STORAGE_ACCOUNT_KEY=${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
             AZURE_BLOB_CONTAINER=images
             AZURE_SAS_TTL_MINUTES=10
-
             OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
             OPENAI_MODEL=gpt-4o-mini
-
             MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }} 
