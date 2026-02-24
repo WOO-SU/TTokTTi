@@ -48,10 +48,9 @@ class FIFOSafeCache:
             if len(self.cache) > self.capacity:
                 self.cache.popitem(last=False)
 
-client_states = {}
 FRAMES_BETWEEN_ACTION_CHECKS = 20
-memory_cache = FIFOSafeCache(capacity=100)
-MAX_FRAMES_PER_CLIENT = 5
+MAX_RECENT_FRAMES = 3
+client_memory_cache = FIFOSafeCache(capacity=100)
 
 # Initialize Logic Modules
 redis_client = redis.from_url(REDIS_URL, decode_responses=True)
@@ -87,16 +86,6 @@ async def report_to_django(user_id: str, reason: str, timestamp: str):
                 logger.warning(f"Backend Error {response.status_code}: {response.text}")
         except Exception as e:
             logger.error(f"Django Report Failed: {e}")
-
-def update_client_memory(client_id: str, image_b64: str, safety_result: Dict[str, Any]):
-    """Stores recent frames and events in the FIFO cache."""
-    client_memory = memory_cache.get(client_id) or deque(maxlen=MAX_FRAMES_PER_CLIENT)
-    # Store the image and the AI's observation of that frame
-    client_memory.append({
-        "image": image_b64,
-        "observation": safety_result.get("details", "No observation")
-    })
-    memory_cache.put(client_id, client_memory)
 
 async def process_job(queue_name, payload):
     """Handles a single job from Redis"""
