@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../api/client';
-import logoImg from '../assets/logo.png';
+import managerImg from '../assets/manager.jpg';
 import useUnreadAlertCount from '../hooks/useUnreadAlertCount';
 
 type UserProfile = {
@@ -22,6 +22,7 @@ const sidebarItems = [
   { label: '\uC548\uC804 \uC7A5\uBE44 \uC810\uAC80', icon: '\u{1F6E1}\uFE0F', path: '/safety' },
   { label: '\uC704\uD5D8\uC131 \uD3C9\uAC00', icon: '\u{1F477}', path: '/risk' },
   { label: '\uBCF4\uACE0\uC11C \uC791\uC131', icon: '\u270F\uFE0F', path: '/report' },
+  { label: '\uC54C\uB9BC \uB85C\uADF8 \uD655\uC778', icon: '\uD83D\uDD14', path: '/alert-logs' },
 ];
 
 export default function ProfileScreen() {
@@ -47,7 +48,7 @@ export default function ProfileScreen() {
     if (!user?.userId) return;
     (async () => {
       try {
-        const res = await apiFetch(`/user/user/${user.userId}/`);
+        const res = await apiFetch(`/user/${user.userId}/`);
         if (res.ok) {
           const data: UserProfile = await res.json();
           setProfile(data);
@@ -73,9 +74,8 @@ export default function ProfileScreen() {
     try {
       const body: Record<string, unknown> = { ...form };
       if (body.birth_date === '') delete body.birth_date;
-      else body.birth_date = `${body.birth_date}T00:00:00Z`;
 
-      const res = await apiFetch(`/user/user/${user.userId}/`, {
+      const res = await apiFetch(`/user/${user.userId}/`, {
         method: 'PATCH',
         body: JSON.stringify(body),
       });
@@ -103,7 +103,7 @@ export default function ProfileScreen() {
       {/* Sidebar */}
       <aside style={styles.sidebar}>
         <button type="button" style={styles.sidebarLogo} onClick={() => navigate('/home')}>
-          <img src={logoImg} alt="TTokTTi" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+          <img src={managerImg} alt="TTokTTi" style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: '50%' }} />
           <span style={styles.logoText}>TTokTTi</span>
         </button>
 

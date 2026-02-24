@@ -12,7 +12,7 @@ class OuttriggerNotDeployedRule(Rule):
         now = ctx.timestamp
         events = []
         # meta["outtrigger_required"]=True 일 때만 체크
-        required = bool(ctx.meta.get("outtrigger_required", False))
+        required = bool(getattr(ctx.task, "outtrigger_required", False))
         if not required:
             return []
         

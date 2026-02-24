@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import logoImg from '../assets/logo.png';
+import managerImg from '../assets/manager.jpg';
 
 // ── Types ──
 
@@ -105,6 +105,7 @@ const sidebarItems = [
   { label: '안전 장비 점검', icon: '🛡️', path: '/safety' },
   { label: '위험성 평가', icon: '👷', path: '/risk' },
   { label: '보고서 작성', icon: '✏️', path: '/report' },
+  { label: '알림 로그 확인', icon: '🔔', path: '/alert-logs' },
 ];
 
 // ── Check Icon ──
@@ -160,7 +161,7 @@ export default function WorkSessionDetailScreen() {
       {/* ── Sidebar ── */}
       <aside style={styles.sidebar}>
         <button type="button" style={styles.sidebarLogo} onClick={() => navigate('/home')}>
-          <img src={logoImg} alt="TTokTTi" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+          <img src={managerImg} alt="TTokTTi" style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: '50%' }} />
           <span style={styles.logoText}>TTokTTi</span>
         </button>
         <nav style={styles.sidebarNav}>

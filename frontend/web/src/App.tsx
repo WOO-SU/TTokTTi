@@ -13,9 +13,11 @@ import EmployeeDetailScreen from './screens/EmployeeDetailScreen';
 import WorkerRiskScreen from './screens/WorkerRiskScreen';
 import WorkSessionDetailScreen from './screens/WorkSessionDetailScreen';
 import EmployeeListScreen from './screens/EmployeeListScreen';
+import AlertLogScreen from './screens/AlertLogScreen';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
+  if (loading) return null;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
@@ -37,6 +39,7 @@ export default function App() {
           <Route path="/employees" element={<ProtectedRoute><EmployeeListScreen /></ProtectedRoute>} />
           <Route path="/employee/:id" element={<ProtectedRoute><EmployeeDetailScreen /></ProtectedRoute>} />
           <Route path="/worksession/:id" element={<ProtectedRoute><WorkSessionDetailScreen /></ProtectedRoute>} />
+          <Route path="/alert-logs" element={<ProtectedRoute><AlertLogScreen /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </AuthProvider>

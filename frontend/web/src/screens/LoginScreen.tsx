@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import logoImg from '../assets/logo.png';
+import managerImg from '../assets/manager.jpg';
 
 function EyeIcon({ color }: { color: string }) {
   return (
@@ -46,7 +46,7 @@ export default function LoginScreen() {
           <div style={styles.card}>
             {/* Logo */}
             <div style={styles.logoSection}>
-              <img src={logoImg} alt="TTokTTi" style={styles.logoIcon} />
+              <img src={managerImg} alt="TTokTTi" style={styles.logoIcon} />
               <span style={styles.logoText}>TTokTTi</span>
             </div>
 
@@ -177,9 +177,10 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 8,
   },
   logoIcon: {
-    width: 60,
-    height: 60,
-    objectFit: 'contain' as const,
+    width: 80,
+    height: 80,
+    objectFit: 'cover' as const,
+    borderRadius: '50%',
   },
   logoText: {
     fontFamily: 'Inter, sans-serif',
