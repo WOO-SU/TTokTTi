@@ -42,7 +42,7 @@ const STATUS_CONFIG: Record<
   completed: { label: '작업 완료', bg: '#00FFAE', text: '#000000', icon: '✓' },
   in_progress: {
     label: '작업 중',
-    bg: '#006FFD',
+    bg: '#FFB800',
     text: '#FFFFFF',
     icon: '▷',
   },
@@ -163,7 +163,7 @@ export default function MainHomeScreen() {
         {/* Task Cards */}
         <View style={styles.taskList}>
           {loading ? (
-            <ActivityIndicator size="large" color="#006FFD" style={{ marginTop: 40 }} />
+            <ActivityIndicator size="large" color="#FFB800" style={{ marginTop: 40 }} />
           ) : sessions.length === 0 ? (
             <Text style={styles.emptyText}>오늘 배정된 작업이 없습니다.</Text>
           ) : (
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
     width: 65,
     height: 65,
     borderRadius: 33,
-    backgroundColor: '#EAF2FF',
+    backgroundColor: '#FFF8E1',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
@@ -495,7 +495,7 @@ const styles = StyleSheet.create({
   modalFilledBtn: {
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     justifyContent: 'center',
     alignItems: 'center',
   },

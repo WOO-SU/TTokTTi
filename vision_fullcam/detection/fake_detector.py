@@ -21,7 +21,6 @@ class FakeDetector:
       - normal
       - no_helmet
       - no_vest
-      - no_shoes
       - one_person
       - ladder_move
       - tilted_ladder
@@ -116,8 +115,6 @@ class FakeDetector:
             dets.append(Detection("helmet", helmet1))
         if self.mode != "no_vest":
             dets.append(Detection("safety_vest", vest1))
-        if self.mode != "no_shoes":
-            dets.append(Detection("safety_shoes", shoes1))
 
         # outtrigger 모드
         # - outtrigger_missing: 일부러 아무 것도 안 넣음 (required=True일 때 미전개 이벤트가 떠야 정상)

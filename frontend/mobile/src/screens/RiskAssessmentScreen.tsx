@@ -36,7 +36,7 @@ function BackArrowIcon() {
 export default function RiskAssessmentScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { worksession_id } = route.params;
-  const { setAssessmentId } = useRiskPhotos();
+  const { setAssessmentId, clearPhotos } = useRiskPhotos();
   const isComponentMounted = useRef(true);
 
   useEffect(() => {
@@ -53,11 +53,13 @@ export default function RiskAssessmentScreen({ navigation, route }: Props) {
             worksession_id,
           });
         } else {
+          clearPhotos();
           navigation.replace('RiskCheck', { worksession_id });
         }
       } catch (err) {
         console.error('[RiskAssessment] checkLatestRisk 실패:', err);
         if (!isComponentMounted.current || !navigation.isFocused()) return;
+        clearPhotos();
         navigation.replace('RiskCheck', { worksession_id });
       }
     }
@@ -76,7 +78,7 @@ export default function RiskAssessmentScreen({ navigation, route }: Props) {
 
       {/* 로딩 */}
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#006FFD" />
+        <ActivityIndicator size="large" color="#FFB800" />
         <Text style={styles.loadingText}>보고서를 확인 중입니다...</Text>
       </View>
     </View>
@@ -95,7 +97,7 @@ const iconStyles = StyleSheet.create({
   backArrowTop: {
     width: 14,
     height: 2,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 1,
     position: 'absolute',
     transform: [{ rotate: '-45deg' }, { translateY: -5.5 }],
@@ -103,7 +105,7 @@ const iconStyles = StyleSheet.create({
   backArrowBottom: {
     width: 14,
     height: 2,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 1,
     position: 'absolute',
     transform: [{ rotate: '45deg' }, { translateY: 5.5 }],

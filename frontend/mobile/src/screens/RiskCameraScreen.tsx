@@ -64,7 +64,7 @@ export default function RiskCameraScreen({ navigation, route }: Props) {
     setIsUploading(true);
     try {
       // 1. blob 업로드
-      const { upload_url, blob_name } = await getSasToken();
+      const { upload_url, blob_name } = await getSasToken('image/jpeg', 'assessment');
       await uploadToBlob(upload_url, photoPath);
 
       // 2. 첫 사진이면 assessment 생성, 아니면 기존 ID 사용
@@ -134,7 +134,7 @@ export default function RiskCameraScreen({ navigation, route }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8F9FE',
   },
 
   cameraPreview: {
@@ -158,6 +158,6 @@ const styles = StyleSheet.create({
   bottomSection: {
     alignItems: 'center',
     paddingHorizontal: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8F9FE',
   },
 });

@@ -147,7 +147,7 @@ const iconStyles = StyleSheet.create({
     arrowTop: {
         width: 14,
         height: 2,
-        backgroundColor: '#006FFD',
+        backgroundColor: '#FFB800',
         borderRadius: 1,
         position: 'absolute',
         transform: [{ rotate: '-45deg' }, { translateY: -5.5 }],
@@ -155,7 +155,7 @@ const iconStyles = StyleSheet.create({
     arrowBottom: {
         width: 14,
         height: 2,
-        backgroundColor: '#006FFD',
+        backgroundColor: '#FFB800',
         borderRadius: 1,
         position: 'absolute',
         transform: [{ rotate: '45deg' }, { translateY: 5.5 }],
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
     },
     submitButton: {
         height: 52,
-        backgroundColor: '#006FFD',
+        backgroundColor: '#FFB800',
         borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',

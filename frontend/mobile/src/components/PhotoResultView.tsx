@@ -61,6 +61,9 @@ export default function PhotoResultView({
                     </View>
                 </View>
             )}
+            {!showControls && (
+                <View style={[styles.bottomSection, { paddingBottom: insets.bottom + 16, height: insets.bottom + 80 }]} />
+            )}
         </View>
     );
 }
@@ -98,7 +101,7 @@ const styles = StyleSheet.create({
         height: 48,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#006FFD',
+        borderColor: '#FFB800',
         backgroundColor: '#FFFFFF',
         justifyContent: 'center',
         alignItems: 'center',
@@ -107,13 +110,13 @@ const styles = StyleSheet.create({
         fontFamily: 'Noto Sans KR',
         fontWeight: '600',
         fontSize: 16,
-        color: '#006FFD',
+        color: '#FFB800',
     },
     confirmButton: {
         flex: 1,
         height: 48,
         borderRadius: 12,
-        backgroundColor: '#006FFD',
+        backgroundColor: '#FFB800',
         justifyContent: 'center',
         alignItems: 'center',
     },
