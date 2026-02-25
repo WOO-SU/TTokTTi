@@ -2,7 +2,7 @@ import type { SafetyEvent, BBox } from '../types';
 import type { VisionConfig } from '../config';
 import { Debounce } from './base';
 import type { Rule, RuleContext } from './base';
-import { median } from '../utils';
+import { CircularBuffer, median } from '../utils';
 
 function bboxCenter(b: BBox): [number, number] {
   return [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2];
@@ -14,69 +14,146 @@ function bboxMovePx(b1: BBox, b2: BBox): number {
   return Math.hypot(c2[0] - c1[0], c2[1] - c1[1]);
 }
 
-function ladderTiltDeg(bbox: BBox): number {
-  const w = Math.abs(bbox[2] - bbox[0]);
-  const h = Math.max(1, Math.abs(bbox[3] - bbox[1]));
-  return Math.abs((Math.atan2(w, h) * 180) / Math.PI);
+function bboxCentersDist(b1: BBox, b2: BBox): number {
+  const c1 = bboxCenter(b1);
+  const c2 = bboxCenter(b2);
+  return Math.hypot(c2[0] - c1[0], c2[1] - c1[1]);
 }
 
-export class LadderTiltRule implements Rule {
-  name = 'ladder_tilt';
+function bboxAspect(b: BBox): number {
+  const w = Math.abs(b[2] - b[0]);
+  const h = Math.max(1, Math.abs(b[3] - b[1]));
+  return w / h;
+}
+
+function bboxArea(b: BBox): number {
+  return Math.max(0, (b[2] - b[0]) * (b[3] - b[1]));
+}
+
+interface Signals {
+  centerDelta: number;
+  aspectDelta: number;
+  areaDeltaR: number;
+}
+
+function computeSignals(bOld: BBox, bNew: BBox): Signals {
+  const centerDelta = bboxCentersDist(bOld, bNew);
+  const aspectDelta = Math.abs(bboxAspect(bNew) - bboxAspect(bOld));
+  const areaOld = bboxArea(bOld);
+  const areaDeltaR = Math.abs(bboxArea(bNew) - areaOld) / Math.max(1.0, areaOld);
+
+  return { centerDelta, aspectDelta, areaDeltaR };
+}
+
+export class LadderInstabilityRule implements Rule {
+  name = 'ladder_instability';
   private cfg: VisionConfig;
   private db: Debounce;
 
+  private static readonly MIN_HIST = 5;
+  private static readonly SIGNAL_WIN = 7;
+
+  private centerHist: Map<number, CircularBuffer<number>>;
+  private aspectHist: Map<number, CircularBuffer<number>>;
+  private areaHist: Map<number, CircularBuffer<number>>;
+
   constructor(cfg: VisionConfig) {
     this.cfg = cfg;
-    this.db = new Debounce(0, 0); // per-key container
+    this.db = new Debounce(0, 0);
+    this.centerHist = new Map();
+    this.aspectHist = new Map();
+    this.areaHist = new Map();
+  }
+
+  private getHists(ladderId: number): {
+    center: CircularBuffer<number>;
+    aspect: CircularBuffer<number>;
+    area: CircularBuffer<number>;
+  } {
+    if (!this.centerHist.has(ladderId)) {
+      this.centerHist.set(ladderId, new CircularBuffer(60));
+    }
+    if (!this.aspectHist.has(ladderId)) {
+      this.aspectHist.set(ladderId, new CircularBuffer(60));
+    }
+    if (!this.areaHist.has(ladderId)) {
+      this.areaHist.set(ladderId, new CircularBuffer(60));
+    }
+
+    return {
+      center: this.centerHist.get(ladderId)!,
+      aspect: this.aspectHist.get(ladderId)!,
+      area: this.areaHist.get(ladderId)!,
+    };
   }
 
   evaluate(ctx: RuleContext): SafetyEvent[] {
     const now = ctx.timestamp;
     const events: SafetyEvent[] = [];
 
-    for (const l of ctx.state.ladders.values()) {
-      if (l.bbox === null) continue;
+    for (const ladder of ctx.state.ladders.values()) {
+      const bboxHist = ladder.bboxHist.toArray();
+      if (bboxHist.length < 2) continue;
 
-      const rawAngle = ladderTiltDeg(l.bbox);
-      l.tiltHist.push(rawAngle);
+      const bOld = bboxHist[bboxHist.length - 2];
+      const bNew = bboxHist[bboxHist.length - 1];
+      const sig = computeSignals(bOld, bNew);
 
-      const hist = l.tiltHist.toArray();
-      if (hist.length < 3) continue;
+      const hists = this.getHists(ladder.id);
+      hists.center.push(sig.centerDelta);
+      hists.aspect.push(sig.aspectDelta);
+      hists.area.push(sig.areaDeltaR);
 
-      const angle = median(hist.slice(-7));
+      if (hists.center.length < LadderInstabilityRule.MIN_HIST) continue;
 
-      console.log(
-        `[Vision:LadderTilt] ladder#${l.id} raw=${rawAngle.toFixed(1)}° median=${angle.toFixed(1)}° (warn>${this.cfg.ladderTiltWarnDeg}° danger>${this.cfg.ladderTiltDangerDeg}°)`,
-      );
+      const centerMedian = median(hists.center.slice(-LadderInstabilityRule.SIGNAL_WIN));
+      const aspectMedian = median(hists.aspect.slice(-LadderInstabilityRule.SIGNAL_WIN));
+      const areaMedian = median(hists.area.slice(-LadderInstabilityRule.SIGNAL_WIN));
 
       const db = this.db.setdefault(
-        l.id,
-        this.cfg.ladderTiltSec,
+        ladder.id,
+        this.cfg.ladderUnstableSec,
         this.cfg.cooldownSec,
       );
 
-      // danger: 즉시
-      if (angle > this.cfg.ladderTiltDangerDeg) {
+      // Danger: 즉시 발화
+      if (
+        centerMedian > this.cfg.ladderDangerCenterPx ||
+        aspectMedian > this.cfg.ladderDangerAspect
+      ) {
         if (db.fireImmediate(now)) {
           events.push({
             label: this.name,
             severity: 'high',
-            targetId: l.id,
+            targetId: ladder.id,
             ts: now,
-            info: { tilt_deg: angle, tilt_raw_deg: rawAngle },
+            info: {
+              center_delta_px: Math.round(centerMedian * 10) / 10,
+              aspect_delta: Math.round(aspectMedian * 1000) / 1000,
+              area_delta_r: Math.round(areaMedian * 1000) / 1000,
+            },
           });
         }
         continue;
       }
 
-      // warn: 지속 조건
-      if (db.check(now, angle > this.cfg.ladderTiltWarnDeg)) {
+      // Warn: 지속 조건
+      const warn =
+        centerMedian > this.cfg.ladderUnstableCenterPx ||
+        aspectMedian > this.cfg.ladderUnstableAspect ||
+        areaMedian > this.cfg.ladderUnstableAreaR;
+
+      if (db.check(now, warn)) {
         events.push({
           label: this.name,
           severity: 'medium',
-          targetId: l.id,
+          targetId: ladder.id,
           ts: now,
-          info: { tilt_deg: angle, tilt_raw_deg: rawAngle },
+          info: {
+            center_delta_px: Math.round(centerMedian * 10) / 10,
+            aspect_delta: Math.round(aspectMedian * 1000) / 1000,
+            area_delta_r: Math.round(areaMedian * 1000) / 1000,
+          },
         });
       }
     }

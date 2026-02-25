@@ -71,16 +71,16 @@ export function useVisionEngine() {
       frameWidth: number,
       frameHeight: number,
       poseInputFn?: (bbox: [number, number, number, number]) => Float32Array | null,
-    ): SafetyEvent[] => {
-      if (!engineRef.current) return [];
+    ): { events: SafetyEvent[]; detections: any[] } => {
+      if (!engineRef.current) return { events: [], detections: [] };
 
       // FPS 스킵
       const now = Date.now();
       const interval = 1000 / state.targetFps;
-      if (now - lastProcessedRef.current < interval) return [];
+      if (now - lastProcessedRef.current < interval) return { events: [], detections: [] };
       lastProcessedRef.current = now;
 
-      const events = engineRef.current.processFrame(
+      const { events, detections } = engineRef.current.processFrame(
         yoloInput,
         frameWidth,
         frameHeight,
@@ -96,7 +96,7 @@ export function useVisionEngine() {
         emitterRef.current.emit(events).catch(console.error);
       }
 
-      return events;
+      return { events, detections };
     },
     [state.targetFps, adjustFps],
   );

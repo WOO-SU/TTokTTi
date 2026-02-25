@@ -6,7 +6,6 @@ export class LadderState {
   lastSeen: number;
 
   bboxHist: CircularBuffer<BBox>;
-  tiltHist: CircularBuffer<number>;
   heightMHist: CircularBuffer<number>;
   bbox: BBox | null;
 
@@ -15,7 +14,6 @@ export class LadderState {
     this.lastSeen = Date.now() / 1000;
 
     this.bboxHist = new CircularBuffer(60);
-    this.tiltHist = new CircularBuffer(60);
     this.heightMHist = new CircularBuffer(10);
     this.bbox = null;
   }

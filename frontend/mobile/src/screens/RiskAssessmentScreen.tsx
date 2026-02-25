@@ -36,7 +36,7 @@ function BackArrowIcon() {
 export default function RiskAssessmentScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { worksession_id } = route.params;
-  const { setAssessmentId } = useRiskPhotos();
+  const { setAssessmentId, clearPhotos } = useRiskPhotos();
   const isComponentMounted = useRef(true);
 
   useEffect(() => {
@@ -53,11 +53,13 @@ export default function RiskAssessmentScreen({ navigation, route }: Props) {
             worksession_id,
           });
         } else {
+          clearPhotos();
           navigation.replace('RiskCheck', { worksession_id });
         }
       } catch (err) {
         console.error('[RiskAssessment] checkLatestRisk 실패:', err);
         if (!isComponentMounted.current || !navigation.isFocused()) return;
+        clearPhotos();
         navigation.replace('RiskCheck', { worksession_id });
       }
     }

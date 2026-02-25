@@ -27,12 +27,14 @@ type Props = {
 };
 
 const LEVEL_COLOR: Record<string, string> = {
-  HIGH: '#E53E3E',
-  MEDIUM: '#DD6B20',
-  LOW: '#38A169',
+  CRITICAL: '#E53E3E',
+  HIGH: '#DD6B20',
+  MEDIUM: '#38A169',
+  LOW: '#7BC043',
 };
 
 const LEVEL_LABEL: Record<string, string> = {
+  CRITICAL: '위험',
   HIGH: '높음',
   MEDIUM: '보통',
   LOW: '낮음',

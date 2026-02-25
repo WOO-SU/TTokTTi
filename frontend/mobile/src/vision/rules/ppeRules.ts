@@ -16,10 +16,10 @@ export class HelmetNotWornRule implements Rule {
     const events: SafetyEvent[] = [];
 
     for (const p of ctx.state.persons.values()) {
-      if (p.helmetHist.length < 10) continue;
-      const recent = p.helmetHist.slice(-10);
+      if (p.helmetHist.length < 1) continue;
+      const recent = p.helmetHist.slice(-1);
       const missRatio = recent.filter(v => !v).length / recent.length;
-      if (this.db.check(now, missRatio > 0.7)) {
+      if (this.db.check(now, missRatio > 0.5)) {
         events.push({
           label: this.name,
           severity: 'medium',
@@ -46,10 +46,10 @@ export class SafetyVestNotWornRule implements Rule {
     const events: SafetyEvent[] = [];
 
     for (const p of ctx.state.persons.values()) {
-      if (p.vestHist.length < 10) continue;
-      const recent = p.vestHist.slice(-10);
+      if (p.vestHist.length < 1) continue;
+      const recent = p.vestHist.slice(-1);
       const missRatio = recent.filter(v => !v).length / recent.length;
-      if (this.db.check(now, missRatio > 0.7)) {
+      if (this.db.check(now, missRatio > 0.5)) {
         events.push({
           label: this.name,
           severity: 'medium',

@@ -12,7 +12,7 @@ import { estimatePersonHeightPx, estimateLadderHeightM } from './geometry/height
 
 import { HelmetNotWornRule, SafetyVestNotWornRule, SafetyShoesNotWornRule } from './rules/ppeRules';
 import { InsufficientWorkerCountRule } from './rules/workerCount';
-import { LadderTiltRule, LadderMovementWithPersonRule } from './rules/ladderRules';
+import { LadderInstabilityRule, LadderMovementWithPersonRule } from './rules/ladderRules';
 import { HeightLadderViolationRule } from './rules/heightRule';
 import { OuttriggerNotDeployedRule } from './rules/outtriggerRule';
 import { ExcessiveBodyTiltRule, TopStepUsageRule } from './rules/postureRules';
@@ -30,6 +30,7 @@ export class VisionEngine {
   private rules: Rule[];
   private config: VisionConfig;
   private lastInferenceMs: number = 0;
+  private lastLogTime: number = 0;
 
   constructor(
     yoloModel: TensorflowModel,
@@ -37,7 +38,7 @@ export class VisionEngine {
     config: VisionConfig,
   ) {
     this.config = config;
-    this.detector = new TFLiteDetector(yoloModel, config.confidenceThreshold);
+    this.detector = new TFLiteDetector(yoloModel, config.confidenceThreshold, 0.5, 640);
     this.poseEstimator = movenetModel ? new PoseEstimator(movenetModel) : null;
     this.tracker = new SimpleTracker(0.3);
     this.state = new StateBuffer();
@@ -54,7 +55,7 @@ export class VisionEngine {
       new InsufficientWorkerCountRule(config),
 
       // Ladder
-      new LadderTiltRule(config),
+      new LadderInstabilityRule(config),
       new LadderMovementWithPersonRule(config),
       new HeightLadderViolationRule(config),
 
@@ -70,24 +71,25 @@ export class VisionEngine {
   /**
    * 1프레임 처리.
    *
-   * @param yoloInput - 416x416x3 Float32Array (0~1 정규화)
+   * @param yoloInput - 640x640x3 Float32Array (0~1 정규화)
    * @param frameWidth - 원본 프레임 너비 (PPE ROI 계산용)
    * @param frameHeight - 원본 프레임 높이
    * @param poseInputFn - person bbox → 192x192x3 crop Float32Array 반환 함수 (선택)
-   * @returns 발생한 안전 이벤트 배열
+   * @returns { events, detections } - 안전 이벤트와 detection 결과
    */
   processFrame(
     yoloInput: Float32Array,
     frameWidth: number,
     frameHeight: number,
     poseInputFn?: (bbox: [number, number, number, number]) => Float32Array | null,
-  ): SafetyEvent[] {
+  ): { events: SafetyEvent[]; detections: Detection[] } {
     const t0 = Date.now();
     const now = t0 / 1000;
+    const shouldLog = t0 - this.lastLogTime >= 1000; // 1초마다 로그
 
     // 1) Detection
     const detections: Detection[] = this.detector.detect(yoloInput);
-    if (detections.length > 0) {
+    if (shouldLog && detections.length > 0) {
       console.log(
         `[Vision:Detection] ${detections.length}개 탐지:`,
         detections.map(d => `${d.label}(${(d.score * 100).toFixed(0)}%) [${d.bbox}]`).join(', '),
@@ -102,7 +104,7 @@ export class VisionEngine {
       score: d.score,
     }));
     const tracked = this.tracker.update(trackedInput);
-    if (tracked.size > 0) {
+    if (shouldLog && tracked.size > 0) {
       const trackLog = Array.from(tracked.values())
         .map(t => `#${t.trackId} ${t.label}`)
         .join(', ');
@@ -111,9 +113,11 @@ export class VisionEngine {
 
     // 3) State update (PPE observer 포함)
     this.state.update(tracked, [frameHeight, frameWidth], now);
-    console.log(
-      `[Vision:State] person=${this.state.site.personCount} ladder=${this.state.site.anyLadder} outtrigger=${this.state.site.anyOuttrigger}`,
-    );
+    if (shouldLog) {
+      console.log(
+        `[Vision:State] person=${this.state.site.personCount} ladder=${this.state.site.anyLadder} outtrigger=${this.state.site.anyOuttrigger}`,
+      );
+    }
 
     // 4) Pose estimation (선택)
     if (this.poseEstimator && poseInputFn) {
@@ -181,8 +185,13 @@ export class VisionEngine {
     }
 
     this.lastInferenceMs = Date.now() - t0;
-    console.log(`[Vision:Frame] ${this.lastInferenceMs}ms | 탐지=${detections.length} | 이벤트=${events.length}`);
-    return events;
+
+    if (shouldLog) {
+      console.log(`[Vision:Frame] ${this.lastInferenceMs}ms | 탐지=${detections.length} | 이벤트=${events.length}`);
+      this.lastLogTime = t0;
+    }
+
+    return { events, detections };
   }
 
   getLastInferenceMs(): number {

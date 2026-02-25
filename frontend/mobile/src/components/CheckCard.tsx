@@ -29,29 +29,29 @@ function CheckIcon() {
 
 const iconStyles = StyleSheet.create({
     checkContainer: {
-        width: 10,
-        height: 10,
+        width: 14,
+        height: 14,
         justifyContent: 'center',
         alignItems: 'center',
     },
     checkShort: {
         width: 5,
-        height: 1.5,
+        height: 2,
         backgroundColor: '#FFFFFF',
         borderRadius: 1,
         position: 'absolute',
-        left: 0,
-        bottom: 1,
+        left: 1,
+        bottom: 4,
         transform: [{ rotate: '45deg' }],
     },
     checkLong: {
-        width: 9,
-        height: 1.5,
+        width: 10,
+        height: 2,
         backgroundColor: '#FFFFFF',
         borderRadius: 1,
         position: 'absolute',
-        right: 0,
-        bottom: 2.5,
+        right: 1,
+        bottom: 5,
         transform: [{ rotate: '-45deg' }],
     },
 });
@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
         shadowColor: '#FFB800',
         shadowOpacity: 0.2,
         shadowRadius: 12,
-        shadowOffset: { width: 0, height: 6 },
+        shadowOffset: { width: 2, height: 6 },
         elevation: 8,
     },
     cardBorder: {

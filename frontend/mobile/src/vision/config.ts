@@ -6,7 +6,7 @@ export interface VisionConfig {
   ppeMissingSec: number;
   workerMissingSec: number;
   ladderMoveSec: number;
-  ladderTiltSec: number;
+  ladderUnstableSec: number;
   topStepSec: number;
   bodyTiltSec: number;
   outtriggerMissingSec: number;
@@ -14,8 +14,11 @@ export interface VisionConfig {
 
   // thresholds
   ladderMovePx: number;
-  ladderTiltWarnDeg: number;
-  ladderTiltDangerDeg: number;
+  ladderUnstableCenterPx: number;
+  ladderDangerCenterPx: number;
+  ladderUnstableAspect: number;
+  ladderDangerAspect: number;
+  ladderUnstableAreaR: number;
   bodyTiltDeg: number;
   ladderHeightThresholdM: number;
 
@@ -29,15 +32,18 @@ export const DEFAULT_CONFIG: VisionConfig = {
   ppeMissingSec: 2.0,
   workerMissingSec: 5.0,
   ladderMoveSec: 0.4,
-  ladderTiltSec: 1.0,
+  ladderUnstableSec: 1.0,
   topStepSec: 1.0,
   bodyTiltSec: 1.2,
   outtriggerMissingSec: 2.5,
   cooldownSec: 15.0,
 
   ladderMovePx: 8.0,
-  ladderTiltWarnDeg: 15.0,
-  ladderTiltDangerDeg: 20.0,
+  ladderUnstableCenterPx: 8.0,
+  ladderDangerCenterPx: 20.0,
+  ladderUnstableAspect: 0.07,
+  ladderDangerAspect: 0.20,
+  ladderUnstableAreaR: 0.10,
   bodyTiltDeg: 35.0,
   ladderHeightThresholdM: 3.5,
 

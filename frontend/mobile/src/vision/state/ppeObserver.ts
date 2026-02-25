@@ -54,11 +54,16 @@ function roiVisible(
 }
 
 export class PPEObserver {
+  private lastLogTime: number = 0;
+
   update(
     persons: Map<number, PersonState>,
     tracked: Map<number, Tracked>,
     frameShape: [number, number], // [height, width]
   ): void {
+    const now = Date.now();
+    const shouldLog = now - this.lastLogTime >= 1000; // 1초마다 로그
+
     const [h, w] = frameShape;
 
     const helmetBoxes: BBox[] = [];
@@ -97,9 +102,11 @@ export class PPEObserver {
       p.feetVisibleHist.push(feetVisible);
       p.shoesHist.push(hasShoes);
 
-      console.log(
-        `[Vision:PPE] person#${p.id} helmet=${hasHelmet} vest=${hasVest} shoes=${hasShoes} feetVisible=${feetVisible}`,
-      );
+      if (shouldLog) {
+        console.log(
+          `[Vision:PPE] person#${p.id} helmet=${hasHelmet} vest=${hasVest} shoes=${hasShoes} feetVisible=${feetVisible}`,
+        );
+      }
 
       // 사다리 탑승 여부
       let onLadder = false;
@@ -110,6 +117,10 @@ export class PPEObserver {
         }
       }
       p.onLadderHist.push(onLadder);
+    }
+
+    if (shouldLog) {
+      this.lastLogTime = now;
     }
   }
 }

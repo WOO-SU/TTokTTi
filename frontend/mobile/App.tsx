@@ -59,7 +59,7 @@ export type RootStackParamList = {
   Login: undefined;
   SignUp: undefined;
   Main: undefined; // The Tab Navigator
-  Camera: { mode: 'all' | 'worker' }; // Full screen modal
+  Camera: { mode: 'all' | 'worker' | 'test' }; // Full screen modal
 };
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();

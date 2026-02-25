@@ -32,7 +32,7 @@ export function useModelLoader(): ModelState {
 
         const [yolo, movenet] = await Promise.all([
           loadTensorflowModel(
-            require('../../../assets/models/best.tflite'),
+            require('../../../assets/models/best_0222_float32.tflite'),
             'nnapi',
           ),
           loadTensorflowModel(
@@ -50,7 +50,7 @@ export function useModelLoader(): ModelState {
           try {
             const [yolo, movenet] = await Promise.all([
               loadTensorflowModel(
-                require('../../../assets/models/best.tflite'),
+                require('../../../assets/models/best_0222_float32.tflite'),
                 'default',
               ),
               loadTensorflowModel(

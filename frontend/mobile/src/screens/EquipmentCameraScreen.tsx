@@ -28,11 +28,12 @@ import {
   fetchCheckUpdate,
   requestManualCheck,
 } from '../api/equipment';
-import LargeCheckIcon from '../components/LargeCheckIcon';
+
 
 const NO_HELMET = require('../assets/no_helmet.png');
 const NO_VEST = require('../assets/no_vest.png');
 const NO_GLOVE = require('../assets/no_glove.png');
+const CLEAR_IMG = require('../assets/clear.png');
 
 type Props = {
   navigation: NativeStackNavigationProp<
@@ -155,6 +156,13 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
     return '미착용 감지'; // 기본값
   };
 
+  const getSuccessMessage = () => {
+    if (title.includes('헬멧') || title.includes('안전모')) return '안전모 착용 확인!';
+    if (title.includes('조끼')) return '안전조끼 착용 확인!';
+    if (title.includes('장갑')) return '안전장갑 착용 확인!';
+    return `${title} 착용 확인`;
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
@@ -173,8 +181,8 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
           >
             {isSuccess && (
               <View style={styles.resultCardOverlay}>
-                <LargeCheckIcon />
-                <Text style={styles.resultText}>착용 확인 완료 ✅</Text>
+                <Image source={CLEAR_IMG} style={styles.clearImage} resizeMode="contain" />
+                <Text style={styles.resultText}>{getSuccessMessage()}</Text>
               </View>
             )}
             {isUploading && !isSuccess && (
@@ -295,6 +303,11 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     marginBottom: 8,
+  },
+  clearImage: {
+    width: 220,
+    height: 220,
+    marginBottom: 0,
   },
   failedText: {
     fontFamily: 'Noto Sans KR',
