@@ -52,6 +52,12 @@ run_web() {
     # but for HA production, run this as a separate 'init container' or job)
     echo "Applying migrations..."
     python manage.py migrate --noinput
+
+    # Integrate our seeding logic purely for local dev
+    if [ "$AUTO_SEED_DB" = "True" ]; then
+        echo "Running automatic database seeding..."
+        python manage.py seed_db
+    fi
     
     echo "Collecting static files..."
     python manage.py collectstatic --noinput
