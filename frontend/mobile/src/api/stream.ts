@@ -26,9 +26,10 @@ class SafetyStream {
 
   // Throttle timer
   private lastFrameTime: number = 0;
-  private readonly FRAME_INTERVAL_MS = 1000; // 4 FPS
+  private readonly FRAME_INTERVAL_MS = 1000; // 1 FPS (matches CameraScreen INTERVAL_MS)
 
-  constructor(clientId: string, onMessage: (data: StreamResponse) => void) {
+  // FIX: Added 'config: SessionConfig' to the constructor parameters
+  constructor(clientId: string, config: SessionConfig, onMessage: (data: StreamResponse) => void) {
     // Port 8888 is where your gateway.py FastAPI server is running
     this.url = `wss://laptop-gpu.tail413c80.ts.net/ws/stream/${clientId}`;
     this.config = config;
@@ -42,6 +43,7 @@ class SafetyStream {
       console.log('✅ Connected to Safety Gateway');
       this.reconnectAttempts = 0;
 
+      // Send initialization config payload right after connection opens
       this.ws?.send(JSON.stringify({
         type: 'CONFIG',
         worksession_id: this.config.worksession_id,
@@ -101,13 +103,13 @@ class SafetyStream {
   /**
    * Sends an STT question to the high-priority 'questions' queue
    */
-  public sendQuestion(text: string, base64Image: string) {
+  // FIX: Updated parameter from `base64Image: string` to `timestamp: string`
+  public sendQuestion(text: string, timestamp: string) {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({
         type: 'QUESTION',
-        image: base64Image,
         text: text,
-        timestamp: Date.now()
+        timestamp: timestamp
       }));
     }
   }
