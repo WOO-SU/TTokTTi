@@ -27,12 +27,14 @@ type Props = {
 };
 
 const LEVEL_COLOR: Record<string, string> = {
-  HIGH: '#E53E3E',
-  MEDIUM: '#DD6B20',
-  LOW: '#38A169',
+  CRITICAL: '#E53E3E',
+  HIGH: '#DD6B20',
+  MEDIUM: '#38A169',
+  LOW: '#7BC043',
 };
 
 const LEVEL_LABEL: Record<string, string> = {
+  CRITICAL: '위험',
   HIGH: '높음',
   MEDIUM: '보통',
   LOW: '낮음',
@@ -84,7 +86,7 @@ export default function RiskResultScreen({ navigation, route }: Props) {
 
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#006FFD" />
+          <ActivityIndicator size="large" color="#FFB800" />
           <Text style={styles.loadingText}>보고서를 불러오는 중...</Text>
         </View>
       ) : error ? (
@@ -197,7 +199,7 @@ const iconStyles = StyleSheet.create({
   backArrowTop: {
     width: 14,
     height: 2,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 1,
     position: 'absolute',
     transform: [{ rotate: '-45deg' }, { translateY: -5.5 }],
@@ -205,7 +207,7 @@ const iconStyles = StyleSheet.create({
   backArrowBottom: {
     width: 14,
     height: 2,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 1,
     position: 'absolute',
     transform: [{ rotate: '45deg' }, { translateY: 5.5 }],
@@ -240,7 +242,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 10,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
   },
   retryButtonText: {
     fontFamily: 'Noto Sans KR',
@@ -307,7 +309,7 @@ const styles = StyleSheet.create({
   },
   recBullet: {
     fontSize: 14,
-    color: '#006FFD',
+    color: '#FFB800',
     lineHeight: 20,
   },
   recText: {
@@ -324,7 +326,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: '#FFFFFF',
     borderWidth: 2,
-    borderColor: '#006FFD',
+    borderColor: '#FFB800',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -332,6 +334,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Noto Sans KR',
     fontWeight: '500',
     fontSize: 16,
-    color: '#006FFD',
+    color: '#FFB800',
   },
 });

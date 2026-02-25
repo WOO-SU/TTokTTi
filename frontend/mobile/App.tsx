@@ -36,7 +36,7 @@ export type HomeStackParamList = {
   RiskResult: { assessment_id: number; worksession_id: number };
   RiskCamera: { title: string; worksession_id: number; assessmentId?: number };
   CaptureWork: { worksession_id: number };
-  EndWork: undefined;
+  EndWork: { worksession_id: number };
 };
 
 export type PersonalStackParamList = {
@@ -59,7 +59,7 @@ export type RootStackParamList = {
   Login: undefined;
   SignUp: undefined;
   Main: undefined; // The Tab Navigator
-  Camera: { mode: 'all' | 'worker' }; // Full screen modal
+  Camera: { mode: 'all' | 'worker' | 'test' }; // Full screen modal
 };
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
@@ -118,7 +118,7 @@ function ActiveDot() {
 }
 
 function HomeTabIcon({ focused }: { focused: boolean }) {
-  const color = focused ? '#006FFD' : '#71727A';
+  const color = focused ? '#FFB800' : '#71727A';
   return (
     <View style={tabIconStyles.iconWrapper}>
       <View style={tabIconStyles.container}>
@@ -130,7 +130,7 @@ function HomeTabIcon({ focused }: { focused: boolean }) {
 }
 
 function PersonTabIcon({ focused }: { focused: boolean }) {
-  const color = focused ? '#006FFD' : '#71727A';
+  const color = focused ? '#FFB800' : '#71727A';
   return (
     <View style={tabIconStyles.iconWrapper}>
       <View style={tabIconStyles.container}>
@@ -142,7 +142,7 @@ function PersonTabIcon({ focused }: { focused: boolean }) {
 }
 
 function SettingTabIcon({ focused }: { focused: boolean }) {
-  const color = focused ? '#006FFD' : '#71727A';
+  const color = focused ? '#FFB800' : '#71727A';
   return (
     <View style={tabIconStyles.iconWrapper}>
       <View style={tabIconStyles.container}>
@@ -172,7 +172,7 @@ const tabIconStyles = StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
   },
   /* Home icon */
   homeRoof: {
@@ -275,8 +275,8 @@ function FloatingTabBar({ state, descriptors, navigation, insets }: any) {
         const label = options.tabBarLabel ?? options.title ?? route.name;
         const isFocused = state.index === index;
 
-        const iconColor = isFocused ? '#006FFD' : '#71727A';
-        const labelColor = isFocused ? '#006FFD' : '#71727A';
+        const iconColor = isFocused ? '#FFB800' : '#71727A';
+        const labelColor = isFocused ? '#FFB800' : '#71727A';
 
         const onPress = () => {
           const event = navigation.emit({
@@ -327,7 +327,7 @@ function MainTabs() {
       tabBar={(props) => <FloatingTabBar {...props} insets={insets} />}
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#006FFD',
+        tabBarActiveTintColor: '#FFB800',
         tabBarInactiveTintColor: '#71727A',
       }}>
       <Tab.Screen
