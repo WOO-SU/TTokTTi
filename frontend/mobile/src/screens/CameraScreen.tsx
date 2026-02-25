@@ -23,6 +23,7 @@ import type { RouteProp } from '@react-navigation/native';
 import type { RootStackParamList } from '../../App';
 import TopHeader from '../components/TopHeader';
 
+import { useWorkSession } from '../context/WorkSessionContext';
 import SafetyStream, { StreamResponse } from '../api/stream';
 import { useVisionEngine } from '../vision/hooks/useVisionEngine';
 import { preprocessImageForYOLO } from '../vision/utils/imagePreprocess';
@@ -35,8 +36,8 @@ type Props = {
 /* ──────── Configuration ──────── */
 
 const STREAM_CONFIG = {
-  WIDTH: 480,
-  HEIGHT: 480,
+  WIDTH: 448,
+  HEIGHT: 448,
   INTERVAL_MS: 1000,
 };
 
@@ -67,6 +68,8 @@ export default function CameraScreen({ route }: Props) {
   const isTestCam = mode === 'test';
   const useVision = isFullCam || isTestCam;
 
+  const { workSessionId } = useWorkSession();
+
   // 스트리밍 설정 기반 포맷 선택
   const device = useCameraDevice('back');
   const streamFormat = useCameraFormat(device, [
@@ -95,11 +98,17 @@ export default function CameraScreen({ route }: Props) {
 
   // mode=worker: 기존 WebSocket 스트리밍
   useEffect(() => {
+    const currentSessionId = workSessionId ? String(workSessionId) : "";
     if (useVision || !isCameraActive) return;
-
     const userId = 'AuthContext_user_id';
 
-    streamRef.current = new SafetyStream(userId, (data: StreamResponse) => {
+    streamRef.current = new SafetyStream(
+      userId, 
+      { 
+        worksession_id: currentSessionId, 
+        video_path: ""  
+      },
+      (data: StreamResponse) => {
       if (data.type === 'DANGER') {
         setAlertMessage(data.message || '위험이 감지되었습니다!');
         setAlertSeverity('high');

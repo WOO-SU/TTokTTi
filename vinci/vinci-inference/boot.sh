@@ -16,11 +16,13 @@ CONDA_ENV=vinci
 
 # 默认的 CUDA 设备
 DEFAULT_CUDA_VISIBLE_DEVICES="0"
-DEFAULT_RUNNING_LANGUAGE='chn'
-DEFAULT_VERSION="v1"
+DEFAULT_RUNNING_LANGUAGE='eng'
+DEFAULT_VERSION="v0"
 
 # Python 启动命令
-COMMAND="python vinci-inference/app/main.py"
+CONDA_BASE="/home/team4/miniconda3"
+PYTHON_EXE="$CONDA_BASE/envs/$CONDA_ENV/bin/python"
+COMMAND="$PYTHON_EXE vinci-inference/app/main.py"
 LOG_FILE="vinci_inference.log"
 PID_FILE="/tmp/.vinci/vinci_inference.pid"
 
@@ -33,9 +35,18 @@ start_service() {
     export RUNNING_LANGUAGE=$2
     export VERSION=$3
 
-    echo "Activating conda environment: $CONDA_ENV"
-    source $(conda info --base)/etc/profile.d/conda.sh
-    conda activate $CONDA_ENV
+    if [ "$CONDA_DEFAULT_ENV" = "$CONDA_ENV" ]; then
+        echo "Conda environment '$CONDA_ENV' is already active. Skipping activation."
+    else
+        echo "Activating conda environment: $CONDA_ENV"
+        if [ -f "$CONDA_BASE_PATH/etc/profile.d/conda.sh" ]; then
+            source "$CONDA_BASE_PATH/etc/profile.d/conda.sh"
+            conda activate $CONDA_ENV
+        else
+            echo "Error: conda.sh not found at $CONDA_BASE_PATH/etc/profile.d/conda.sh"
+            exit 1
+        fi
+    fi
 
     echo "Starting service with CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES..."
     $COMMAND &
