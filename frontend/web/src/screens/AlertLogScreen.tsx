@@ -41,7 +41,8 @@ type AutoCheckDetail = {
 
 const COMPLIANCE_LABEL: Record<string, string> = {
   HELMET: '안전모',
-  VEST: '안전 조끼',
+  VEST: '안전조끼',
+  GLOVE: '안전장갑',
   SHOES: '안전화',
 };
 
@@ -111,6 +112,8 @@ function LogDetailModal({
   const [manualDetail, setManualDetail] = useState<ManualCheckDetail | null>(null);
   const [autoDetail, setAutoDetail] = useState<AutoCheckDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [resolvedImageUrl, setResolvedImageUrl] = useState<string | null>(null);
+  const [resolvedVideoUrl, setResolvedVideoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     setDetailLoading(true);
@@ -132,6 +135,38 @@ function LogDetailModal({
         .finally(() => setDetailLoading(false));
     }
   }, [log.id, log.source]);
+
+  // original_image blob_name → SAS URL 변환 (compliance 컨테이너)
+  useEffect(() => {
+    if (!manualDetail?.original_image) return;
+    const blobName = manualDetail.original_image;
+    const effectiveBlobName = blobName.includes('/') ? blobName : `compliance/${blobName}`;
+    apiFetch('/user/storage/sas/download/', {
+      method: 'POST',
+      body: JSON.stringify({ blob_name: effectiveBlobName }),
+    })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data) setResolvedImageUrl(data.download_url ?? data.url ?? null);
+      })
+      .catch(() => {});
+  }, [manualDetail?.original_image]);
+
+  // original_video blob_name → SAS URL 변환 (videolog 컨테이너)
+  useEffect(() => {
+    if (!autoDetail?.original_video) return;
+    const blobName = autoDetail.original_video;
+    const effectiveBlobName = blobName.includes('/') ? blobName : `videolog/${blobName}`;
+    apiFetch('/user/storage/sas/download/', {
+      method: 'POST',
+      body: JSON.stringify({ blob_name: effectiveBlobName }),
+    })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data) setResolvedVideoUrl(data.download_url ?? data.url ?? null);
+      })
+      .catch(() => {});
+  }, [autoDetail?.original_video]);
 
   const isManual = log.source === 'MANUAL';
   const currentStatus = isManual
@@ -215,11 +250,17 @@ function LogDetailModal({
           <div style={{ padding: '0 24px 16px' }}>
             <div style={styles.modalInfoItem}>
               <span style={styles.modalInfoLabel}>감지 영상</span>
-              <video
-                src={autoDetail.original_video}
-                controls
-                style={{ width: '100%', borderRadius: 8, marginTop: 8, maxHeight: 260, backgroundColor: '#000' }}
-              />
+              {resolvedVideoUrl ? (
+                <video
+                  src={resolvedVideoUrl}
+                  controls
+                  style={{ width: '100%', borderRadius: 8, marginTop: 8, maxHeight: 260, backgroundColor: '#000' }}
+                />
+              ) : (
+                <div style={{ width: '100%', height: 160, borderRadius: 8, marginTop: 8, backgroundColor: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: 13, color: '#8F9098' }}>영상 로딩 중...</span>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -239,11 +280,17 @@ function LogDetailModal({
           <div style={{ padding: '0 24px 16px' }}>
             <div style={styles.modalInfoItem}>
               <span style={styles.modalInfoLabel}>촬영 이미지</span>
-              <img
-                src={manualDetail.original_image}
-                alt="점검 이미지"
-                style={{ width: '100%', borderRadius: 8, marginTop: 8, maxHeight: 240, objectFit: 'contain', backgroundColor: '#F0F1F3' }}
-              />
+              {resolvedImageUrl ? (
+                <img
+                  src={resolvedImageUrl}
+                  alt="점검 이미지"
+                  style={{ width: '100%', borderRadius: 8, marginTop: 8, maxHeight: 240, objectFit: 'contain', backgroundColor: '#F0F1F3' }}
+                />
+              ) : (
+                <div style={{ width: '100%', height: 120, borderRadius: 8, marginTop: 8, backgroundColor: '#F0F1F3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: 13, color: '#8F9098' }}>이미지 로딩 중...</span>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -336,10 +383,25 @@ export default function AlertLogScreen() {
         setSelectedLog(prev =>
           prev && prev.id === logId ? { ...prev, status: approval ? 'APPROVED' : 'REJECTED' } : prev
         );
+
+        // 승인 시 해당 Compliance의 is_complied를 true로 업데이트 → 안전 장비 점검 자동 체크
+        if (approval) {
+          const targetLog = logs.find(l => l.id === logId);
+          if (targetLog?.compliance_id) {
+            apiFetch('/check/upload/', {
+              method: 'POST',
+              body: JSON.stringify({
+                compliance_id: targetLog.compliance_id,
+                detected_image: '',
+                is_complied: true,
+              }),
+            }).catch(() => {});
+          }
+        }
       }
     } catch { /* ignore */ }
     setApproving(false);
-  }, []);
+  }, [logs]);
 
   const markAsRead = useCallback((logId: number) => {
     setReadIds(prev => {
