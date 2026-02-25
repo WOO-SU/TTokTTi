@@ -200,7 +200,7 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # The URL of your cloud frontend
 CORS_ALLOWED_ORIGINS = [
-    "https://your-frontend-cloud-url.com",
+    "https://web-riskpulse.delightfulglacier-38eeee86.koreacentral.azurecontainerapps.io",
     "http://localhost:3000", # Keep for local testing
 ]
 
