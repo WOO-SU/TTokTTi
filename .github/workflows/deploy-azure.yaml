@@ -23,7 +23,7 @@ env:
   VITE_API_URL: https://api-riskpulse.delightfulglacier-38eeee86.koreacentral.azurecontainerapps.io
 
 jobs:
-  build-and-deploy:
+  build-and-deploy-backend:
     runs-on: ubuntu-latest
 
     steps:
@@ -45,17 +45,17 @@ jobs:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
-      # 4. Build and Push the Docker Image
+      # 4. Build and Push the backend Image
       - name: Build and push container image to ACR
         run: |
           # Go to the backend directory where the Dockerfile is
           cd backend
           
           # Build the image and tag it with the Github SHA (unique ID)
-          docker build -t ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
+          docker build -t ${{ env.ACR_LOGIN_SERVER }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }} .
           
           # Push it to ACR
-          docker push ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker push ${{ env.ACR_LOGIN_SERVER }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
 
       # 5. Deploy to Azure Container Apps
       - name: Deploy to Azure Container Apps
@@ -63,9 +63,9 @@ jobs:
         with:
           inlineScript: |
             az containerapp update \
-              --name ${{ env.CONTAINER_APP_NAME }} \
+              --name ${{ env.BACKEND_APP_NAME_APP_NAME }} \
               --resource-group ${{ env.RESOURCE_GROUP }} \
-              --image ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+              --image ${{ env.ACR_LOGIN_SERVER }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }} \
               --set-env-vars \
                 "DB_NAME=riskpulse_db" \
                 "DB_USER=${{ vars.DB_USER }}" \
@@ -86,3 +86,42 @@ jobs:
                 "AZURE_SAS_TTL_MINUTES=10" \
                 "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" \
                 "OPENAI_MODEL=gpt-4o-mini"
+
+  build-and-deploy-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout GitHub Actions
+        uses: actions/checkout@v3
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Log in to ACR
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Build and push Frontend image to ACR
+        run: |
+          cd frontend  # Ensure this matches your actual frontend folder name
+          
+          # Inject the backend URL at build time. 
+          # Note: If you use Create React App instead of Vite, change VITE_API_URL to REACT_APP_API_URL
+          docker build \
+            --build-arg VITE_API_URL=${{ env.VITE_API_URL }} \
+            -t ${{ env.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }} .
+            
+          docker push ${{ env.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+
+      - name: Deploy Frontend to Azure Container Apps
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az containerapp update \
+              --name ${{ env.FRONTEND_APP_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --image ${{ env.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
