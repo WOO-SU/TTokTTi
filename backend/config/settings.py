@@ -51,6 +51,8 @@ CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 # Application definition
 
 INSTALLED_APPS = [
+    'corsheaders',
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -61,6 +63,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
+
     'apps.user',
     'apps.risk',
     'apps.check',
@@ -89,6 +92,7 @@ SIMPLE_JWT={
 }
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware', # Add this at the VERY top
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -191,3 +195,23 @@ STATIC_URL = 'static/'
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# The URL of your cloud frontend
+CORS_ALLOWED_ORIGINS = [
+    "https://your-frontend-cloud-url.com",
+    "http://localhost:3000", # Keep for local testing
+]
+
+# Since you are using JWT in the Authorization header:
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "authorization",
+    "content-type",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
+
+# If you use cookies for JWT (optional), set this to True. 
+# For standard Bearer tokens in LocalStorage, False is fine.
+CORS_ALLOW_CREDENTIALS = True

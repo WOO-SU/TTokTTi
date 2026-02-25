@@ -6,13 +6,21 @@ on:
       - main  # Or 'dev', depending on when you want to trigger this
     paths:
       - 'backend/**' # Only run if backend code changes
+      - 'frontend/**'
       - 'deploy-azure.yaml'
+  workflow_dispatch:
 
 env:
   ACR_LOGIN_SERVER: riskpulseacr.azurecr.io # Replace with your ACR name
-  IMAGE_NAME: riskpulse-backend
-  CONTAINER_APP_NAME: api-riskpulse
   RESOURCE_GROUP: rg-riskpulse
+
+  BACKEND_IMAGE: riskpulse-backend
+  BACKEND_APP_NAME: api-riskpulse
+
+  FRONTEND_IMAGE: riskpulse-frontend
+  FRONTEND_APP_NAME: web-riskpulse
+
+  VITE_API_URL: https://api-riskpulse.delightfulglacier-38eeee86.koreacentral.azurecontainerapps.io
 
 jobs:
   build-and-deploy:
