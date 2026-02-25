@@ -487,12 +487,22 @@ class Command(BaseCommand):
                 target_workers = []
 
             for employee_id in target_workers:
+                violated_category = None
+                if session.status == WorkSession.StatusChoices.IN_PROGRESS:
+                    violated_category = random.choice(categories)
+
                 for category in categories:
+
+                    is_violation = (
+                        session.status == WorkSession.StatusChoices.IN_PROGRESS
+                        and category == violated_category
+                    )
+
                     Compliance.objects.create(
                         employee_id=employee_id,
                         worksession=session,
                         category=category,
-                        is_complied=True,
+                        is_complied=not is_violation,
                         original_image=original_paths[category][
                             original_idx[category] % len(original_paths[category])
                         ],
@@ -501,7 +511,8 @@ class Command(BaseCommand):
                         ],
                     )
                     original_idx[category] += 1
-                    detected_idx[category] += 1
+                    if not is_violation:
+                        detected_idx[category] += 1
 
         self.stdout.write(self.style.SUCCESS("✅ apps.check seeding completed"))
 
@@ -617,6 +628,47 @@ class Command(BaseCommand):
                             "is_read": True,
                             "read_at": log.created_at + timedelta(minutes=random.randint(1, 60)),
                         }
+                    )
+        
+        for session in WorkSession.objects.filter(
+            status=WorkSession.StatusChoices.IN_PROGRESS
+        ):
+
+            non_compliances = Compliance.objects.filter(
+                worksession=session,
+                is_complied=False,
+            )
+
+            if not non_compliances.exists():
+                continue
+
+            session_managers = list(
+                User.objects.filter(
+                    work_sessions__worksession=session,
+                    work_sessions__role__in=[
+                        WorkSessionMember.RoleChoices.HEAD,
+                        WorkSessionMember.RoleChoices.RELATED,
+                    ]
+                ).distinct()
+            )
+
+            if not session_managers:
+                continue
+
+            for compliance in non_compliances:
+
+                videolog = VideoLog.objects.create(
+                    worksession=session,
+                    source=VideoLog.SourceChoices.MANUAL,
+                    compliance=compliance,
+                    status=VideoLog.StatusChoices.PENDING,
+                )
+
+                for manager in session_managers:
+                    VideoLogRead.objects.create(
+                        videolog=videolog,
+                        manager=manager,
+                        is_read=False,
                     )
         self.stdout.write(self.style.SUCCESS("✅ apps.detect seeding completed"))
 
