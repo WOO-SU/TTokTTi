@@ -15,6 +15,8 @@ import {
   Camera,
   useCameraDevice,
   useCameraFormat,
+  useCameraPermission,
+  useMicrophonePermission,
 } from 'react-native-vision-camera';
 import BaseCamera from '../components/BaseCamera';
 import RNFS from 'react-native-fs';
@@ -24,8 +26,13 @@ import type { RootStackParamList } from '../../App';
 import TopHeader from '../components/TopHeader';
 
 import SafetyStream, { StreamResponse } from '../api/stream';
+
 import { useVisionEngine } from '../vision/hooks/useVisionEngine';
 import { preprocessImageForYOLO } from '../vision/utils/imagePreprocess';
+
+import { PorcupineManager } from '@picovoice/porcupine-react-native';
+import Voice, { SpeechResultsEvent } from '@react-native-voice/voice';
+import Tts from 'react-native-tts';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Camera'>;
