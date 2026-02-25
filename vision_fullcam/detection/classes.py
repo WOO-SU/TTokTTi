@@ -6,5 +6,4 @@ class DetLabel(str, Enum):
     LADDER = "ladder"
     HELMET = "helmet"
     VEST = "safety_vest"
-    SHOES = "safety_shoes"
     OUTTRIGGER = "outtrigger"

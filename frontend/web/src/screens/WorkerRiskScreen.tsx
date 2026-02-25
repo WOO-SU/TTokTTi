@@ -64,6 +64,12 @@ type WorkSessionCard = {
   report: boolean;
 };
 
+type PhotoItem = {
+  id: number;
+  type: string;
+  image: string | null;
+};
+
 type WorkspaceRisk = {
   id: number;
   siteName: string;
@@ -73,9 +79,11 @@ type WorkspaceRisk = {
   assessmentId: number | null;
   status: string | null;
   images: RiskImage[];
+  photos: PhotoItem[];
+  photoUrls: Record<number, string>;
   riskReport: RiskReportData | null;
   generatedAt: string | null;
-  error?: string | null; // ✨ 디버깅용 에러 메시지 보관 필드
+  error?: string | null;
 };
 
 // ── Data ──
@@ -125,6 +133,8 @@ function convertSession(session: WorkSessionCard): WorkspaceRisk {
     assessmentId: null,
     status: null,
     images: [],
+    photos: [],
+    photoUrls: {},
     riskReport: null,
     generatedAt: null,
   };
@@ -132,10 +142,14 @@ function convertSession(session: WorkSessionCard): WorkspaceRisk {
 
 async function resolvePhotoUrl(blobName: string): Promise<string | null> {
   try {
-    const res = await apiFetch(`/risk/media/sas?blob_name=${encodeURIComponent(blobName)}`);
+    // POST /user/storage/sas/download/ 엔드포인트 사용 (WorkSessionDetailScreen과 동일)
+    const res = await apiFetch('/user/storage/sas/download/', {
+      method: 'POST',
+      body: JSON.stringify({ blob_name: blobName }),
+    });
     if (!res.ok) return null;
     const data = await res.json();
-    return data.url ?? null;
+    return data.download_url ?? data.url ?? null;
   } catch {
     return null;
   }
@@ -421,52 +435,109 @@ export default function WorkerRiskScreen() {
         report: item.report !== undefined ? item.report : (item.report_status || false)
       }));
 
-      // 3. 각 세션별로 'COMPLETED' 상태의 가장 최근 RiskAssessment 조회
+      // 3. 각 세션별로 위험성 평가 데이터 조회
       const results = await Promise.all(
         mappedSessions.map(async (session): Promise<WorkspaceRisk> => {
           const base = convertSession(session);
 
           try {
-            // 3-1. 특정 세션의 최신 RiskAssessment ID 확인
-            const latestRes = await apiFetch(`/risk/latest/${session.id}`);
-            if (!latestRes.ok) {
-               return { ...base, error: `/risk/latest/ 응답 실패 (상태: ${latestRes.status})` };
+            // ── 1차: /risk/latest → /risk/admin/{assessment_id} (COMPLETED 평가) ──
+            let assessmentId: number | null = null;
+            try {
+              const latestRes = await apiFetch(`/risk/latest/${session.id}`);
+              if (latestRes.ok) {
+                const latestData = await latestRes.json();
+                if (latestData.exists && latestData.assessment_id) {
+                  assessmentId = latestData.assessment_id;
+                }
+              }
+            } catch { /* ignore */ }
+
+            // ── 1-1: COMPLETED가 없으면 PENDING 평가 ID 조회 ──
+            if (!assessmentId) {
+              try {
+                const startRes = await apiFetch(`/risk/start/${session.id}`, { method: 'POST' });
+                if (startRes.ok) {
+                  const startData = await startRes.json();
+                  if (startData.assessment_id) {
+                    assessmentId = startData.assessment_id;
+                  }
+                }
+              } catch { /* ignore */ }
             }
-            
-            const latestData = await latestRes.json();
 
-            // 존재하지 않으면 기본 반환
-            if (!latestData.exists || !latestData.assessment_id) {
-               return { ...base, error: "완료된(COMPLETED) 위험성 평가 기록이 없습니다." };
+            // ── 2차: /risk/admin/{assessment_id} (RiskReport 필요) ──
+            if (assessmentId) {
+              const reportRes = await apiFetch(`/risk/admin/${assessmentId}`);
+              if (reportRes.ok) {
+                const reportData = await reportRes.json();
+                const imagesWithUrls = await Promise.all(
+                  (reportData.images || []).map(async (img: any) => {
+                    const url = await resolvePhotoUrl(img.blob_name);
+                    return { ...img, url };
+                  })
+                );
+                const report = reportData.report;
+                return {
+                  ...base,
+                  assessmentId: reportData.assessment_id,
+                  status: reportData.status,
+                  images: imagesWithUrls,
+                  riskReport: report ? {
+                    scene_summary: report.scene_summary,
+                    hazards: report.hazards ?? [],
+                    overall: report.overall,
+                    version: report.version ?? 'v1',
+                  } : null,
+                  generatedAt: reportData.generated_at,
+                  error: null,
+                };
+              }
             }
 
-            // 3-2. 관리자용 위험성 평가 리포트 상세 조회
-            const reportRes = await apiFetch(`/risk/admin/${latestData.assessment_id}`);
-            if (!reportRes.ok) {
-               return { ...base, error: `평가는 존재하나 리포트 상세 조회를 실패했습니다. (상태: ${reportRes.status})` };
+            // ── 3차 fallback: /worksession/summary/{session.id}/ ──
+            const summaryRes = await apiFetch(`/worksession/summary/${session.id}/`);
+            if (summaryRes.ok) {
+              const summaryData = await summaryRes.json();
+              const riskReport = summaryData.risk_report ?? null;
+              const photos: any[] = summaryData.photos ?? [];
+
+              // worksession photos (image 필드가 blob_name)
+              const allBlobNames: { id: number; blob_name: string; created_at: string }[] = [];
+              if (photos.length > 0) {
+                for (const p of photos) {
+                  if (p.image) {
+                    allBlobNames.push({ id: p.id, blob_name: p.image, created_at: '' });
+                  }
+                }
+              }
+
+              const imagesWithUrls = await Promise.all(
+                allBlobNames.map(async (img) => {
+                  const url = await resolvePhotoUrl(img.blob_name);
+                  return { ...img, url };
+                })
+              );
+
+              return {
+                ...base,
+                assessmentId: assessmentId,
+                status: riskReport ? 'COMPLETED' : (assessmentId ? 'PENDING' : null),
+                images: imagesWithUrls,
+                riskReport: riskReport ? {
+                  scene_summary: riskReport.scene_summary,
+                  hazards: riskReport.hazards ?? [],
+                  overall: riskReport.overall,
+                  version: riskReport.version ?? 'v1',
+                } : null,
+                generatedAt: riskReport?.generated_at ?? null,
+                error: null,
+              };
             }
-            
-            const reportData = await reportRes.json();
 
-            // 3-3. blob_name 기반으로 SAS URL 로드
-            const imagesWithUrls = await Promise.all(
-              (reportData.images || []).map(async (img: any) => {
-                const url = await resolvePhotoUrl(img.blob_name);
-                return { ...img, url };
-              })
-            );
-
-            return {
-              ...base,
-              assessmentId: reportData.assessment_id,
-              status: reportData.status,
-              images: imagesWithUrls,
-              riskReport: reportData.report,
-              generatedAt: reportData.generated_at,
-              error: null, // 에러 없이 완벽 성공!
-            };
+            return base;
           } catch (e: any) {
-            return { ...base, error: `데이터 파싱 또는 네트워크 에러: ${e.message}` };
+            return { ...base, error: `데이터 로드 오류: ${e.message}` };
           }
         })
       );

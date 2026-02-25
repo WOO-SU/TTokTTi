@@ -1,16 +1,11 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
-  Text,
-  TouchableOpacity,
   StyleSheet,
   StatusBar,
-  Image,
-  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Camera } from 'react-native-vision-camera';
-import RNFS from 'react-native-fs';
 import BaseCamera from '../components/BaseCamera';
 import PhotoResultView from '../components/PhotoResultView';
 import { useIsFocused } from '@react-navigation/native';
@@ -64,7 +59,7 @@ export default function RiskCameraScreen({ navigation, route }: Props) {
     setIsUploading(true);
     try {
       // 1. blob 업로드
-      const { upload_url, blob_name } = await getSasToken();
+      const { upload_url, blob_name } = await getSasToken('image/jpeg', 'assessment');
       await uploadToBlob(upload_url, photoPath);
 
       // 2. 첫 사진이면 assessment 생성, 아니면 기존 ID 사용
@@ -93,7 +88,7 @@ export default function RiskCameraScreen({ navigation, route }: Props) {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      <TopHeader title={title || '위험 요인 촬영'} />
+      <TopHeader title="위험 요인 촬영" />
 
       {/* Camera Preview */}
       <View style={styles.cameraPreview}>
@@ -110,7 +105,7 @@ export default function RiskCameraScreen({ navigation, route }: Props) {
             ref={cameraRef}
             isActive={isFocused && !photoPath}
             photo={true}
-            guideText={`${title} 사진을 촬영하세요`}
+            guideText="위험 요인 사진을 촬영하세요"
             onCapture={handleCapture}
             onInitialized={() => { isCameraReadyRef.current = true; }}
           />
@@ -134,7 +129,7 @@ export default function RiskCameraScreen({ navigation, route }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8F9FE',
   },
 
   cameraPreview: {
@@ -158,6 +153,6 @@ const styles = StyleSheet.create({
   bottomSection: {
     alignItems: 'center',
     paddingHorizontal: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8F9FE',
   },
 });

@@ -49,7 +49,7 @@ export default function HomeScreen() {
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 24 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 88 }]}
         bounces={false}
         showsVerticalScrollIndicator={false}>
 
@@ -70,13 +70,6 @@ export default function HomeScreen() {
         />
 
         <MenuBanner
-          title={'작업시작하기\n(실시간 촬영)'}
-          imageSource={workstartImage}
-          imageStyle={styles.bannerImage3}
-          onPress={() => navigation.navigate('SelectMode')}
-        />
-
-        <MenuBanner
           title="작업물 촬영"
           imageSource={targetPictureImage}
           imageStyle={styles.bannerImage4}
@@ -84,10 +77,17 @@ export default function HomeScreen() {
         />
 
         <MenuBanner
+          title={'작업시작하기\n(실시간 촬영)'}
+          imageSource={workstartImage}
+          imageStyle={styles.bannerImage3}
+          onPress={() => navigation.navigate('SelectMode')}
+        />
+
+        <MenuBanner
           title="근무 마무리"
           imageSource={endWorkImage}
           imageStyle={styles.bannerImage4}
-          onPress={() => navigation.navigate('EndWork')}
+          onPress={() => navigation.navigate('EndWork', { worksession_id })}
         />
 
       </ScrollView>
@@ -109,7 +109,7 @@ const iconStyles = StyleSheet.create({
     width: 24,
     height: 16,
     borderWidth: 2,
-    borderColor: '#006FFD',
+    borderColor: '#FFB800',
     borderRadius: 2,
   },
   placeholderSun: {
@@ -117,7 +117,7 @@ const iconStyles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: '#006FFD',
+    borderColor: '#FFB800',
     position: 'absolute',
     top: 8,
     right: 10,
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Noto Sans KR',
     fontWeight: '600',
     fontSize: 12,
-    color: '#006FFD',
+    color: '#FFB800',
   },
   cardsContainer: {
     gap: 12,
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
   },
   cardImageArea: {
     height: 120,
-    backgroundColor: '#EAF2FF',
+    backgroundColor: '#FFF8E1',
     justifyContent: 'center',
     alignItems: 'center',
   },

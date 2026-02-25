@@ -8,11 +8,11 @@ import {
   StatusBar,
   Modal,
   Alert,
+  Vibration,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Camera,
-  PhotoFile,
   useCameraDevice,
   useCameraFormat,
 } from 'react-native-vision-camera';
@@ -23,7 +23,9 @@ import type { RouteProp } from '@react-navigation/native';
 import type { RootStackParamList } from '../../App';
 import TopHeader from '../components/TopHeader';
 
-import SafetyStream, { StreamResponse } from '../api/stream'
+import SafetyStream, { StreamResponse } from '../api/stream';
+import { useVisionEngine } from '../vision/hooks/useVisionEngine';
+import { preprocessImageForYOLO } from '../vision/utils/imagePreprocess';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Camera'>;
@@ -35,14 +37,35 @@ type Props = {
 const STREAM_CONFIG = {
   WIDTH: 480,
   HEIGHT: 480,
-  INTERVAL_MS: 1000, // 4 fps (1000/250)
+  INTERVAL_MS: 1000,
+};
+
+const SEVERITY_COLORS: Record<string, string> = {
+  high: '#FF3B30',
+  medium: '#FF9500',
+  low: '#FFCC00',
+};
+
+const SEVERITY_LABELS: Record<string, string> = {
+  helmet_not_worn: '안전모 미착용',
+  safety_vest_not_worn: '안전조끼 미착용',
+  insufficient_worker_count: '작업자 부족',
+  ladder_instability: '사다리 불안정',
+  ladder_movement_with_person: '사다리 이동 위험',
+  height_ladder_violation: '사다리 높이 초과',
+  outtrigger_not_deployed: '아웃트리거 미설치',
+  excessive_body_tilt: '과도한 몸 기울기',
+  top_step_usage: '최상단 발판 사용',
 };
 
 /* ──────── Main Component ──────── */
 
-export default function CameraScreen({ navigation, route }: Props) {
+export default function CameraScreen({ route }: Props) {
   const insets = useSafeAreaInsets();
   const { mode } = route.params;
+  const isFullCam = mode === 'all';
+  const isTestCam = mode === 'test';
+  const useVision = isFullCam || isTestCam;
 
   // 스트리밍 설정 기반 포맷 선택
   const device = useCameraDevice('back');
@@ -51,21 +74,35 @@ export default function CameraScreen({ navigation, route }: Props) {
   ]);
 
   // State
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const isCameraActiveRef = useRef(false);
+  const isCameraReadyRef = useRef(false);
   const [isRecording, setIsRecording] = useState(false);
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
+  const [alertSeverity, setAlertSeverity] = useState<string>('medium');
+  const [detections, setDetections] = useState<any[]>([]);
+  const [previewSize, setPreviewSize] = useState({ width: 0, height: 0 });
+
+  // Vision Engine (mode=all 전용)
+  const vision = useVisionEngine();
+  const [visionStatus, setVisionStatus] = useState<string>('');
 
   // Refs
   const cameraRef = useRef<Camera>(null);
   const streamRef = useRef<SafetyStream | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // mode=worker: 기존 WebSocket 스트리밍
   useEffect(() => {
-    const userId = "AuthContext_user_id"
+    if (useVision || !isCameraActive) return;
+
+    const userId = 'AuthContext_user_id';
 
     streamRef.current = new SafetyStream(userId, (data: StreamResponse) => {
       if (data.type === 'DANGER') {
         setAlertMessage(data.message || '위험이 감지되었습니다!');
+        setAlertSeverity('high');
         setAlertVisible(true);
       } else if (data.type === 'ANSWER') {
         Alert.alert('AI Assistant', data.message);
@@ -81,9 +118,7 @@ export default function CameraScreen({ navigation, route }: Props) {
             flash: 'off',
             enableShutterSound: false,
           });
-
           const base64 = await RNFS.readFile(photo.path, 'base64');
-
           streamRef.current.sendFrame(base64);
         } catch (err) {
           console.log('Frame capture error (expected if camera not ready)');
@@ -92,18 +127,116 @@ export default function CameraScreen({ navigation, route }: Props) {
     }, STREAM_CONFIG.INTERVAL_MS);
 
     return () => {
-
       if (intervalRef.current) clearInterval(intervalRef.current);
       streamRef.current?.disconnect();
     };
-  }, []);
+  }, [useVision, isCameraActive]);
 
-  const headerTitle = mode === 'all' ? '전체 촬영' : '작업자 환경 촬영';
+  // ref 동기화
+  useEffect(() => {
+    isCameraActiveRef.current = isCameraActive;
+  }, [isCameraActive]);
 
-  const handleToggleRecording = useCallback(async () => {
-    if (!cameraRef.current) {
+  // mode=all/test: 온디바이스 VisionEngine
+  useEffect(() => {
+    if (!useVision || !isCameraActive) {
+      isCameraReadyRef.current = false;
       return;
     }
+    if (!vision.isReady) {
+      setVisionStatus(vision.loading ? '모델 로딩 중...' : vision.error || '');
+      return;
+    }
+
+    setVisionStatus(`온디바이스 탐지 (${vision.targetFps}fps)`);
+
+    const captureInterval = setInterval(async () => {
+      if (!cameraRef.current || !vision.isReady) return;
+      if (!isCameraActiveRef.current || !isCameraReadyRef.current) return;
+
+      try {
+        const photo = await cameraRef.current.takePhoto({
+          flash: 'off',
+          enableShutterSound: false,
+        });
+
+        // 실제 이미지 전처리: JPEG → 640x640 RGB Float32Array
+        const inputData = await preprocessImageForYOLO(`file://${photo.path}`, 640);
+
+        const { events, detections: frameDetections } = vision.processFrame(inputData, 640, 640);
+
+        // 모드별 detection 필터
+        const filtered = isTestCam
+          ? frameDetections // test: 전체 표시
+          : frameDetections.filter(
+              d => d.label === 'person' || d.label === 'helmet' || d.label === 'safety_vest',
+            );
+        setDetections(filtered);
+
+        // 모드별 이벤트 처리
+        if (isTestCam && events.length > 0) {
+          // test 모드: 모든 이벤트 처리 (가장 높은 severity 우선)
+          const sorted = [...events].sort((a, b) => {
+            const order: Record<string, number> = { high: 0, medium: 1, low: 2 };
+            return (order[a.severity] ?? 2) - (order[b.severity] ?? 2);
+          });
+          const top = sorted[0];
+          const messages = events.map(e => SEVERITY_LABELS[e.label] || e.label);
+          setAlertMessage(messages.join(', '));
+          setAlertSeverity(top.severity);
+          setAlertVisible(true);
+          if (top.severity === 'high') {
+            Vibration.vibrate(1000);
+          } else {
+            Vibration.vibrate(500);
+          }
+        } else if (isFullCam) {
+          // all 모드: PPE만
+          const helmetEvent = events.find(e => e.label === 'helmet_not_worn');
+          const vestEvent = events.find(e => e.label === 'safety_vest_not_worn');
+          if (helmetEvent || vestEvent) {
+            const messages: string[] = [];
+            if (helmetEvent) messages.push('안전모 미착용');
+            if (vestEvent) messages.push('안전조끼 미착용');
+            setAlertMessage(messages.join(', '));
+            setAlertSeverity('medium');
+            setAlertVisible(true);
+            Vibration.vibrate(500);
+          }
+        }
+      } catch (err) {
+        console.error('[CameraScreen] 프레임 처리 실패:', err);
+      }
+    }, 1000); // 1fps
+
+    return () => clearInterval(captureInterval);
+  }, [useVision, isCameraActive, vision.isReady, vision.targetFps, vision.processFrame]);
+
+  // 비전 이벤트 처리 → 알림 표시 (실험용으로 비활성화)
+  // const handleVisionEvents = useCallback((events: SafetyEvent[]) => {
+  //   if (events.length === 0) return;
+
+  //   // 가장 높은 severity 이벤트 선택
+  //   const sorted = [...events].sort((a, b) => {
+  //     const order = { high: 0, medium: 1, low: 2 };
+  //     return (order[a.severity] ?? 2) - (order[b.severity] ?? 2);
+  //   });
+
+  //   const top = sorted[0];
+  //   const label = SEVERITY_LABELS[top.label] || top.label;
+  //   setAlertMessage(label);
+  //   setAlertSeverity(top.severity);
+  //   setAlertVisible(true);
+
+  //   if (top.severity === 'high') {
+  //     Vibration.vibrate(500);
+  //   }
+  // }, []);
+
+  const headerTitle = isTestCam ? '종합 테스트' : isFullCam ? '전체 촬영' : '작업자 환경 촬영';
+
+  const handleToggleRecording = useCallback(async () => {
+    if (!cameraRef.current) return;
 
     if (isRecording) {
       await cameraRef.current.stopRecording();
@@ -128,26 +261,107 @@ export default function CameraScreen({ navigation, route }: Props) {
 
       <TopHeader title={headerTitle} />
 
+      {/* Vision Status Banner (mode=all/test) */}
+      {useVision && visionStatus !== '' && (
+        <View style={styles.statusBanner}>
+          <Text style={styles.statusText}>{visionStatus}</Text>
+          {vision.lastInferenceMs > 0 && (
+            <Text style={styles.statusFps}>
+              {vision.targetFps}fps / {vision.lastInferenceMs}ms
+            </Text>
+          )}
+        </View>
+      )}
+
       {/* Camera Preview Area */}
-      <View style={styles.cameraPreview}>
+      <View
+        style={styles.cameraPreview}
+        onLayout={(e) => {
+          const { width, height } = e.nativeEvent.layout;
+          setPreviewSize({ width, height });
+        }}>
         <BaseCamera
           ref={cameraRef}
-          isActive={true}
+          isActive={isCameraActive}
           video={true}
-          audio={true}
+          audio={!useVision}
           format={streamFormat || undefined}
           isRecording={isRecording}
-          onCapture={handleToggleRecording}
+          onCapture={useVision ? undefined : handleToggleRecording}
+          onInitialized={() => {
+            console.log('[CameraScreen] 카메라 초기화 완료');
+            isCameraReadyRef.current = true;
+          }}
         />
+
+        {/* Bounding Box Overlay */}
+        {useVision && detections.length > 0 && previewSize.width > 0 && (
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            {detections.map((det, idx) => {
+              const [x1, y1, x2, y2] = det.bbox;
+              const scaleX = previewSize.width / 640;
+              const scaleY = previewSize.height / 640;
+              const left = x1 * scaleX;
+              const top = y1 * scaleY;
+              const width = (x2 - x1) * scaleX;
+              const height = (y2 - y1) * scaleY;
+
+              const boxColor =
+                det.label === 'person' ? '#00FF00' :
+                  det.label === 'helmet' ? '#00BFFF' :
+                    det.label === 'safety_vest' ? '#FF9500' :
+                      det.label === 'ladder' ? '#FF3B30' :
+                        det.label === 'outtrigger' ? '#AF52DE' :
+                          '#FFCC00'; // 기타
+
+              return (
+                <View
+                  key={`${idx}-${det.label}`}
+                  style={{
+                    position: 'absolute',
+                    left,
+                    top,
+                    width,
+                    height,
+                    borderWidth: 2,
+                    borderColor: boxColor,
+                    backgroundColor: 'transparent',
+                  }}>
+                  <View
+                    style={{
+                      backgroundColor: boxColor,
+                      paddingHorizontal: 4,
+                      paddingVertical: 2,
+                    }}>
+                    <Text style={{ color: '#000', fontSize: 10, fontWeight: 'bold' }}>
+                      {det.label} {(det.score * 100).toFixed(0)}%
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        )}
       </View>
 
-      {/* Bottom Spacer Section to match EquipmentCameraScreen Layout */}
+      {/* Bottom Control Section */}
       <View
         style={[
           styles.bottomSection,
-          { height: insets.bottom + 16 },
-        ]}
-      />
+          { paddingBottom: insets.bottom + 16 },
+        ]}>
+        <TouchableOpacity
+          style={[
+            styles.cameraButton,
+            isCameraActive && styles.cameraButtonActive,
+          ]}
+          onPress={() => setIsCameraActive(!isCameraActive)}>
+          <Text style={styles.cameraButtonText}>
+            {isCameraActive ? '촬영 중지' : '촬영 시작'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Alert Modal */}
       <Modal
         visible={alertVisible}
@@ -157,7 +371,17 @@ export default function CameraScreen({ navigation, route }: Props) {
         <View style={styles.modalOverlay}>
           <View style={styles.dialog}>
             <View style={styles.dialogContent}>
-              <Text style={styles.dialogTitle}>⚠️ 위험 감지!</Text>
+              <Text
+                style={[
+                  styles.dialogTitle,
+                  { color: SEVERITY_COLORS[alertSeverity] || '#FF3B30' },
+                ]}>
+                {alertSeverity === 'high'
+                  ? '⚠️ 위험 감지!'
+                  : alertSeverity === 'medium'
+                    ? '⚠️ 주의'
+                    : '📋 알림'}
+              </Text>
               <Text style={styles.dialogDescription}>{alertMessage}</Text>
             </View>
             <View style={styles.dialogActions}>
@@ -171,8 +395,6 @@ export default function CameraScreen({ navigation, route }: Props) {
         </View>
       </Modal>
     </View>
-
-
   );
 }
 
@@ -181,7 +403,29 @@ export default function CameraScreen({ navigation, route }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8F9FE',
+  },
+
+  /* Status Banner */
+  statusBanner: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginHorizontal: 15,
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#F0F4FF',
+    borderRadius: 8,
+  },
+  statusText: {
+    fontSize: 12,
+    color: '#FFB800',
+    fontWeight: '600',
+  },
+  statusFps: {
+    fontSize: 11,
+    color: '#8E8E93',
   },
 
   /* Camera Preview */
@@ -193,7 +437,24 @@ const styles = StyleSheet.create({
   bottomSection: {
     alignItems: 'center',
     paddingHorizontal: 20,
+    paddingTop: 16,
     backgroundColor: '#FFFFFF',
+  },
+  cameraButton: {
+    width: '100%',
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: '#FFB800',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cameraButtonActive: {
+    backgroundColor: '#FF3B30',
+  },
+  cameraButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 
   // Modal Styles
@@ -203,6 +464,6 @@ const styles = StyleSheet.create({
   dialogTitle: { fontSize: 18, fontWeight: '800', color: '#FF3B30' },
   dialogDescription: { fontSize: 14, color: '#1F2024', textAlign: 'center' },
   dialogActions: { flexDirection: 'row', justifyContent: 'center' },
-  dialogButtonFilled: { width: '100%', height: 44, borderRadius: 12, backgroundColor: '#006FFD', justifyContent: 'center', alignItems: 'center' },
+  dialogButtonFilled: { width: '100%', height: 44, borderRadius: 12, backgroundColor: '#FFB800', justifyContent: 'center', alignItems: 'center' },
   dialogButtonFilledText: { color: '#FFFFFF', fontWeight: '600' },
 });
