@@ -280,8 +280,8 @@ const styles: Record<string, React.CSSProperties> = {
     boxSizing: 'border-box',
   },
   checkboxChecked: {
-    backgroundColor: '#006FFD',
-    borderColor: '#006FFD',
+    backgroundColor: '#FFB800',
+    borderColor: '#FFB800',
   },
   checkmark: {
     color: '#FFFFFF',
@@ -304,12 +304,12 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 600,
     fontSize: 12,
-    color: '#006FFD',
+    color: '#FFB800',
   },
   loginButton: {
     width: '100%',
     height: 48,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 12,
     display: 'flex',
     justifyContent: 'center',
@@ -338,7 +338,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   signUpLink: {
     fontWeight: 600,
-    color: '#006FFD',
+    color: '#FFB800',
   },
   errorText: {
     fontFamily: 'Inter, sans-serif',

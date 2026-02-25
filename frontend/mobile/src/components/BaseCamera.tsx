@@ -6,6 +6,7 @@ import {
     useCameraFormat,
     useCameraPermission,
     useMicrophonePermission,
+    type ReadonlyFrameProcessor,
 } from 'react-native-vision-camera';
 
 export interface BaseCameraProps {
@@ -14,6 +15,7 @@ export interface BaseCameraProps {
     video?: boolean;
     audio?: boolean;
     format?: ReturnType<typeof useCameraFormat>;
+    frameProcessor?: ReadonlyFrameProcessor;
     guideText?: string;
     showControls?: boolean;
     isRecording?: boolean;
@@ -30,6 +32,7 @@ const BaseCamera = forwardRef<Camera, BaseCameraProps>(
             video = false,
             audio = false,
             format,
+            frameProcessor,
             guideText,
             showControls = true,
             isRecording = false,
@@ -81,6 +84,7 @@ const BaseCamera = forwardRef<Camera, BaseCameraProps>(
                     style={[StyleSheet.absoluteFill, { borderRadius: 20, overflow: 'hidden' }]}
                     device={device}
                     {...(format ? { format } : {})}
+                    {...(frameProcessor ? { frameProcessor } : {})}
                     isActive={isActive}
                     photo={photo}
                     video={video}
@@ -165,7 +169,7 @@ const styles = StyleSheet.create({
         width: 58,
         height: 58,
         borderRadius: 29,
-        backgroundColor: '#006FFD',
+        backgroundColor: '#FFB800',
         justifyContent: 'center',
         alignItems: 'center',
         position: 'absolute',
@@ -231,7 +235,7 @@ const styles = StyleSheet.create({
         width: 10,
         height: 10,
         borderRadius: 5,
-        backgroundColor: '#006FFD',
+        backgroundColor: '#FFB800',
     },
     stopIcon: {
         width: 20,

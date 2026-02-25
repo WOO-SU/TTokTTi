@@ -132,7 +132,7 @@ export default function PersonalScreen() {
 
       {loading ? (
         <View style={styles.loadingWrapper}>
-          <ActivityIndicator size="large" color="#006FFD" />
+          <ActivityIndicator size="large" color="#FFB800" />
         </View>
       ) : (
         <ScrollView
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Noto Sans KR',
     fontWeight: '700',
     fontSize: 16,
-    color: '#006FFD',
+    color: '#FFB800',
   },
 
   /* Profile Card */
@@ -484,12 +484,12 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   saveBtn: {
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     height: 56,
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#006FFD',
+    shadowColor: '#FFB800',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,

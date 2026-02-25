@@ -20,7 +20,7 @@ const styles = StyleSheet.create({
     largeCheckShort: {
         width: 36,
         height: 8,
-        backgroundColor: '#006FFD',
+        backgroundColor: '#FFB800',
         borderRadius: 4,
         position: 'absolute',
         left: 16,
@@ -30,7 +30,7 @@ const styles = StyleSheet.create({
     largeCheckLong: {
         width: 72,
         height: 8,
-        backgroundColor: '#006FFD',
+        backgroundColor: '#FFB800',
         borderRadius: 4,
         position: 'absolute',
         right: 8,

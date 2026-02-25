@@ -223,10 +223,10 @@ class Command(BaseCommand):
         # ------------------------------------------------------------------
         self.stdout.write("🚀 Seeding apps.worksession data...")
         now = timezone.now()
-        dates = [now - timedelta(days=i) for i in range(1, 7)] + [now + timedelta(days=i) for i in range(7)]
-        
+    
         workers = list(User.objects.filter(is_manager=False))
         managers = list(User.objects.filter(is_manager=True))
+        users = list(User.objects.all())
 
         if len(workers) < 2 or len(managers) < 5:
             raise Exception("❌ Insufficient users: worker>=2, manager>=5 required")
@@ -255,11 +255,70 @@ class Command(BaseCommand):
             "환기설비 안전 점검",
         ]
 
-        has_in_progress = False
+        random.shuffle(users)
+        user_chunks = [users[i:i + 7] for i in range(0, len(users), 7)]
 
-        for date in dates: # 하루 당 3개의 세션씩 랜덤으로 생성
+        for chunk in user_chunks:
+            worksite = random.choice(worksites)
+            task_name = random.choice(task_templates)
+
+            ws = WorkSession.objects.create(
+                worksite=worksite,
+                name=f"{worksite.name} {task_name}",
+                starts_at=now - timedelta(minutes=30),
+                ends_at=now + timedelta(hours=2),
+                status=WorkSession.StatusChoices.IN_PROGRESS,
+            )
+
+            chunk_managers = [u for u in chunk if u.is_manager]
+            chunk_workers = [u for u in chunk if not u.is_manager]
+
+            if chunk_managers:
+                head = chunk_managers[0]
+            else:
+                head = random.choice(managers)
+
+            WorkSessionMember.objects.create(
+                worksession=ws,
+                user=head,
+                role=WorkSessionMember.RoleChoices.HEAD,
+            )
+
+            related_pool = [m for m in managers if m != head]
+            relateds = random.sample(related_pool, 4)
+
+            for rm in relateds:
+                WorkSessionMember.objects.create(
+                    worksession=ws,
+                    user=rm,
+                    role=WorkSessionMember.RoleChoices.RELATED,
+                )
+
+            selected_workers = []
+
+            for w in chunk_workers:
+                if len(selected_workers) < 2:
+                    selected_workers.append(w)
+
+            if len(selected_workers) < 2:
+                remain = [w for w in workers if w not in selected_workers]
+                selected_workers += random.sample(remain, 2 - len(selected_workers))
+
+            for w in selected_workers:
+                WorkSessionMember.objects.create(
+                    worksession=ws,
+                    user=w,
+                    role=WorkSessionMember.RoleChoices.WORKER,
+                )
+        # for DONE, READY
+
+        dates = [now - timedelta(days=i) for i in range(1, 7)] + [
+            now + timedelta(days=i) for i in range(1, 7)
+        ]
+
+        for date in dates:
             for worksite in worksites:
-                for i in range(3):
+                for _ in range(3):
                     start_hour = random.randint(9, 15)
                     duration = random.randint(2, 3)
 
@@ -273,8 +332,7 @@ class Command(BaseCommand):
                     if ends_at < now:
                         status = WorkSession.StatusChoices.DONE
                     elif starts_at <= now <= ends_at:
-                        status = WorkSession.StatusChoices.IN_PROGRESS
-                        has_in_progress = True
+                        continue
                     else:
                         status = WorkSession.StatusChoices.READY
 
@@ -284,10 +342,8 @@ class Command(BaseCommand):
                         starts_at=starts_at,
                         ends_at=ends_at,
                         status=status,
-                        # fullcam, bodycam: 실제 blob path 필요 (status == done 에 대해서만 = 3*7 < n <3*8)
                     )
 
-                    # 각 세션당 1명의 HEAD (is_manager=True), 4명의 RELATED (is_manager=True, but not HEAD), 2명의 WORKER (is_manager=False) 배정
                     head = random.choice(managers)
                     WorkSessionMember.objects.create(
                         worksession=session,
@@ -297,7 +353,7 @@ class Command(BaseCommand):
 
                     relateds = random.sample(
                         [m for m in managers if m != head],
-                        k=4
+                        4,
                     )
                     for rm in relateds:
                         WorkSessionMember.objects.create(
@@ -306,28 +362,15 @@ class Command(BaseCommand):
                             role=WorkSessionMember.RoleChoices.RELATED,
                         )
 
-                    selected_workers = random.sample(workers, k=2)
+                    selected_workers = random.sample(workers, 2)
                     for w in selected_workers:
                         WorkSessionMember.objects.create(
                             worksession=session,
                             user=w,
                             role=WorkSessionMember.RoleChoices.WORKER,
                         )
-        if not has_in_progress:
-            session = (
-                WorkSession.objects
-                .filter(starts_at__date=now.date())
-                .order_by("?")
-                .first()
-            )
 
-            if session:
-                session.starts_at = now - timedelta(hours=1)
-                session.ends_at = now + timedelta(hours=1)
-                session.status = WorkSession.StatusChoices.IN_PROGRESS
-                session.save()        
-        
-        self.stdout.write(self.style.SUCCESS(f"✅ apps.worksession seeding completed"))
+        self.stdout.write(self.style.SUCCESS("✅ apps.worksession seeding completed"))
 
 
         # ------------------------------------------------------------------
@@ -444,12 +487,22 @@ class Command(BaseCommand):
                 target_workers = []
 
             for employee_id in target_workers:
+                violated_category = None
+                if session.status == WorkSession.StatusChoices.IN_PROGRESS:
+                    violated_category = random.choice(categories)
+
                 for category in categories:
+
+                    is_violation = (
+                        session.status == WorkSession.StatusChoices.IN_PROGRESS
+                        and category == violated_category
+                    )
+
                     Compliance.objects.create(
                         employee_id=employee_id,
                         worksession=session,
                         category=category,
-                        is_complied=True,
+                        is_complied=not is_violation,
                         original_image=original_paths[category][
                             original_idx[category] % len(original_paths[category])
                         ],
@@ -458,7 +511,8 @@ class Command(BaseCommand):
                         ],
                     )
                     original_idx[category] += 1
-                    detected_idx[category] += 1
+                    if not is_violation:
+                        detected_idx[category] += 1
 
         self.stdout.write(self.style.SUCCESS("✅ apps.check seeding completed"))
 
@@ -574,6 +628,47 @@ class Command(BaseCommand):
                             "is_read": True,
                             "read_at": log.created_at + timedelta(minutes=random.randint(1, 60)),
                         }
+                    )
+        
+        for session in WorkSession.objects.filter(
+            status=WorkSession.StatusChoices.IN_PROGRESS
+        ):
+
+            non_compliances = Compliance.objects.filter(
+                worksession=session,
+                is_complied=False,
+            )
+
+            if not non_compliances.exists():
+                continue
+
+            session_managers = list(
+                User.objects.filter(
+                    work_sessions__worksession=session,
+                    work_sessions__role__in=[
+                        WorkSessionMember.RoleChoices.HEAD,
+                        WorkSessionMember.RoleChoices.RELATED,
+                    ]
+                ).distinct()
+            )
+
+            if not session_managers:
+                continue
+
+            for compliance in non_compliances:
+
+                videolog = VideoLog.objects.create(
+                    worksession=session,
+                    source=VideoLog.SourceChoices.MANUAL,
+                    compliance=compliance,
+                    status=VideoLog.StatusChoices.PENDING,
+                )
+
+                for manager in session_managers:
+                    VideoLogRead.objects.create(
+                        videolog=videolog,
+                        manager=manager,
+                        is_read=False,
                     )
         self.stdout.write(self.style.SUCCESS("✅ apps.detect seeding completed"))
 

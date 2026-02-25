@@ -13,6 +13,7 @@ import { useNavigation, type CompositeNavigationProp } from '@react-navigation/n
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { SettingStackParamList, RootStackParamList } from '../../App';
 import { useAuth } from '../context/AuthContext';
+import { useWorkSession } from '../context/WorkSessionContext';
 import TopHeader from '../components/TopHeader';
 
 const APP_VERSION = '1.0.0';
@@ -59,6 +60,7 @@ function SettingRow({ label, value, onPress, showChevron = false, danger = false
 export default function SettingScreen() {
   const insets = useSafeAreaInsets();
   const { logout, userName, userId } = useAuth();
+  const { endSession } = useWorkSession();
   const navigation = useNavigation<
     CompositeNavigationProp<
       NativeStackNavigationProp<SettingStackParamList>,
@@ -73,6 +75,7 @@ export default function SettingScreen() {
         text: '로그아웃',
         style: 'destructive',
         onPress: async () => {
+          endSession();
           await logout();
           navigation.reset({ index: 0, routes: [{ name: 'Login' as never }] });
         },

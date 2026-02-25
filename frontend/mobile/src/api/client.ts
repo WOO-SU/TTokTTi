@@ -2,10 +2,12 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // const API_BASE_URL = 'http://10.0.2.2:8000/api'; // Android Emulator
-const API_BASE_URL = 'http://localhost:8000/api';   // Real Device (with adb reverse) or Localhost
+// const API_BASE_URL = 'http://192.0.0.2:8000/api';   // Hotspot network
+// const API_BASE_URL = 'http://localhost:8000/api';   // Real Device (adb reverse)
+const API_BASE_URL = 'https://api-riskpulse.delightfulglacier-38eeee86.koreacentral.azurecontainerapps.io/api';
 
 const client = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: 'https://api-riskpulse.delightfulglacier-38eeee86.koreacentral.azurecontainerapps.io/api',
   timeout: 10000,
   headers: { 'Content-Type': 'application/json' },
 });

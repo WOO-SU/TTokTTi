@@ -9,6 +9,7 @@ import {
   StatusBar,
   Image,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Camera } from 'react-native-vision-camera';
@@ -27,11 +28,12 @@ import {
   fetchCheckUpdate,
   requestManualCheck,
 } from '../api/equipment';
-import LargeCheckIcon from '../components/LargeCheckIcon';
+
 
 const NO_HELMET = require('../assets/no_helmet.png');
 const NO_VEST = require('../assets/no_vest.png');
 const NO_GLOVE = require('../assets/no_glove.png');
+const CLEAR_IMG = require('../assets/clear.png');
 
 type Props = {
   navigation: NativeStackNavigationProp<
@@ -54,6 +56,8 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
   const [isUploading, setIsUploading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isFailed, setIsFailed] = useState(false);
+  const [complianceId, setComplianceId] = useState<number | null>(null);
+  const [manualRequested, setManualRequested] = useState(false);
 
   const cameraRef = useRef<Camera>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -116,6 +120,8 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
     setIsUploading(false);
     setIsSuccess(false);
     setIsFailed(false);
+    setComplianceId(null);
+    setManualRequested(false);
   }, []);
 
   // 선택 버튼 → 업로드 + 탐지 요청 + 폴링
@@ -124,10 +130,11 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
     try {
       setIsUploading(true);
       setIsFailed(false);
-      const { upload_url, blob_name } = await getSasToken();
+      const { upload_url, blob_name } = await getSasToken('image/jpeg', 'compliance');
       await uploadToBlob(upload_url, photoPath);
-      const complianceId = await requestDetection(blob_name, title, worksession_id);
-      startPolling(complianceId);
+      const cId = await requestDetection(blob_name, title, worksession_id);
+      setComplianceId(cId);
+      startPolling(cId);
     } catch (err) {
       console.error('handleConfirm error:', err);
       setIsUploading(false);
@@ -149,6 +156,13 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
     return '미착용 감지'; // 기본값
   };
 
+  const getSuccessMessage = () => {
+    if (title.includes('헬멧') || title.includes('안전모')) return '안전모 착용 확인!';
+    if (title.includes('조끼')) return '안전조끼 착용 확인!';
+    if (title.includes('장갑')) return '안전장갑 착용 확인!';
+    return `${title} 착용 확인`;
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
@@ -167,13 +181,13 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
           >
             {isSuccess && (
               <View style={styles.resultCardOverlay}>
-                <LargeCheckIcon />
-                <Text style={styles.resultText}>착용 확인 완료 ✅</Text>
+                <Image source={CLEAR_IMG} style={styles.clearImage} resizeMode="contain" />
+                <Text style={styles.resultText}>{getSuccessMessage()}</Text>
               </View>
             )}
             {isUploading && !isSuccess && (
               <View style={styles.resultCardOverlay}>
-                <ActivityIndicator size="large" color="#006FFD" />
+                <ActivityIndicator size="large" color="#FFB800" />
                 <Text style={styles.resultText}>AI 분석 중...</Text>
               </View>
             )}
@@ -181,6 +195,24 @@ export default function EquipmentCameraScreen({ navigation, route }: Props) {
               <View style={styles.resultCardOverlay}>
                 <Image source={getFailureImage()} style={styles.failureImage} resizeMode="contain" />
                 <Text style={styles.resultText}>❌ {getFailureMessage()}{`\n`}다시 촬영해주세요</Text>
+                {complianceId && !manualRequested && (
+                  <TouchableOpacity
+                    style={styles.manualRequestButton}
+                    onPress={async () => {
+                      try {
+                        await requestManualCheck(worksession_id, complianceId);
+                        setManualRequested(true);
+                        Alert.alert('요청 완료', '관리자에게 수동 확인을 요청했습니다.');
+                      } catch {
+                        Alert.alert('요청 실패', '다시 시도해주세요.');
+                      }
+                    }}>
+                    <Text style={styles.manualRequestText}>수동 확인 요청</Text>
+                  </TouchableOpacity>
+                )}
+                {manualRequested && (
+                  <Text style={styles.manualRequestedText}>✅ 수동 확인 요청됨</Text>
+                )}
               </View>
             )}
           </PhotoResultView>
@@ -272,6 +304,11 @@ const styles = StyleSheet.create({
     height: 140,
     marginBottom: 8,
   },
+  clearImage: {
+    width: 220,
+    height: 220,
+    marginBottom: 0,
+  },
   failedText: {
     fontFamily: 'Noto Sans KR',
     fontWeight: '700',     // Bold
@@ -289,7 +326,7 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#006FFD',
+    borderColor: '#FFB800',
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
@@ -298,13 +335,13 @@ const styles = StyleSheet.create({
     fontFamily: 'Noto Sans KR',
     fontWeight: '600',
     fontSize: 16,
-    color: '#006FFD',
+    color: '#FFB800',
   },
   retakeButton: {
     width: 120,
     height: 48,
     borderRadius: 12,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -336,7 +373,7 @@ const styles = StyleSheet.create({
     width: 153,
     height: 38,
     borderRadius: 15,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -360,7 +397,7 @@ const styles = StyleSheet.create({
   largeCheckShort: {
     width: 36,
     height: 8,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 4,
     position: 'absolute',
     left: 16,
@@ -370,7 +407,7 @@ const styles = StyleSheet.create({
   largeCheckLong: {
     width: 72,
     height: 8,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 4,
     position: 'absolute',
     right: 8,
@@ -380,7 +417,7 @@ const styles = StyleSheet.create({
   xLine1: {
     width: 80,
     height: 8,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 4,
     position: 'absolute',
     transform: [{ rotate: '45deg' }],
@@ -388,9 +425,31 @@ const styles = StyleSheet.create({
   xLine2: {
     width: 80,
     height: 8,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 4,
     position: 'absolute',
     transform: [{ rotate: '-45deg' }],
+  },
+  manualRequestButton: {
+    marginTop: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#FFB800',
+    backgroundColor: '#FFFFFF',
+  },
+  manualRequestText: {
+    fontFamily: 'Noto Sans KR',
+    fontWeight: '600',
+    fontSize: 15,
+    color: '#FFB800',
+  },
+  manualRequestedText: {
+    marginTop: 8,
+    fontFamily: 'Noto Sans KR',
+    fontWeight: '500',
+    fontSize: 14,
+    color: '#71727A',
   },
 });

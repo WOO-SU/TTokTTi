@@ -13,15 +13,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Camera, useCameraPermission } from 'react-native-vision-camera';
-import RNFS from 'react-native-fs';
 import BaseCamera from '../components/BaseCamera';
 import PhotoResultView from '../components/PhotoResultView';
-import { useAuth } from '../context/AuthContext';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { HomeStackParamList } from '../../App';
 import TopHeader from '../components/TopHeader';
 import LargeCheckIcon from '../components/LargeCheckIcon';
-import { getSasToken, uploadToBlob } from '../api/equipment';
+import { getSasToken, uploadToBlob, requestTargetPhoto } from '../api/equipment';
 
 type Props = {
   navigation: NativeStackNavigationProp<HomeStackParamList, 'EndWork'>;
@@ -32,8 +31,10 @@ type ScreenState = 'idle' | 'camera' | 'preview' | 'sending' | 'sent';
 /* ──────── Icon Components ──────── */
 
 export default function EndWorkScreen({ navigation }: Props) {
+  const route = useRoute<RouteProp<HomeStackParamList, 'EndWork'>>();
+  const { worksession_id } = route.params;
   const insets = useSafeAreaInsets();
-  const [screenState, setScreenState] = useState<ScreenState>('idle');
+  const [screenState, setScreenState] = useState<ScreenState>('camera');
   const [photoPath, setPhotoPath] = useState<string | null>(null);
 
   const cameraRef = useRef<Camera>(null);
@@ -70,18 +71,20 @@ export default function EndWorkScreen({ navigation }: Props) {
     }
     setScreenState('sending');
     try {
-      const { upload_url } = await getSasToken();
+      const { upload_url, blob_name } = await getSasToken('image/jpeg', 'target');
       await uploadToBlob(upload_url, photoPath);
+      // 백엔드 DB에 'AFTER' 상태로 기록 요청
+      await requestTargetPhoto(blob_name, worksession_id, 'AFTER');
       setScreenState('sent');
     } catch (err) {
       console.error('EndWork upload error:', err);
       Alert.alert(
         '업로드 실패',
-        '사진 업로드에 실패했습니다. 다시 시도해주세요.',
+        '사진 업로드 또는 DB 기록에 실패했습니다. 다시 시도해주세요.',
       );
       setScreenState('preview');
     }
-  }, [photoPath]);
+  }, [photoPath, worksession_id]);
 
   const handleConfirm = useCallback(() => {
     handleSend();
@@ -97,70 +100,54 @@ export default function EndWorkScreen({ navigation }: Props) {
 
       <TopHeader title="근무 마무리" />
 
-      {/* Idle State */}
-      {screenState === 'idle' && (
-        <View style={styles.idleContent}>
-          <Text style={styles.idleTitle}>근무를 마무리합니다</Text>
-          <Text style={styles.idleSubtitle}>현장 사진을 촬영해주세요</Text>
-          <TouchableOpacity
-            style={styles.startCameraButton}
-            activeOpacity={0.8}
-            onPress={handleStartCamera}>
-            <Text style={styles.startCameraButtonText}>마무리 촬영</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
       {/* Camera & Preview States */}
-      {screenState !== 'idle' && (
-        <View style={styles.cameraPreview}>
-          {screenState === 'camera' && (
-            <BaseCamera
-              ref={cameraRef}
-              isActive={true}
-              photo={true}
-              guideText="마무리 현장을 촬영하세요"
-              onCapture={handleCapture}
-            />
-          )}
+      <View style={styles.cameraPreview}>
+        {screenState === 'camera' && (
+          <BaseCamera
+            ref={cameraRef}
+            isActive={true}
+            photo={true}
+            guideText="마무리 현장을 촬영하세요"
+            onCapture={handleCapture}
+          />
+        )}
 
-          {screenState === 'preview' && photoPath && (
-            <PhotoResultView
-              photoPath={photoPath}
-              onRetake={handleRetake}
-              onConfirm={handleConfirm}
-              confirmText="전송"
-            />
-          )}
-          {screenState === 'sending' && photoPath && (
-            <PhotoResultView
-              photoPath={photoPath}
-              onRetake={handleRetake}
-              onConfirm={handleConfirm}
-              confirmText="전송"
-              isConfirming={true}
-            >
-              <View style={styles.resultCardOverlay}>
-                <ActivityIndicator size="large" color="#006FFD" />
-                <Text style={styles.resultText}>업로드 중...</Text>
-              </View>
-            </PhotoResultView>
-          )}
-          {screenState === 'sent' && photoPath && (
-            <PhotoResultView
-              photoPath={photoPath}
-              onRetake={handleRetake}
-              onConfirm={handleDone}
-              confirmText="완료"
-            >
-              <View style={styles.resultCardOverlay}>
-                <LargeCheckIcon />
-                <Text style={styles.resultText}>전송 완료</Text>
-              </View>
-            </PhotoResultView>
-          )}
-        </View>
-      )}
+        {screenState === 'preview' && photoPath && (
+          <PhotoResultView
+            photoPath={photoPath}
+            onRetake={handleRetake}
+            onConfirm={handleConfirm}
+            confirmText="전송"
+          />
+        )}
+        {screenState === 'sending' && photoPath && (
+          <PhotoResultView
+            photoPath={photoPath}
+            onRetake={handleRetake}
+            onConfirm={handleConfirm}
+            confirmText="전송"
+            isConfirming={true}
+          >
+            <View style={styles.resultCardOverlay}>
+              <ActivityIndicator size="large" color="#FFB800" />
+              <Text style={styles.resultText}>업로드 중...</Text>
+            </View>
+          </PhotoResultView>
+        )}
+        {screenState === 'sent' && photoPath && (
+          <PhotoResultView
+            photoPath={photoPath}
+            onRetake={handleRetake}
+            onConfirm={handleDone}
+            confirmText="완료"
+          >
+            <View style={styles.resultCardOverlay}>
+              <LargeCheckIcon />
+              <Text style={styles.resultText}>전송 완료</Text>
+            </View>
+          </PhotoResultView>
+        )}
+      </View>
 
       {screenState === 'camera' && (
         <View
@@ -186,7 +173,7 @@ const iconStyles = StyleSheet.create({
   arrowTop: {
     width: 14,
     height: 2,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 1,
     position: 'absolute',
     transform: [{ rotate: '-45deg' }, { translateY: -5.5 }],
@@ -194,7 +181,7 @@ const iconStyles = StyleSheet.create({
   arrowBottom: {
     width: 14,
     height: 2,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 1,
     position: 'absolute',
     transform: [{ rotate: '45deg' }, { translateY: 5.5 }],
@@ -208,7 +195,7 @@ const iconStyles = StyleSheet.create({
   largeCheckShort: {
     width: 36,
     height: 8,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 4,
     position: 'absolute',
     left: 16,
@@ -218,7 +205,7 @@ const iconStyles = StyleSheet.create({
   largeCheckLong: {
     width: 72,
     height: 8,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 4,
     position: 'absolute',
     right: 8,
@@ -278,7 +265,7 @@ const styles = StyleSheet.create({
     width: 200,
     height: 52,
     borderRadius: 15,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 8,

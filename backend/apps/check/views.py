@@ -11,6 +11,7 @@ import json
 from .models import Compliance, Photo
 from ..detect.models import VideoLog, VideoLogRead
 from .serializers import *
+from .permissions import IsJetson
 
 from ..worksession.models import WorkSession, WorkSessionMember
 # temporary measure. if two redis queues are needed,, pull the client code .
@@ -56,7 +57,7 @@ def check_update(request):
     responses={200: UploadResultResponseSerializer}
 )
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsJetson])
 def upload_result(request):
     """
     "/api/check/upload": 탐지 결과를 DB에 업로드 한다. (모델 -> 백 -> DB)

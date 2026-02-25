@@ -58,6 +58,14 @@ export default function SelectModeScreen({ navigation }: Props) {
             imageStyle={styles.cardImage2}
             onPress={() => navigation.navigate('Camera', { mode: 'worker' })}
           />
+
+          {/* Card 3: 종합 테스트 */}
+          <MenuBanner
+            title="테스트"
+            imageSource={tripodImage}
+            imageStyle={styles.cardImage1}
+            onPress={() => navigation.navigate('Camera', { mode: 'test' })}
+          />
         </View>
       </ScrollView>
     </View>
@@ -76,7 +84,7 @@ const iconStyles = StyleSheet.create({
   backArrowTop: {
     width: 14,
     height: 2,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 1,
     position: 'absolute',
     transform: [{ rotate: '-45deg' }, { translateY: -5.5 }],
@@ -84,7 +92,7 @@ const iconStyles = StyleSheet.create({
   backArrowBottom: {
     width: 14,
     height: 2,
-    backgroundColor: '#006FFD',
+    backgroundColor: '#FFB800',
     borderRadius: 1,
     position: 'absolute',
     transform: [{ rotate: '45deg' }, { translateY: 5.5 }],

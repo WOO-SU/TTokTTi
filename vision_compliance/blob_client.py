@@ -13,20 +13,29 @@ class BlobClient:
             account_url=f"https://{cfg.AZURE_ACCOUNT_NAME}.blob.core.windows.net",
             credential=cfg.AZURE_ACCOUNT_KEY,
         )
-        self._container = self._svc.get_container_client(cfg.AZURE_CONTAINER)
+        self._default_container = cfg.AZURE_CONTAINER
+
+    def _resolve(self, blob_name: str):
+        """blob_name이 'container/filename' 형태면 컨테이너를 분리, 아니면 기본 컨테이너 사용"""
+        if "/" in blob_name:
+            container, actual_blob = blob_name.split("/", 1)
+            return self._svc.get_container_client(container), actual_blob
+        return self._svc.get_container_client(self._default_container), blob_name
 
     def download(self, blob_name: str) -> bytes:
         """Blob에서 이미지 바이트 다운로드"""
-        blob = self._container.get_blob_client(blob_name)
+        container, actual_blob = self._resolve(blob_name)
+        blob = container.get_blob_client(actual_blob)
         return blob.download_blob().readall()
 
     def upload(self, image_bytes: bytes, prefix: str = "detected") -> str:
         """탐지 결과 이미지를 Blob에 업로드하고 blob_name 반환"""
-        blob_name = f"{prefix}/{uuid.uuid4().hex}.jpg"
-        blob = self._container.get_blob_client(blob_name)
+        filename = f"{prefix}_{uuid.uuid4().hex}.jpg"
+        container = self._svc.get_container_client("compliance")
+        blob = container.get_blob_client(filename)
         blob.upload_blob(
             io.BytesIO(image_bytes),
             overwrite=True,
             content_settings=ContentSettings(content_type="image/jpeg"),
         )
-        return blob_name
+        return f"compliance/{filename}"

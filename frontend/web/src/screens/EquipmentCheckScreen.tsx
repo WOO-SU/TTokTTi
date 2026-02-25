@@ -44,7 +44,7 @@ const equipmentItems: EquipmentItem[] = [
   { category: 'SHOES', label: '안전장갑 착용', icon: '🧤' },
 ];
 
-const MEMBER_COLORS = ['#006FFD', '#E87C5D', '#22A06B', '#8F9098', '#7B61FF', '#E85DBF', '#FF6B35', '#9B59B6'];
+const MEMBER_COLORS = ['#FFB800', '#E87C5D', '#22A06B', '#8F9098', '#7B61FF', '#E85DBF', '#FF6B35', '#9B59B6'];
 
 function getMemberColor(index: number): string {
   return MEMBER_COLORS[index % MEMBER_COLORS.length];
@@ -113,6 +113,34 @@ export default function SafetyRegulationScreen() {
   const [loading, setLoading] = useState(true);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const fetchComplianceData = useCallback(async (sessions: WorkSessionCard[]) => {
+    if (sessions.length === 0) return;
+    try {
+      const wsIds = sessions.map(ws => ws.id);
+      const res = await apiFetch('/check/admin/', {
+        method: 'POST',
+        body: JSON.stringify({ worksession_ids: wsIds }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const worksessions = json.worksessions ?? [];
+        setCompliance(prev => {
+          const next = { ...prev };
+          for (const ws of worksessions) {
+            for (const wc of ws.workers ?? []) {
+              for (const eq of equipmentItems) {
+                const key = complianceKey(ws.worksession_id, wc.worker.id, eq.category);
+                const val = wc.checks?.[eq.category];
+                next[key] = val === true;
+              }
+            }
+          }
+          return next;
+        });
+      }
+    } catch { /* ignore */ }
+  }, []);
+
   const fetchWorkSessions = useCallback(async () => {
     try {
       const res = await apiFetch('/worksession/admin/today/');
@@ -120,26 +148,13 @@ export default function SafetyRegulationScreen() {
         const json = await res.json();
         if (Array.isArray(json)) {
           setWorkSessions(json);
-          // Initialize compliance from equipment_check (preserve manual overrides)
-          setCompliance(prev => {
-            const next = { ...prev };
-            for (const ws of json as WorkSessionCard[]) {
-              for (const worker of ws.workers_detail ?? []) {
-                for (const eq of equipmentItems) {
-                  const key = complianceKey(ws.id, worker.employee_id, eq.category);
-                  if (!(key in next)) {
-                    next[key] = worker.equipment_check;
-                  }
-                }
-              }
-            }
-            return next;
-          });
+          // Only expand the first group if nothing is currently expanded
           setExpandedGroupId(prev => prev ?? (json.length > 0 ? (json[0] as WorkSessionCard).id : null));
+          await fetchComplianceData(json as WorkSessionCard[]);
         }
       }
     } catch { /* ignore */ }
-  }, []);
+  }, [fetchComplianceData]);
 
   useEffect(() => {
     fetchWorkSessions().finally(() => setLoading(false));
@@ -161,8 +176,35 @@ export default function SafetyRegulationScreen() {
     setExpandedEquipment(prev => (prev === key ? null : key));
   };
 
-  const toggleCompliance = (key: string) => {
-    setCompliance(prev => ({ ...prev, [key]: !prev[key] }));
+  // 💡 핵심 변경: 체크박스 토글 시 서버에 상태를 저장합니다.
+  const toggleCompliance = async (
+    key: string,
+    wsId: number,
+    empId: number,
+    category: string
+  ) => {
+    // 1. 프론트엔드 상태를 즉시 업데이트 (Optimistic UI Update)
+    const newValue = !compliance[key];
+    setCompliance(prev => ({ ...prev, [key]: newValue }));
+
+    try {
+      // 2. 백엔드에 변경된 상태(체크 여부) 저장 요청 전송
+      // ※ API 엔드포인트와 요청 바디 구조는 실제 백엔드 구현에 맞게 조정이 필요할 수 있습니다.
+      await apiFetch('/check/admin/update/', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          worksession_id: wsId,
+          employee_id: empId,
+          category: category,
+          is_complied: newValue,
+        }),
+      });
+    } catch (error) {
+      console.error("Failed to update compliance on server:", error);
+      // 실패 시 원래 상태로 되돌림 (Rollback)
+      setCompliance(prev => ({ ...prev, [key]: !newValue }));
+      alert("체크 상태 저장에 실패했습니다.");
+    }
   };
 
   return (
@@ -175,7 +217,7 @@ export default function SafetyRegulationScreen() {
         </button>
 
         <div style={styles.sidebarIcons}>
-          <button type="button" style={{ ...styles.sidebarIconBtn, ...(isProfileActive ? { backgroundColor: '#006FFD', boxShadow: '0 2px 8px rgba(0,111,253,0.3)' } : {}) }} onClick={() => navigate('/profile')}>👤</button>
+          <button type="button" style={{ ...styles.sidebarIconBtn, ...(isProfileActive ? { backgroundColor: '#FFB800', boxShadow: '0 2px 8px rgba(255,184,0,0.3)' } : {}) }} onClick={() => navigate('/profile')}>👤</button>
           <button type="button" style={styles.sidebarIconBtn}>⚙️</button>
           <button type="button" style={{ ...styles.sidebarIconBtn, position: 'relative' }}>
             🔔
@@ -237,7 +279,7 @@ export default function SafetyRegulationScreen() {
                 </div>
                 <span style={{
                   ...styles.summaryCount,
-                  color: done === total && total > 0 ? '#22A06B' : '#006FFD',
+                  color: done === total && total > 0 ? '#22A06B' : '#FFB800',
                 }}>
                   {done}/{total}
                 </span>
@@ -309,7 +351,7 @@ export default function SafetyRegulationScreen() {
                       <div style={{
                         ...styles.progressBarFill,
                         width: `${groupPct}%`,
-                        backgroundColor: groupDone === totalChecks && totalChecks > 0 ? '#22A06B' : '#006FFD',
+                        backgroundColor: groupDone === totalChecks && totalChecks > 0 ? '#22A06B' : '#FFB800',
                       }} />
                     </div>
                     <span style={{
@@ -343,8 +385,8 @@ export default function SafetyRegulationScreen() {
                                 <span style={styles.equipmentLabel}>{eq.label}</span>
                                 <span style={{
                                   ...styles.equipmentBadge,
-                                  backgroundColor: allDone ? '#E8F5E9' : '#EAF2FF',
-                                  color: allDone ? '#22A06B' : '#006FFD',
+                                  backgroundColor: allDone ? '#E8F5E9' : '#FFF8E1',
+                                  color: allDone ? '#22A06B' : '#FFB800',
                                 }}>
                                   {done}/{total}
                                 </span>
@@ -358,7 +400,7 @@ export default function SafetyRegulationScreen() {
                                 <div style={{
                                   ...styles.progressBarFill,
                                   width: `${pct}%`,
-                                  backgroundColor: allDone ? '#22A06B' : '#006FFD',
+                                  backgroundColor: allDone ? '#22A06B' : '#FFB800',
                                 }} />
                               </div>
                             </div>
@@ -392,10 +434,10 @@ export default function SafetyRegulationScreen() {
                                           type="button"
                                           style={{
                                             ...styles.checkbox,
-                                            backgroundColor: isChecked ? '#006FFD' : '#FFFFFF',
-                                            borderColor: isChecked ? '#006FFD' : '#C5C6CC',
+                                            backgroundColor: isChecked ? '#FFB800' : '#FFFFFF',
+                                            borderColor: isChecked ? '#FFB800' : '#C5C6CC',
                                           }}
-                                          onClick={() => toggleCompliance(key)}
+                                          onClick={() => toggleCompliance(key, ws.id, member.employee_id, eq.category)}
                                         >
                                           {isChecked && (
                                             <svg width="14" height="10" viewBox="0 0 14 10" fill="none">
@@ -544,7 +586,7 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: 'left',
   },
   sidebarNavItemActive: {
-    backgroundColor: '#EAF2FF',
+    backgroundColor: '#FFF8E1',
   },
   sidebarNavLabel: {
     fontFamily: 'Inter, sans-serif',
@@ -553,7 +595,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#71727A',
   },
   sidebarNavLabelActive: {
-    color: '#006FFD',
+    color: '#FFB800',
     fontWeight: 600,
   },
   logoutBtn: {
@@ -733,7 +775,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 600,
     fontSize: 13,
-    color: '#006FFD',
+    color: '#FFB800',
   },
   groupProgressRow: {
     display: 'flex',

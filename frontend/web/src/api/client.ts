@@ -1,4 +1,6 @@
-const API_BASE = '/api';
+const CLOUD_URL = import.meta.env.VITE_API_URL;
+const API_BASE = CLOUD_URL ? `${CLOUD_URL}/api` : '/api';
+
 
 const TOKEN_KEY = 'rp_access';
 const REFRESH_KEY = 'rp_refresh';

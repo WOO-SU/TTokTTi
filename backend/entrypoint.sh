@@ -52,6 +52,12 @@ run_web() {
     # but for HA production, run this as a separate 'init container' or job)
     echo "Applying migrations..."
     python manage.py migrate --noinput
+
+    # Integrate our seeding logic purely for local dev
+    if [ "$AUTO_SEED_DB" = "True" ]; then
+        echo "Running automatic database seeding..."
+        python manage.py seed_db
+    fi
     
     echo "Collecting static files..."
     python manage.py collectstatic --noinput
@@ -61,7 +67,10 @@ run_web() {
     exec gunicorn config.wsgi:application \
         --bind 0.0.0.0:8000 \
         --workers 3 \
-        --timeout 120
+        --timeout 120 \
+        --access-logfile - \
+        --error-logfile - \
+        --access-logformat '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
 }
 
 # Function to handle the 'worker' mode (Celery)

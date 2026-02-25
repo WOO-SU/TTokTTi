@@ -11,10 +11,12 @@ class SaveVideoResponseSerializer(serializers.Serializer):
     data = VideoSerializer(allow_null=True)
     detail = serializers.CharField(required=False, allow_null=True)
 
+
 class VideoSearchResponseSerializer(serializers.Serializer):
     ok = serializers.BooleanField()
     count = serializers.IntegerField()
     data = VideoSerializer(many=True)
+
 
 class CheckLogsResponseSerializer(serializers.Serializer):
     id = serializers.IntegerField()

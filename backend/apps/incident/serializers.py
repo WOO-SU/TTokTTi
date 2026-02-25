@@ -12,7 +12,6 @@ class FallJudgeRequestSerializer(serializers.Serializer):
         help_text="Exactly 5 images in chronological order (oldest → newest)",
     )
 
-
 class FallJudgeResponseSerializer(serializers.Serializer):
     is_fall_or_imminent_fall = serializers.BooleanField()
     confidence = serializers.FloatField()
