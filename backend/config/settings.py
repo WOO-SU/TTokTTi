@@ -217,3 +217,7 @@ CORS_ALLOW_HEADERS = [
 # If you use cookies for JWT (optional), set this to True. 
 # For standard Bearer tokens in LocalStorage, False is fine.
 CORS_ALLOW_CREDENTIALS = True
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://web-riskpulse.delightfulglacier-38eeee86.koreacentral.azurecontainerapps.io",
+]
