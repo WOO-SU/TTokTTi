@@ -107,7 +107,7 @@ jobs:
 
       - name: Build and push Frontend image to ACR
         run: |
-          cd frontend  # Ensure this matches your actual frontend folder name
+          cd frontend/web  # Ensure this matches your actual frontend folder name
           
           # Inject the backend URL at build time. 
           # Note: If you use Create React App instead of Vite, change VITE_API_URL to REACT_APP_API_URL
