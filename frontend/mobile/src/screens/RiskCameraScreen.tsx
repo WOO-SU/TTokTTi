@@ -1,16 +1,11 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
-  Text,
-  TouchableOpacity,
   StyleSheet,
   StatusBar,
-  Image,
-  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Camera } from 'react-native-vision-camera';
-import RNFS from 'react-native-fs';
 import BaseCamera from '../components/BaseCamera';
 import PhotoResultView from '../components/PhotoResultView';
 import { useIsFocused } from '@react-navigation/native';
@@ -93,7 +88,7 @@ export default function RiskCameraScreen({ navigation, route }: Props) {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      <TopHeader title={title || '위험 요인 촬영'} />
+      <TopHeader title="위험 요인 촬영" />
 
       {/* Camera Preview */}
       <View style={styles.cameraPreview}>
@@ -110,7 +105,7 @@ export default function RiskCameraScreen({ navigation, route }: Props) {
             ref={cameraRef}
             isActive={isFocused && !photoPath}
             photo={true}
-            guideText={`${title} 사진을 촬영하세요`}
+            guideText="위험 요인 사진을 촬영하세요"
             onCapture={handleCapture}
             onInitialized={() => { isCameraReadyRef.current = true; }}
           />
