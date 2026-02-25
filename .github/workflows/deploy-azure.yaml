@@ -65,7 +65,7 @@ jobs:
             az containerapp update \
               --name ${{ env.BACKEND_APP_NAME }} \
               --resource-group ${{ env.RESOURCE_GROUP }} \
-              --container-name ${{ api-riskpulse }} \
+              --container-name ${{ env.BACKEND_IMAGE }} \
               --image ${{ env.ACR_LOGIN_SERVER }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }} \
               --set-env-vars \
                 "DB_NAME=riskpulse_db" \
@@ -126,5 +126,5 @@ jobs:
             az containerapp update \
               --name ${{ env.FRONTEND_APP_NAME }} \
               --resource-group ${{ env.RESOURCE_GROUP }} \
-              --container-name ${{ web-riskpulse }} \
+              --container-name ${{ env.FRONTEND_IMAGE }} \
               --image ${{ env.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
