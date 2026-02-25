@@ -7,7 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const API_BASE_URL = 'https://api-riskpulse.delightfulglacier-38eeee86.koreacentral.azurecontainerapps.io/api';
 
 const client = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: 'https://api-riskpulse.delightfulglacier-38eeee86.koreacentral.azurecontainerapps.io/api',
   timeout: 10000,
   headers: { 'Content-Type': 'application/json' },
 });
