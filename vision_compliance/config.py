@@ -9,7 +9,7 @@ load_dotenv(Path(__file__).resolve().parent / ".env")
 
 class Config:
     # ── Backend API ──
-    BACKEND_URL = os.getenv("BACKEND_URL", "http://100.120.43.34:8000")
+    BACKEND_URL = os.getenv("BACKEND_URL", "https://api-riskpulse.delightfulglacier-38eeee86.koreacentral.azurecontainerapps.io")
     API_LOGIN = "/api/user/login/"
     API_CHECK_UPLOAD = "/api/check/upload/"
     JETSON_API_KEY = os.getenv("JETSON_API_KEY", "jetson-special-key-2024")
@@ -19,12 +19,12 @@ class Config:
     SERVICE_PASSWORD = os.getenv("SERVICE_PASSWORD", "jetson1234")
 
     # ── Redis ──
-    REDIS_HOST = os.getenv("REDIS_HOST", "100.120.43.34")
-    REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+    REDIS_HOST = os.getenv("REDIS_HOST", "rp.redis.cache.windows.net")
+    REDIS_PORT = int(os.getenv("REDIS_PORT", "6380"))
     REDIS_QUEUE = os.getenv("REDIS_QUEUE", "compliance:queue")
     REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", None)
     # Azure Redis typically uses SSL (port 6380); Local uses non-SSL (port 6379)
-    REDIS_SSL = os.getenv("REDIS_SSL", "False").lower() in ("true", "1", "t")
+    REDIS_SSL = os.getenv("REDIS_SSL", "True").lower() in ("true", "1", "t")
 
     # ── Azure Blob ──
     AZURE_ACCOUNT_NAME = os.getenv("AZURE_STORAGE_ACCOUNT_NAME", "striskpulse")
