@@ -38,6 +38,7 @@ export type HomeStackParamList = {
   CaptureWork: { worksession_id: number };
   EndWork: { worksession_id: number };
   STTTest: undefined;
+  TTSTest: undefined;
 };
 
 export type PersonalStackParamList = {
@@ -74,6 +75,7 @@ const Tab = createBottomTabNavigator<TabParamList>();
 import CaptureWorkScreen from './src/screens/CaptureWorkScreen';
 import ChangePasswordScreen from './src/screens/ChangePasswordScreen';
 import STTTestScreen from './src/screens/STTTestScreen';
+import TTSTestScreen from './src/screens/TTSTestScreen';
 
 function HomeStackNavigator() {
   return (
@@ -90,6 +92,7 @@ function HomeStackNavigator() {
       <HomeStack.Screen name="CaptureWork" component={CaptureWorkScreen} />
       <HomeStack.Screen name="EndWork" component={EndWorkScreen} />
       <HomeStack.Screen name="STTTest" component={STTTestScreen} />
+      <HomeStack.Screen name="TTSTest" component={TTSTestScreen} />
     </HomeStack.Navigator>
   );
 }

@@ -40,7 +40,7 @@ type Props = {
   route: RouteProp<RootStackParamList, 'Camera'>;
 };
 
-type AssistantState = 'idle' | 'listening_for_wakeword' | 'listening_for_question' | 'speaking';
+type AssistantState = 'idle' | 'listening_for_wakeword' | 'listening_for_question' | 'thinking' | 'speaking';
 
 
 
@@ -101,6 +101,7 @@ export default function CameraScreen({ route }: Props) {
   // Voice Assistant
   const [assistantState, setAssistantState] = useState<AssistantState>('idle');
   const [recognizedText, setRecognizedText] = useState<string>('');
+  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; text: string }[]>([]);
 
   // Vision Engine (mode=all 전용)
   const vision = useVisionEngine();
@@ -111,6 +112,7 @@ export default function CameraScreen({ route }: Props) {
   const streamRef = useRef<SafetyStream | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const porcupineManagerRef = useRef<PorcupineManager | null>(null);
+  const isGreetingRef = useRef(false);
 
   // Permissions:
   const { hasPermission, requestPermission } = useCameraPermission();
@@ -145,31 +147,51 @@ export default function CameraScreen({ route }: Props) {
 
   const wakeWordCallback = async (keywordIndex: number) => {
     if (keywordIndex === 0) {
-      // Wake word detected! Stop Porcupine and start listening to user's question
+      // Wake word detected! Stop Porcupine and say greeting
       await stopWakeWord();
-      setAssistantState('listening_for_question');
-      setRecognizedText('듣고 있습니다...'); // 웨이크 워드 감지 시 표시
-      try {
-        await Voice.start('ko-KR');
-      } catch (e) {
-        console.error("Voice start error:", e);
-        startWakeWord();
-      }
+      isGreetingRef.current = true;
+      setAssistantState('speaking');
+      Tts.speak('네, 무슨 일이신가요?');
     }
   };
+
+  // Sync wake word with camera state in worker mode
+  useEffect(() => {
+    if (mode !== 'worker') return;
+    if (isCameraActive) {
+      startWakeWord();
+    } else {
+      stopWakeWord();
+      Voice.stop().catch(() => { });
+      Tts.stop();
+      setAssistantState('idle');
+    }
+  }, [isCameraActive, mode]);
 
   // Voice Assistant Setup
   useEffect(() => {
     const onTtsFinish = () => {
-      console.log('[TTS Debug] Speaking finished, restarting Wake Word.');
-      startWakeWord();
+      console.log('[TTS Debug] Speaking finished, checking for greeting.');
+      if (isGreetingRef.current) {
+        isGreetingRef.current = false;
+        setAssistantState('listening_for_question');
+        setRecognizedText('듣고 있습니다...');
+        Voice.start('ko-KR').catch(e => {
+          console.error("Voice start error:", e);
+          startWakeWord();
+        });
+      } else {
+        startWakeWord();
+      }
     };
+
+    let ttsFinishListener: any;
 
     const initVoiceAssistant = async () => {
       // 1. Init TTS
       Tts.setDefaultLanguage('ko-KR');
       Tts.setDefaultRate(0.5);
-      Tts.addEventListener('tts-finish', onTtsFinish);
+      ttsFinishListener = Tts.addEventListener('tts-finish', onTtsFinish) as any;
 
       // 2. Init STT (Voice)
       Voice.onSpeechStart = (e: any) => {
@@ -192,7 +214,9 @@ export default function CameraScreen({ route }: Props) {
         const text = e.value?.[0] || '';
         console.log('[Voice Debug] Final Results:', text);
         if (text) {
-          setRecognizedText(text);
+          setMessages(prev => [...prev, { role: 'user', text }]);
+          setAssistantState('thinking');
+          setRecognizedText('');
           if (streamRef.current) {
             const timestamp = new Date().toISOString();
             console.log(`[Voice Debug] Sending question to WebSocket: "${text}"`);
@@ -200,8 +224,8 @@ export default function CameraScreen({ route }: Props) {
           }
         } else {
           setRecognizedText(''); // 결과가 없으면 초기화
+          startWakeWord();
         }
-        startWakeWord();
       };
 
       Voice.onSpeechError = (e: any) => {
@@ -223,7 +247,9 @@ export default function CameraScreen({ route }: Props) {
           modelPath
         );
         console.log('[Porcupine Debug] Wake Word Engine Initialized successfully.');
-        await startWakeWord();
+        if (isCameraActiveRef.current) {
+          await startWakeWord();
+        }
       } catch (error) {
         console.error('Porcupine Initialization Error:', error);
       }
@@ -233,7 +259,7 @@ export default function CameraScreen({ route }: Props) {
 
     return () => {
       Tts.stop();
-      Tts.removeEventListener('tts-finish', onTtsFinish);
+      ttsFinishListener?.remove();
       Voice.stop().catch(() => { });
       Voice.destroy().then(Voice.removeAllListeners).catch(() => { });
       porcupineManagerRef.current?.delete();
@@ -258,10 +284,14 @@ export default function CameraScreen({ route }: Props) {
           setAlertSeverity('high');
           setAlertVisible(true);
         } else if (data.type === 'ANSWER') {
-          Alert.alert('AI Assistant', data.message);
+          setMessages(prev => [...prev, { role: 'assistant', text: data.message || '' }]);
           setAssistantState('speaking');
           stopWakeWord().then(() => {
-            Tts.speak(data.message);
+            if (data.message) {
+              Tts.speak(data.message);
+            } else {
+              startWakeWord();
+            }
           });
         }
       });
@@ -418,6 +448,29 @@ export default function CameraScreen({ route }: Props) {
 
       <TopHeader title={headerTitle} />
 
+      {/* Status Chip (mode=worker) */}
+      {mode === 'worker' && (
+        <View style={styles.assistantStatusChip}>
+          <Text style={[
+            styles.assistantStatusText,
+            {
+              color: assistantState === 'idle' || assistantState === 'listening_for_wakeword'
+                ? '#8E8E93' : assistantState === 'listening_for_question'
+                  ? '#1A73E8' : assistantState === 'thinking'
+                    ? '#FF9500' : '#34C759'
+            }
+          ]}>
+            {assistantState === 'idle' || assistantState === 'listening_for_wakeword'
+              ? '👤 "똑띠" 라고 불러보세요'
+              : assistantState === 'listening_for_question'
+                ? '🎤 듣고 있어요...'
+                : assistantState === 'thinking'
+                  ? '💡 생각 중...'
+                  : '💬 답변 중...'}
+          </Text>
+        </View>
+      )}
+
       {/* Vision Status Banner (mode=all/test) */}
       {useVision && visionStatus !== '' && (
         <View style={styles.statusBanner}>
@@ -500,10 +553,32 @@ export default function CameraScreen({ route }: Props) {
           </View>
         )}
 
-        {/* STT Text Overlay */}
-        {recognizedText !== '' && (
+        {/* STT Text Overlay (Non-worker mode fallback) */}
+        {recognizedText !== '' && mode !== 'worker' && (
           <View style={styles.sttOverlay}>
             <Text style={styles.sttText}>{recognizedText}</Text>
+          </View>
+        )}
+
+        {/* Chat History Panel (mode=worker) */}
+        {mode === 'worker' && (messages.length > 0 || (assistantState === 'listening_for_question' && recognizedText !== '')) && (
+          <View style={styles.chatPanel}>
+            {messages.slice(-3).map((msg, idx) => (
+              <View
+                key={idx}
+                style={[
+                  styles.chatBubble,
+                  msg.role === 'user' ? styles.chatBubbleUser : styles.chatBubbleAi,
+                ]}>
+                <Text style={styles.chatText}>{msg.text}</Text>
+              </View>
+            ))}
+            {/* 실시간 인식 중인 STT 표시 */}
+            {assistantState === 'listening_for_question' && recognizedText !== '' && (
+              <View style={[styles.chatBubble, styles.chatBubbleUser, { opacity: 0.5 }]}>
+                <Text style={styles.chatText}>{recognizedText}</Text>
+              </View>
+            )}
           </View>
         )}
       </View>
@@ -640,6 +715,60 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
+  },
+
+  /* Status Chip */
+  assistantStatusChip: {
+    alignSelf: 'center',
+    marginTop: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  assistantStatusText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+
+  /* Chat History Panel */
+  chatPanel: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '40%',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    padding: 16,
+    justifyContent: 'flex-end',
+    gap: 12,
+  },
+  chatBubble: {
+    maxWidth: '85%',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 16,
+  },
+  chatBubbleUser: {
+    alignSelf: 'flex-end',
+    backgroundColor: '#FFB800',
+    borderBottomRightRadius: 4,
+  },
+  chatBubbleAi: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderBottomLeftRadius: 4,
+  },
+  chatText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    lineHeight: 20,
+    fontWeight: '500',
   },
 
   // Modal Styles
