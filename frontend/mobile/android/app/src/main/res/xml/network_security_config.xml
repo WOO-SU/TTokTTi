@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <domain-config>
+    <!-- 기본: 모든 HTTPS 연결은 시스템 CA 인증서 신뢰 -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+    <!-- Azure Container Apps 도메인 명시적 신뢰 -->
+    <domain-config cleartextTrafficPermitted="false">
         <domain includeSubdomains="true">azurecontainerapps.io</domain>
         <trust-anchors>
             <certificates src="system" />
