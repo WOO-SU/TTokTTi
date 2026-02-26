@@ -258,17 +258,27 @@ class Command(BaseCommand):
         random.shuffle(users)
         user_chunks = [users[i:i + 7] for i in range(0, len(users), 7)]
 
-        for chunk in user_chunks:
+        for chunk_idx, chunk in enumerate(user_chunks):
             worksite = random.choice(worksites)
             task_name = random.choice(task_templates)
 
-            ws = WorkSession.objects.create(
-                worksite=worksite,
-                name=f"{worksite.name} {task_name}",
-                starts_at=now - timedelta(minutes=30),
-                ends_at=now + timedelta(hours=2),
-                status=WorkSession.StatusChoices.IN_PROGRESS,
-            )
+            # First 2 chunks → DONE (ended earlier today), rest → IN_PROGRESS
+            if chunk_idx < 2:
+                ws = WorkSession.objects.create(
+                    worksite=worksite,
+                    name=f"{worksite.name} {task_name}",
+                    starts_at=now - timedelta(hours=4),
+                    ends_at=now - timedelta(minutes=30),
+                    status=WorkSession.StatusChoices.DONE,
+                )
+            else:
+                ws = WorkSession.objects.create(
+                    worksite=worksite,
+                    name=f"{worksite.name} {task_name}",
+                    starts_at=now - timedelta(minutes=30),
+                    ends_at=now + timedelta(hours=2),
+                    status=WorkSession.StatusChoices.IN_PROGRESS,
+                )
 
             chunk_managers = [u for u in chunk if u.is_manager]
             chunk_workers = [u for u in chunk if not u.is_manager]

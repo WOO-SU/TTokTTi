@@ -7,12 +7,6 @@ import useUnreadAlertCount from '../hooks/useUnreadAlertCount';
 
 // ── Types ──
 
-type PhotoEntry = {
-  photo_id: number;
-  employee_id: number;
-  image_path: string;
-  created_at: string;
-};
 
 type RiskHighlight = {
   start: string;
@@ -127,12 +121,46 @@ function convertSession(session: WorkSessionCard): WorkSessionTeam {
 
 async function resolvePhotoUrl(blobName: string): Promise<string | null> {
   try {
-    const res = await apiFetch(`/risk/media/sas?blob_name=${encodeURIComponent(blobName)}`);
+    const effectiveName = blobName.includes('/') ? blobName : `target/${blobName}`;
+    const res = await apiFetch('/user/storage/sas/download/', {
+      method: 'POST',
+      body: JSON.stringify({ blob_name: effectiveName }),
+    });
     if (!res.ok) return null;
     const data = await res.json();
-    return data.url ?? null;
+    return data.download_url ?? data.url ?? null;
   } catch {
     return null;
+  }
+}
+
+async function loadPhotosFromSummary(
+  wsId: number,
+  setBeforePhotos: React.Dispatch<React.SetStateAction<{ path: string; url: string | null }[]>>,
+  setAfterPhotos: React.Dispatch<React.SetStateAction<{ path: string; url: string | null }[]>>,
+) {
+  const summaryRes = await apiFetch(`/worksession/summary/${wsId}/`);
+  if (!summaryRes.ok) return;
+  const summaryData = await summaryRes.json();
+  const photos: any[] = summaryData.photos ?? [];
+  // summary returns { id, type: photo.status, image: photo.image_path }
+  const bPhotos = photos
+    .filter((p: any) => p.type === 'BEFORE' && p.image)
+    .map((p: any) => ({ path: p.image as string, url: null as string | null }));
+  const aPhotos = photos
+    .filter((p: any) => p.type === 'AFTER' && p.image)
+    .map((p: any) => ({ path: p.image as string, url: null as string | null }));
+  setBeforePhotos(bPhotos);
+  setAfterPhotos(aPhotos);
+  for (let i = 0; i < bPhotos.length; i++) {
+    resolvePhotoUrl(bPhotos[i].path).then(url => {
+      setBeforePhotos(prev => prev.map((p, idx) => idx === i ? { ...p, url } : p));
+    });
+  }
+  for (let i = 0; i < aPhotos.length; i++) {
+    resolvePhotoUrl(aPhotos[i].path).then(url => {
+      setAfterPhotos(prev => prev.map((p, idx) => idx === i ? { ...p, url } : p));
+    });
   }
 }
 
@@ -188,7 +216,7 @@ export default function ReportScreen() {
   };
 
   // Fetch latest report for selected team
-  const fetchLatestReport = useCallback(async (wsId: number) => {
+  const fetchLatestReport = useCallback(async (wsId: number, isDone = false) => {
     setLoading(true);
     setError(null);
     setReport(null);
@@ -200,6 +228,39 @@ export default function ReportScreen() {
         if (res.status === 404) {
           setReport(null);
           setReportVersion(null);
+          // 보고서가 없어도 target 컨테이너 사진은 미리 로드
+          try {
+            await loadPhotosFromSummary(wsId, setBeforePhotos, setAfterPhotos);
+          } catch { /* ignore */ }
+          // DONE 세션이면 llm.py를 통해 자동으로 보고서 생성
+          if (isDone) {
+            setLoading(false);
+            setGenerating(true);
+            try {
+              const genRes = await apiFetch('/report/generate', {
+                method: 'POST',
+                body: JSON.stringify({ worksession_id: wsId }),
+              });
+              if (genRes.ok) {
+                // Re-fetch from latest endpoint — same reliable path as normal load
+                const latestRes = await apiFetch(`/report/${wsId}/latest`);
+                if (latestRes.ok) {
+                  const latestData = await latestRes.json();
+                  setReport(latestData.report);
+                  setReportVersion(latestData.report_version);
+                }
+                await loadPhotosFromSummary(wsId, setBeforePhotos, setAfterPhotos);
+                fetchVersions(wsId);
+              } else {
+                const errData = await genRes.json().catch(() => ({}));
+                setError(errData.detail ?? '보고서 자동 생성에 실패했습니다.');
+              }
+            } catch {
+              setError('보고서 자동 생성 중 오류가 발생했습니다.');
+            }
+            setGenerating(false);
+            return;
+          }
         } else {
           setError('보고서를 불러오는 중 오류가 발생했습니다.');
         }
@@ -213,32 +274,14 @@ export default function ReportScreen() {
       } else {
         setReport(data.report);
         setReportVersion(data.report_version);
-
-        // Extract photos from input_package
-        const pkg = data.input_package;
-        if (pkg?.photos) {
-          const bPhotos = (pkg.photos.before ?? []).map((p: PhotoEntry) => ({ path: p.image_path, url: null as string | null }));
-          const aPhotos = (pkg.photos.after ?? []).map((p: PhotoEntry) => ({ path: p.image_path, url: null as string | null }));
-          setBeforePhotos(bPhotos);
-          setAfterPhotos(aPhotos);
-
-          // Resolve SAS URLs in background
-          for (let i = 0; i < bPhotos.length; i++) {
-            resolvePhotoUrl(bPhotos[i].path).then(url => {
-              setBeforePhotos(prev => prev.map((p, idx) => idx === i ? { ...p, url } : p));
-            });
-          }
-          for (let i = 0; i < aPhotos.length; i++) {
-            resolvePhotoUrl(aPhotos[i].path).then(url => {
-              setAfterPhotos(prev => prev.map((p, idx) => idx === i ? { ...p, url } : p));
-            });
-          }
-        }
+        // Always load fresh photos from summary (input_snapshot may be stale)
+        await loadPhotosFromSummary(wsId, setBeforePhotos, setAfterPhotos);
       }
     } catch {
       setError('보고서를 불러오는 중 오류가 발생했습니다.');
     }
     setLoading(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Fetch versions
@@ -257,7 +300,8 @@ export default function ReportScreen() {
   // When team selection changes
   useEffect(() => {
     if (selectedTeamId) {
-      fetchLatestReport(selectedTeamId);
+      const isDone = selectedTeam?.workStatus === '작업 끝';
+      fetchLatestReport(selectedTeamId, isDone);
       fetchVersions(selectedTeamId);
     } else {
       setReport(null);
@@ -266,7 +310,7 @@ export default function ReportScreen() {
       setBeforePhotos([]);
       setAfterPhotos([]);
     }
-  }, [selectedTeamId, fetchLatestReport, fetchVersions]);
+  }, [selectedTeamId, selectedTeam, fetchLatestReport, fetchVersions]);
 
   // Generate report
   const handleGenerate = async () => {
@@ -287,28 +331,16 @@ export default function ReportScreen() {
         setGenerating(false);
         return;
       }
-      const data = await res.json();
-      setReport(data.report);
-      setReportVersion(data.report_version);
-
-      // Refresh photos from input package
-      const pkg = data.input_package;
-      if (pkg?.photos) {
-        const bPhotos = (pkg.photos.before ?? []).map((p: PhotoEntry) => ({ path: p.image_path, url: null as string | null }));
-        const aPhotos = (pkg.photos.after ?? []).map((p: PhotoEntry) => ({ path: p.image_path, url: null as string | null }));
-        setBeforePhotos(bPhotos);
-        setAfterPhotos(aPhotos);
-        for (let i = 0; i < bPhotos.length; i++) {
-          resolvePhotoUrl(bPhotos[i].path).then(url => {
-            setBeforePhotos(prev => prev.map((p, idx) => idx === i ? { ...p, url } : p));
-          });
-        }
-        for (let i = 0; i < aPhotos.length; i++) {
-          resolvePhotoUrl(aPhotos[i].path).then(url => {
-            setAfterPhotos(prev => prev.map((p, idx) => idx === i ? { ...p, url } : p));
-          });
-        }
+      // Re-fetch from latest endpoint after generate
+      const latestRes = await apiFetch(`/report/${selectedTeam.id}/latest`);
+      if (latestRes.ok) {
+        const latestData = await latestRes.json();
+        setReport(latestData.report);
+        setReportVersion(latestData.report_version);
       }
+
+      // Always load fresh photos from summary (input_snapshot may be stale)
+      await loadPhotosFromSummary(selectedTeam.id, setBeforePhotos, setAfterPhotos);
 
       fetchVersions(selectedTeam.id);
     } catch {
