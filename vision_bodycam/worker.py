@@ -13,6 +13,7 @@ from core.inference import SafetyAnalyzer
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - WORKER - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 # Configuration
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
@@ -55,6 +56,7 @@ async def process_job(queue_name, payload):
         # 2. Branch Logic
         if queue_name == "questions":
             user_text = content.get("text", "What do you see?")
+            logger.info(f"[{client_id}] Received question payload: {user_text}")
             async for chunk in analyzer.answer_question(frames_list, user_text, list(state["ltm"]), state["stm"], timestamp_str):
                 await redis_client.publish(f"alerts:{client_id}", json.dumps({"type": "ANSWER_CHUNK", "message": chunk}))
             await redis_client.publish(f"alerts:{client_id}", json.dumps({"type": "ANSWER_DONE"}))
