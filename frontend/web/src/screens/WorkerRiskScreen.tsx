@@ -165,7 +165,7 @@ function RiskReportView({ report, generatedAt }: { report: RiskReportData; gener
       {/* 보고서 타이틀 및 타임스탬프 */}
       <div style={styles.assessmentHeader}>
         <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 15, color: '#1F2024' }}>
-          AI 위험성 평가 리포트
+          위험성 평가 리포트
         </span>
         {generatedAt && (
           <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 11, color: '#8F9098' }}>
