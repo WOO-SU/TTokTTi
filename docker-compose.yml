@@ -39,9 +39,9 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - VITE_API_URL=http://backend:8000
+      - VITE_API_URL=http://localhost:8000
       - WATCHPACK_POLLING=true
-      - DEBUG=${DEBUG}
+      - DEBUG=True
     depends_on:
       - backend
     stdin_open: true
@@ -67,7 +67,7 @@ services:
       - MYSQL_HOST=db
       - MYSQL_PORT=3306
 
-      - DEBUG=${DEBUG}
+      - DEBUG=True
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
       - AUTO_SEED_DB=True
 

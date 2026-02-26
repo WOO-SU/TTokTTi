@@ -22,7 +22,6 @@ def init_model(sep_chat: False, stream: bool=False, device: str='cuda:0', langua
         print('Initialization Finished')
         return chat
 
-
 def add_history(question, history, sep_chat: bool=False, language: str='eng'):
     if not history:
         print('history not added because self.history is empty')
@@ -37,31 +36,31 @@ def add_history(question, history, sep_chat: bool=False, language: str='eng'):
             for hist in history[:-1]:
                 ts = hist[0]
                 a = hist[1]
-                if language == 'eng':
-                    res += 'When the video is at %.1f seconds, the video content is "%s". ' % (ts, a)
+                if language == 'kor':
+                    res += '비디오가 %.1f초일 때, 내용은 "%s"입니다. ' % (ts, a)
                 else:
                     res += 'When the video is at %.1f seconds, the video content is "%s". ' % (ts, a)
             ts = history[-1][0]
             a = history[-1][1]
-            if language == 'eng':
-                res += 'This is the end of the history which indicate what have previously happened.\n Now the video is at %.1f seconds, the video content is: "%s". ' % (ts, a)
+            if language == 'kor':
+                res += '이것은 이전에 발생한 일을 나타내는 히스토리의 끝입니다.\n 현재 비디오는 %.1f초 지점이며, 내용은 "%s"입니다. ' % (ts, a)
             else:
                 res += 'This is the end of the history which indicate what have previously happened.\n Now the video is at %.1f seconds, the video content is: "%s". ' % (ts, a)
         else:
             for hist in history:
                 ts = hist[0]
                 a = hist[1]
-                if language == 'eng':
-                    res += 'When the video is at %.1f seconds, the video contect is "%s". ' % (ts, a.strip())
+                if language == 'kor':
+                    res += '비디오가 %.1f초일 때, 내용은 "%s"입니다. ' % (ts, a.strip())
                 else:
                     res += 'When the video is at %.1f seconds, the video contect is "%s". ' % (ts, a.strip())
-            if language == 'eng':
-                res += 'This is the end of the video history that indicates what happened before.\n'
+            if language == 'kor':
+                res += '이것은 이전에 발생한 일을 나타내는 비디오 히스토리의 끝입니다.\n'
             else:
                 res += 'This is the end of the video history that indicates what happened before.\n'
 
-        if language == 'eng':
-            res += 'Given the current video and using the previous video as reference, answer my question in English: "%s". Note that if the question is about what has been previously done, please only focus on the history. Otherwise, please only focus on the question and the current video input. If the question is about future planning, provide at most 3 steps.' % question
+        if language == 'kor':
+            res += '현재 비디오와 이전 비디오를 참고하여, 내 질문에 한국어로 답변해 주세요: "%s". 만약 질문이 이전에 수행된 작업에 관한 것이라면 히스토리에만 집중하십시오. 그렇지 않다면 질문과 현재 비디오 입력에만 집중하십시오. 질문이 향후 계획에 관한 것이라면 최대 3단계로 제공하십시오.' % question
         else:
             res += 'Given the current video and using the previous video as reference, answer my question in English: "%s". Note that if the question is about what has been previously done, please only focus on the history. Otherwise, please only focus on the question and the current video input. If the question is about future planning, provide at most 3 steps.' % question
         question = res
@@ -110,36 +109,47 @@ class IntervlChat():
 
     def chat_unsafe_silent(self, question: str, frames: list, history: list=[], timestamp: int=0,):
         """
-        在静默模式下聊天交互。
-        
+        Chat interaction in silent mode.
 
-        参数:
-        - question: str
-          输入的问题字符串，目前此参数在函数内部被重新构造而不是使用。
-        - frames: list
-          视频帧的列表，每个帧代表视频的一个时间点。
-        - history: list
-          之前的聊天历史记录，默认为空列表。
-        - session_id: str
-          会话的唯一标识符，默认为"default"。
-        - timestamp: int
-          当前视频的时间戳，用于构造问题和记录历史。
+        Args:
+        - question (str): 
+            The input question string. Currently, this parameter is reconstructed 
+            internally rather than being used directly.
+        - frames (list): 
+            A list of video frames, where each frame represents a specific time point in the video.
+        - history (list): 
+            Previous chat history, defaulting to an empty list.
+        - session_id (str): 
+            The unique identifier for the session, defaulting to "default".
+        - timestamp (int): 
+            The current video timestamp, used for constructing the question and recording history.
 
-        返回:
-        - response: str
-          生成的回答。
-        - history: list
-          更新后的聊天历史记录，包括新增的回答。
+        Returns:
+        - response (str): 
+            The generated response.
+        - history (list): 
+            The updated chat history, including the newly added response.
         """
         print(f"silent chat history: {history}")
         print(f"silent chat timestamp: {timestamp}")
+
+        lang = getattr(self, 'language', 'eng')
+
+        system_prompts = {
+            'eng': 'The video is now at %.1f seconds. As a safety supervisor, briefly describe my actions and identify any hazardous objects or procedural errors.',
+            'kor': '현재 동영상이 %.1f초 지점에 있습니다. 안전 감독관으로서 제 행동을 간략히 묘사하고, 위험한 물체나 절차상 오류가 있는지 확인하십시오.'
+        }
+
+        prompt_template = system_prompts.get(lang, system_prompts['eng'])
         
         with torch.device(self.device):
             pixel_values, num_patches_list = self.load_video_frames(frames)
             pixel_values = pixel_values.to(torch.bfloat16).cuda()
 
             video_prefix = ''.join([f'Frame{i+1}: <image>\n' for i in range(len(num_patches_list))])
-            question = video_prefix + '现在视频到了 %.1f 秒处. 简单的描述视频中我的动作.' % timestamp
+
+            question = video_prefix + (prompt_template % timestamp)
+            
             response, _history = self._chat(self.origin_intervl_model, self.intervl_chat.tokenizer, pixel_values, question, num_patches_list)
             history.append((timestamp, response))
             # print('VL_HISTORY:', _history)
@@ -151,22 +161,59 @@ class IntervlChat():
 
     def chat_unsafe(self, question: str, frames: list, history: list=[], timestamp: int=0, silent: bool=False):
         """
-        实现与用户视频内容相关的聊天功能，支持实时流式输出。
+        Implements chat functionality related to user video content, supporting real-time streaming output.
 
-        参数:
-        - question: str, 用户提出的问题。
-        - frames: list, 视频的帧数据列表。
-        - history: list, 聊天历史记录，默认为空列表。
-        - session_id: str, 会话ID，默认为"default"。
-        - timestamp: int, 视频的当前时间戳，默认为0。
-        - silent: bool, 是否静默模式，默认为False。
+        Args:
+            question (str): The question proposed by the user.
+            frames (list): A list of video frame data.
+            history (list, optional): Chat history records. Defaults to [].
+            timestamp (int, optional): The current timestamp of the video. Defaults to 0.
+            silent (bool, optional): Whether to enable silent mode. Defaults to False.
 
-        该函数首先从缓存中获取特定会话的历史记录（如果存在），然后将视频帧数据加载到设备上进行处理。
-        根据配置决定是使用流式输出还是非流式输出来生成回答。聊天历史记录会被更新并缓存。
+        Description:
+            This function loads video frame data onto the device for processing.
+            It decides whether to use streaming or non-streaming output to generate a response based on the configuration.
+            Chat history is updated and returned.
+
+        사용자 비디오 콘텐츠와 관련된 채팅 기능을 구현하며, 실시간 스트리밍 출력을 지원합니다.
+
+        매개변수:
+            question (str): 사용자의 질문.
+            frames (list): 비디오 프레임 데이터 목록.
+            history (list): 채팅 기록. 기본값은 빈 목록([]).
+            timestamp (int): 비디오의 현재 타임스탬프. 기본값은 0.
+            silent (bool): 침묵 모드 여부. 기본값은 False.
+
+        설명:
+            이 함수는 비디오 프레임 데이터를 디바이스로 로드하여 처리합니다.
+            설정에 따라 스트리밍 또는 비스트리밍 출력을 사용하여 답변을 생성합니다.
+            채팅 기록이 업데이트되어 반환됩니다.
         """
         print(f"chat history: {history}")
         print(f"chat timestamp: {timestamp}")
-        
+
+        lang = getattr(self, 'language', 'eng')
+
+        prompts = {
+            'chn': {
+                'action_desc': '现在视频到了 %.1f 秒处. 作为安全助手，描述我的动作并检查是否符合安全规范。',
+                'time_prefix': '现在视频到了%.1f秒处. ',
+                'safety_system_msg': '你是一个工业安全助手。请监控危险物品，确认步骤是否正确，并在被问及时指导下一步。'
+            },
+            'eng': {
+                'action_desc': 'The video is now at %.1f seconds. As a safety aid, describe my actions and check for compliance with safety protocols.',
+                'time_prefix': 'The video is now at %.1f seconds. ',
+                'safety_system_msg': 'You are an industrial safety assistant. Monitor for hazardous objects, verify correct process execution, and provide the next step if asked. '
+            },
+            'kor': {
+                'action_desc': '현재 동영상이 %.1f초 지점에 있습니다. 안전 도우미로서 제 행동을 묘사하고 안전 규정 준수 여부를 확인하십시오.',
+                'time_prefix': '현재 동영상이 %.1f초 지점에 있습니다. ',
+                'safety_system_msg': '당신은 산업 안전 도우미입니다. 위험한 물체를 감시하고, 공정이 올바르게 수행되었는지 확인하며, 요청 시 다음 단계를 안내하십시오. '
+            }
+        }
+
+        lang_pack = prompts.get(lang, prompts['eng'])
+
         with torch.device(self.device):
             pixel_values, num_patches_list = self.load_video_frames(frames)
             pixel_values = pixel_values.to(torch.bfloat16).cuda()
@@ -174,7 +221,9 @@ class IntervlChat():
             video_prefix = ''.join([f'Frame{i+1}: <image>\n' for i in range(len(num_patches_list))])
 
             if self.sep_chat:
-                quest = video_prefix + '现在视频到了 %.1f 秒处. 描述视频中我的动作.' % timestamp
+                quest_suffix = lang_pack['action_desc'] % timestamp
+                quest = video_prefix + quest_suffix
+
                 response, _ = self._chat(self.origin_intervl_model, self.intervl_chat.tokenizer, pixel_values, quest, num_patches_list)
                 
                 history.append((timestamp, response))
@@ -200,7 +249,9 @@ class IntervlChat():
 
                     yield response, history
             else:
-                question = '现在视频到了%.1f秒处. ' % timestamp + question 
+                time_prefix=lang_pack['time_prefix'] % timestamp
+                question = lang_pack['safety_system_msg'] + time_prefix + question
+
                 question = add_history(question, history, self.sep_chat)
                 question = video_prefix + question
 
@@ -233,7 +284,7 @@ class IntervlChat():
 
 # 获取所有可用的CUDA设备
 available_devices = [f'cuda:{i}' for i in range(torch.cuda.device_count())]
-print(f"availabel devices: {available_devices}")
+print(f"available devices: {available_devices}")
 
 sep_chat = False
 stream = True

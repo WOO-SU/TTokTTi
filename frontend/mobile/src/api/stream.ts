@@ -7,18 +7,32 @@ export interface StreamResponse {
   type: StreamMessageType;
   message: string;
   details?: string;
+  timestamp?: string;
+}
+
+// 1. Define the configuration interface
+export interface SessionConfig {
+  worksession_id: string;
+  video_path: string;
 }
 
 class SafetyStream {
   private ws: WebSocket | null = null;
   private url: string;
+  private config: SessionConfig;
   private onMessageCallback: (data: StreamResponse) => void;
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 5;
 
-  constructor(clientId: string, onMessage: (data: StreamResponse) => void) {
+  // Throttle timer
+  private lastFrameTime: number = 0;
+  private readonly FRAME_INTERVAL_MS = 1000; // 1 FPS (matches CameraScreen INTERVAL_MS)
+
+  // FIX: Added 'config: SessionConfig' to the constructor parameters
+  constructor(clientId: string, config: SessionConfig, onMessage: (data: StreamResponse) => void) {
     // Port 8888 is where your gateway.py FastAPI server is running
     this.url = `wss://laptop-gpu.tail413c80.ts.net/ws/stream/${clientId}`;
+    this.config = config;
     this.onMessageCallback = onMessage;
   }
 
@@ -28,6 +42,13 @@ class SafetyStream {
     this.ws.onopen = () => {
       console.log('✅ Connected to Safety Gateway');
       this.reconnectAttempts = 0;
+
+      // Send initialization config payload right after connection opens
+      this.ws?.send(JSON.stringify({
+        type: 'CONFIG',
+        worksession_id: this.config.worksession_id,
+        video_path: this.config.video_path
+      }));
     };
 
     this.ws.onmessage = (e) => {
@@ -60,13 +81,21 @@ class SafetyStream {
   }
 
   /**
-   * Sends a 4fps video frame to the 'video_frames' queue
+   * Sends video frame in desired rate.
    */
   public sendFrame(base64Image: string) {
+    const now = Date.now();
+    // Drop frames if they are coming in too fast
+    if (now - this.lastFrameTime < this.FRAME_INTERVAL_MS) {
+        return;
+    }
+    
     if (this.ws?.readyState === WebSocket.OPEN) {
+      this.lastFrameTime = now;
       this.ws.send(JSON.stringify({
         type: 'FRAME',
-        image: base64Image
+        image: base64Image,
+        timestamp: now
       }));
     }
   }
@@ -74,12 +103,13 @@ class SafetyStream {
   /**
    * Sends an STT question to the high-priority 'questions' queue
    */
-  public sendQuestion(text: string, base64Image: string) {
+  // FIX: Updated parameter from `base64Image: string` to `timestamp: string`
+  public sendQuestion(text: string, timestamp: string) {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({
         type: 'QUESTION',
         text: text,
-        image: base64Image
+        timestamp: timestamp
       }));
     }
   }

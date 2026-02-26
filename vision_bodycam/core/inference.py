@@ -2,7 +2,7 @@
 
 import os
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, List, AsyncGenerator
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
 
@@ -23,143 +23,131 @@ class SafetyAnalyzer:
             return image_b64
         return f"data:image/jpeg;base64,{image_b64}"
 
-    async def detect_danger(self, image_b64: str, rag_context: str) -> Dict[str, Any]:
+    def _build_multi_frame_content(self, text_prompt: str, frames: List[str]) -> List[Dict[str, Any]]:
         """
-        Standard 4fps Safety Check.
-        Returns: { "is_danger": bool, "details": str }
+        [VINCI INTEGRATION] Multi-Frame Prompting 
+        Builds the payload stacking multiple chronological frames for vLLM natively.
+        """
+        content = [{"type": "text", "text": text_prompt}]
+        for b64 in frames:
+            content.append({
+                "type": "image_url", 
+                "image_url": {"url": self._format_image_url(b64)}
+            })
+        return content
+
+    async def detect_danger(self, frames: List[str], rag_context: str) -> Dict[str, Any]:
+        """
+        Fast Loop (Blocking): Standard non-streaming safety check over recent frames.
         """
         try:
             prompt = (
                 f"Safety Rules Context: {rag_context}\n"
-                "You are a safety inspector. Analyze this image. Is the worker wearing required safety gear or performing a safe action? "
+                "You are a safety inspector viewing the last 3 seconds of a worker's bodycam. "
+                "Is the worker wearing required safety gear or performing a safe action? "
                 "If there is a safety violation, you MUST start your response exactly with 'DANGER:' followed by a brief 1-sentence explanation of the hazard. "
                 "If everything is safe, reply only with 'SAFE'."
             )
-            
+
+            # NOTE: If you ever want to test pure scene description, you can temporarily 
+            # swap `prompt` for `prompt_debug` in the completions call below.
+            prompt_debug = (
+                f"Safety Rules Context: {rag_context}\n"
+                "You are viewing the last 3 seconds of a worker's bodycam. "
+                "Describe the current situation, based on the video and the context."    
+            )
+
+            logger.info(f"[vLLM REQUEST] detect_danger | Checking {len(frames)} frames against RAG context: '{rag_context}'")
+
             response = await self.client.chat.completions.create(
                 model=self.model_name,
                 messages=[{
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": prompt},
-                        {"type": "image_url", "image_url": {"url": self._format_image_url(image_b64)}}
-                    ]
-                }],
-                temperature=0.1, # Low temp for consistent safety checks
-                max_tokens=100
+                    "role": "user", 
+                    "content": self._build_multi_frame_content(prompt, frames)}],
+                temperature=0.1, 
+                max_tokens=100,
+                stream=False # Explicitly Blocking
             )
 
-            # 1. Safe Extraction: Check if choices exist
-            if not getattr(response, 'choices', None) or len(response.choices) == 0:
-                logger.warning("vLLM returned an empty choices list in detect_danger.")
-                return {"is_danger": False, "details": "SAFE - Model returned an empty response."}
-
             message = response.choices[0].message
-            
-            # 2. Safe Extraction: Check if content exists
-            if not getattr(message, 'content', None):
-                logger.warning("vLLM returned a message with no content in detect_danger.")
-                return {"is_danger": False, "details": "SAFE - Model could not process this image."}
+            result_text = message.content[0].get("text", "").strip() if isinstance(message.content, list) else str(message.content).strip()
 
-            # 3. Handle edge cases where content is returned as a list of dicts
-            if isinstance(message.content, list):
-                result_text = message.content[0].get("text", "").strip()
-            else:
-                result_text = str(message.content).strip()
-                
-            # 4. Standardize empty text fallbacks
+            # DEBUG LOGGING: Print exactly what vLLM spat out
+            logger.info(f"[vLLM OUTPUT] detect_danger | {result_text}")
+
             if not result_text:
-                logger.warning("vLLM returned an empty text string in detect_danger.")
                 return {"is_danger": False, "details": "SAFE - Empty text returned."}
 
-            # 5. Evaluate the final text
-            is_danger = result_text.upper().startswith("DANGER")
-            return {"is_danger": is_danger, "details": result_text}
-        
+            return {"is_danger": result_text.upper().startswith("DANGER"), "details": result_text}
+
         except Exception as e:
             logger.error(f"Inference Error in detect_danger: {e}")
             return {"is_danger": False, "details": "Error during inference"}
 
-    async def detect_action(self, image_b64: str) -> str:
-        """Determines the broad action the worker is currently performing."""
+    async def detect_action(self, frames: List[str]) -> str:
+        """Slow Loop (Blocking): Determines broad action context from recent frames."""
         try:
+            prompt = "In two words or less, what physical task is the worker performing across these frames?"
+            
+            logger.info(f"[vLLM REQUEST] detect_action | Analyzing {len(frames)} frames...")
+
             response = await self.client.chat.completions.create(
                 model=self.model_name,
-                messages=[{
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": "In two words or less, what physical task is the worker performing? (e.g., 'climbing ladder', 'welding', 'walking', 'operating machinery')"},
-                        {"type": "image_url", "image_url": {"url": self._format_image_url(image_b64)}}
-                    ]
-                }],
+                messages=[{"role": "user", "content": self._build_multi_frame_content(prompt, frames)}],
                 temperature=0.1,
-                max_tokens=10
+                max_tokens=10,
+                stream=False
             )
 
-            logger.info(f"Raw vLLM Response: {response}")
-            if not getattr(response, 'choices', None) or len(response.choices) == 0:
-                logger.warning("vLLM returned an empty choices list.")
-                return "Error: The vision model returned an empty response."
-
             message = response.choices[0].message
+            result_text = message.content[0].get("text", "").strip() if isinstance(message.content, list) else str(message.content).strip()
+            
+            # DEBUG LOGGING: Print the recognized action
+            logger.info(f"[vLLM OUTPUT] detect_action | Recognized Action: '{result_text}'")
 
-            if not getattr(message, 'content', None):
-                logger.warning("vLLM returned a message with no content.")
-                return "Error: The model could not process this image."
-
-            # 4. Handle edge cases where content is returned as a list of dicts
-            if isinstance(message.content, list):
-                return message.content[0].get("text", "").strip()
-
-            return str(mesage.content).strip()
+            return result_text
 
         except Exception as e:
             logger.error(f"Action Detection Error: {e}")
             return "general work"
 
-    async def answer_question(self, image_b64: str, question: str, recent_context: str) -> str:
-        """Answers a user question utilizing short-term memory and the current frame."""
+    async def answer_question(self, frames: List[str], question: str, recent_context: str) -> AsyncGenerator[str, None]:
+        """
+        Asynchronous streaming via AsyncOpenAI to yield text chunks immediately.
+        """
         try:
             prompt = (
-                f"Recent Event History: {recent_context}\n"
+                f"Recent Event History Timeline:\n{recent_context}\n"
+                "You are an egocentric AI assistant analyzing the user's view in real time. "
                 f"User Question: {question}\n"
-                "Provide a clear, conversational, and direct answer based on the recent events and the current image. "
-                "Keep the answer short so it can be played back as an audio response."
+                "Provide a clear, conversational answer directly addressing the user based on the timeline and chronological frames."
             )
+            
+            logger.info(f"[vLLM REQUEST] answer_question | Streaming answer for: '{question}'")
+
             response = await self.client.chat.completions.create(
                 model=self.model_name,
                 messages=[{
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": prompt},
-                        {"type": "image_url", "image_url": {"url": self._format_image_url(image_b64)}}
-                    ]
-                }],
+                    "role": "user", 
+                    "content": self._build_multi_frame_content(prompt, frames)}],
                 temperature=0.4,
-                max_tokens=150
+                max_tokens=150,
+                stream=True # Mixed streaming toggled ON
             )
 
-            logger.info(f"Raw vLLM Response: {response}")
-            if not getattr(response, 'choices', None) or len(response.choices) == 0:
-                logger.warning("vLLM returned an empty choices list.")
-                return "Error: The vision model returned an empty response."
-
-            message = response.choices[0].message
-
-            if not getattr(message, 'content', None):
-                logger.warning("vLLM returned a message with no content.")
-                return "Error: The model could not process this image."
-
-            # 4. Handle edge cases where content is returned as a list of dicts
-            if isinstance(message.content, list):
-                return message.content[0].get("text", "").strip()
-
-            return str(message.content).strip()
+            full_answer = ""
+            async for chunk in response:
+                if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
+                    chunk_text = chunk.choices[0].delta.content
+                    full_answer += chunk_text
+                    yield chunk_text
             
+            # DEBUG LOGGING: Log the fully constructed answer once the stream ends
+            logger.info(f"[vLLM OUTPUT] answer_question COMPLETE | {full_answer}")
+
         except Exception as e:
             logger.error(f"Inference Error in answer_question: {e}")
-            return "I'm having trouble analyzing the scene right now. Please try again."
-
+            yield "I'm having trouble analyzing the scene right now."
    
 
 # Global instance to be used by main.py
