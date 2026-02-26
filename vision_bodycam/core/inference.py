@@ -42,11 +42,12 @@ class SafetyAnalyzer:
 
             prompt = (
                 f"Safety Rules:\n{rules_text}\n\n"
-                f"History:\n{history_context}\n\n"
+                f"History (For context only):\n{history_context}\n\n"
                 "Context: You are analyzing an egocentric video stream (from a worker's bodycam). "
-                "Do NOT flag a safety violation simply because no workers are seen in the frame.\n"
+                "Evaluate DANGER based ONLY on the CURRENT frames, not the History.\n"
+                "Do NOT flag a safety violation if the frame is pitch black, empty, or no workers are seen in the frame.\n"
                 "Task 1: Describe the worker's current action in exactly one sentence (max 10 words).\n"
-                "Task 2: Evaluate safety. If there is a violation, write 'DANGER: <reason>'. Otherwise write 'SAFE'."
+                "Task 2: Evaluate safety in the current moment. If there is a violation, write 'DANGER: <reason>'. Otherwise write 'SAFE'."
             )
 
             response = await self.client.chat.completions.create(

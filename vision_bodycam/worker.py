@@ -66,6 +66,7 @@ async def process_job(queue_name, payload):
             async for chunk in analyzer.answer_question(frames_list, user_text, list(state["ltm"]), state["stm"], timestamp_str):
                 full_answer += chunk
                 
+            logger.info(f"[{client_id}] Generated ANSWER: {full_answer}")
             await redis_client.publish(f"alerts:{client_id}", json.dumps({
                 "type": "ANSWER", 
                 "message": full_answer
