@@ -134,11 +134,11 @@ export default function CameraScreen({ route }: Props) {
       console.error("Wake word start error:", e);
     }
   };
-
   const stopWakeWord = async () => {
     try {
       if (porcupineManagerRef.current) {
         await porcupineManagerRef.current.stop();
+        console.log('[WakeWord Debug] Porcupine stopped');
       }
     } catch (e) {
       console.error("Wake word stop error:", e);
@@ -149,6 +149,7 @@ export default function CameraScreen({ route }: Props) {
     if (keywordIndex === 0) {
       // Wake word detected! Stop Porcupine and say greeting
       await stopWakeWord();
+      console.log('[WakeWord Debug] Wake word detected');
       isGreetingRef.current = true;
       setAssistantState('speaking');
       Tts.speak('네, 무슨 일이신가요?');
@@ -174,20 +175,20 @@ export default function CameraScreen({ route }: Props) {
       console.log('[TTS Debug] Speaking finished, checking for greeting.');
       if (isGreetingRef.current) {
         isGreetingRef.current = false;
-        setAssistantState('listening_for_question');
-        setRecognizedText('듣고 있습니다...');
 
         // Give Android Audio Focus a brief moment to transition from text-to-speech 
         // back to the STT listener.
         setTimeout(async () => {
           try {
+            await stopWakeWord(); // Ensure porcupine is definitely dead
+            await Voice.destroy(); // Clear any stale native Voice listeners
             await Voice.start('ko-KR');
             console.log('[Voice Debug] STT started successfully');
           } catch (e) {
             console.error("Voice start error:", e);
             startWakeWord();
           }
-        }, 500);
+        }, 1000);
       } else {
         setTimeout(() => startWakeWord(), 500);
       }
@@ -204,6 +205,8 @@ export default function CameraScreen({ route }: Props) {
       // 2. Init STT (Voice)
       Voice.onSpeechStart = (e: any) => {
         console.log('[Voice Debug] Speech Started:', e);
+        setAssistantState('listening_for_question');
+        setRecognizedText('듣고 있습니다...');
       };
 
       Voice.onSpeechRecognized = (e: any) => {
@@ -238,6 +241,7 @@ export default function CameraScreen({ route }: Props) {
 
       Voice.onSpeechError = (e: any) => {
         console.error('Voice Error:', JSON.stringify(e));
+
         setRecognizedText(''); // 에러 시 초기화
         setTimeout(() => startWakeWord(), 500); // 딜레이를 주어 Porcupine으로 안전하게 복귀
       };
@@ -502,7 +506,7 @@ export default function CameraScreen({ route }: Props) {
           ref={cameraRef}
           isActive={isCameraActive}
           video={true}
-          audio={!useVision}
+          audio={false}
           format={streamFormat || undefined}
           isRecording={isRecording}
           onCapture={useVision ? undefined : handleToggleRecording}
