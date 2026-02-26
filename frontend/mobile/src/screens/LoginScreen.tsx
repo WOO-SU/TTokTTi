@@ -44,19 +44,13 @@ export default function LoginScreen({ navigation }: Props) {
       await login(userName.trim(), password);
       navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
     } catch (error: any) {
-      console.error('LOGIN ERROR:', JSON.stringify({
-        message: error?.message,
-        code: error?.code,
-        status: error?.response?.status,
-        data: error?.response?.data,
-      }));
       const status = error?.response?.status;
       if (status === 401) {
         Alert.alert('로그인 실패', '아이디 혹은 비밀번호가 틀렸습니다.');
       } else {
         Alert.alert(
           '연결 오류',
-          `서버에 연결할 수 없습니다.\n${error?.message || ''}`,
+          `code: ${error?.code}\nmsg: ${error?.message}\nstatus: ${status}\ndata: ${JSON.stringify(error?.response?.data)}`,
         );
       }
     } finally {
