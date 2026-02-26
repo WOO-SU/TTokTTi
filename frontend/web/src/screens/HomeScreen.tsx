@@ -1366,7 +1366,7 @@ const styles: Record<string, React.CSSProperties> = {
 
   // ✨ Alert Panel 
   alertPanel: {
-    width: 600,
+    width: 300,
     flexShrink: 0,
     backgroundColor: '#F8F9FA',
     borderLeft: '1px solid #E8E9EB',
