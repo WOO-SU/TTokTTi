@@ -103,10 +103,8 @@ class SafetyStream {
   /**
    * Sends an STT question to the high-priority 'questions' queue
    */
-<<<<<<< Updated upstream
   // FIX: Updated parameter from `base64Image: string` to `timestamp: string`
-=======
->>>>>>> Stashed changes
+
   public sendQuestion(text: string, timestamp: string) {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({

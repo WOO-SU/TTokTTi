@@ -100,6 +100,7 @@ export default function CameraScreen({ route }: Props) {
 
   // Voice Assistant
   const [assistantState, setAssistantState] = useState<AssistantState>('idle');
+  const [recognizedText, setRecognizedText] = useState<string>('');
 
   // Vision Engine (mode=all 전용)
   const vision = useVisionEngine();
@@ -112,8 +113,8 @@ export default function CameraScreen({ route }: Props) {
   const porcupineManagerRef = useRef<PorcupineManager | null>(null);
 
   // Permissions:
-  const {hasPermission, requestPermission} = useCameraPermission();
-  const {hasPermission: hasMicPermission, requestPermission: requestMicPermission} = useMicrophonePermission();
+  const { hasPermission, requestPermission } = useCameraPermission();
+  const { hasPermission: hasMicPermission, requestPermission: requestMicPermission } = useMicrophonePermission();
 
   useEffect(() => {
     if (!hasPermission) requestPermission();
@@ -147,6 +148,7 @@ export default function CameraScreen({ route }: Props) {
       // Wake word detected! Stop Porcupine and start listening to user's question
       await stopWakeWord();
       setAssistantState('listening_for_question');
+      setRecognizedText('듣고 있습니다...'); // 웨이크 워드 감지 시 표시
       try {
         await Voice.start('ko-KR');
       } catch (e) {
@@ -158,36 +160,53 @@ export default function CameraScreen({ route }: Props) {
 
   // Voice Assistant Setup
   useEffect(() => {
+    const onTtsFinish = () => {
+      console.log('[TTS Debug] Speaking finished, restarting Wake Word.');
+      startWakeWord();
+    };
+
     const initVoiceAssistant = async () => {
       // 1. Init TTS
       Tts.setDefaultLanguage('ko-KR');
-      Tts.setDefaultRate(0.5); // Adjust rate as needed
-      
-      // Prevent TTS audio clash with camera/voice recordings on iOS
-      Tts.setDefaultCategory('ios.audio.category.PLAY_AND_RECORD', {
-        defaultToSpeaker: true,
-        duckOthers: true, // Lowers background audio when speaking
-        interruptSpokenAudioAndMixWithOthers: true,
-      });
-
-      Tts.addEventListener('tts-finish', () => {
-        // Resume wake word listener after speaking finishes
-        startWakeWord();
-      });
+      Tts.setDefaultRate(0.5);
+      Tts.addEventListener('tts-finish', onTtsFinish);
 
       // 2. Init STT (Voice)
+      Voice.onSpeechStart = (e: any) => {
+        console.log('[Voice Debug] Speech Started:', e);
+      };
+
+      Voice.onSpeechRecognized = (e: any) => {
+        console.log('[Voice Debug] Speech Recognized:', e);
+      };
+
+      Voice.onSpeechPartialResults = (e) => {
+        const text = e.value?.[0] || '';
+        console.log('[Voice Debug] Partial Results:', text);
+        if (text) {
+          setRecognizedText(text);
+        }
+      };
+
       Voice.onSpeechResults = (e: SpeechResultsEvent) => {
         const text = e.value?.[0] || '';
-        if (text && streamRef.current) {
-          const timestamp = new Date().toISOString();
-          streamRef.current.sendQuestion(text, timestamp);
+        console.log('[Voice Debug] Final Results:', text);
+        if (text) {
+          setRecognizedText(text);
+          if (streamRef.current) {
+            const timestamp = new Date().toISOString();
+            console.log(`[Voice Debug] Sending question to WebSocket: "${text}"`);
+            streamRef.current.sendQuestion(text, timestamp);
+          }
+        } else {
+          setRecognizedText(''); // 결과가 없으면 초기화
         }
-        // Fallback: Restart wake word (will be overridden if an ANSWER triggers TTS quickly)
-        startWakeWord(); 
+        startWakeWord();
       };
 
       Voice.onSpeechError = (e: any) => {
         console.error('Voice Error:', e);
+        setRecognizedText(''); // 에러 시 초기화
         startWakeWord();
       };
 
@@ -197,12 +216,13 @@ export default function CameraScreen({ route }: Props) {
         const modelPath = 'porcupine_params_ko.pv';
 
         porcupineManagerRef.current = await PorcupineManager.fromKeywordPaths(
-          'Ng4sw9Y25q+jDsw5aX7l2JuaaEy1nJDTuxF21nQy/QYhGoaRNd31wQ==', // PICOVOICE_ACCESS_KEY
-          [keywordPath],     // TODO: Insert local path/require to the generated .ppn file
+          'Ng4sw9Y25q+jDsw5aX7l2JuaaEy1nJDTuxF21nQy/QYhGoaRNd31wQ==',
+          [keywordPath],
           wakeWordCallback,
           (error) => { console.error("Porcupine Error: ", error); },
           modelPath
         );
+        console.log('[Porcupine Debug] Wake Word Engine Initialized successfully.');
         await startWakeWord();
       } catch (error) {
         console.error('Porcupine Initialization Error:', error);
@@ -212,9 +232,10 @@ export default function CameraScreen({ route }: Props) {
     initVoiceAssistant();
 
     return () => {
-      // Cleanup Voice Assistant engines
       Tts.stop();
-      Voice.destroy().then(Voice.removeAllListeners);
+      Tts.removeEventListener('tts-finish', onTtsFinish);
+      Voice.stop().catch(() => { });
+      Voice.destroy().then(Voice.removeAllListeners).catch(() => { });
       porcupineManagerRef.current?.delete();
     };
   }, []);
@@ -226,24 +247,24 @@ export default function CameraScreen({ route }: Props) {
     const userId = 'AuthContext_user_id';
 
     streamRef.current = new SafetyStream(
-      userId, 
-      { 
-        worksession_id: currentSessionId, 
-        video_path: ""  
+      userId,
+      {
+        worksession_id: currentSessionId,
+        video_path: ""
       },
       (data: StreamResponse) => {
-      if (data.type === 'DANGER') {
-        setAlertMessage(data.message || '위험이 감지되었습니다!');
-        setAlertSeverity('high');
-        setAlertVisible(true);
-      } else if (data.type === 'ANSWER') {
-        Alert.alert('AI Assistant', data.message);
-        setAssistantState('speaking');
-        stopWakeWord().then(() => {
-          Tts.speak(data.message);
-        });
-      }
-    });
+        if (data.type === 'DANGER') {
+          setAlertMessage(data.message || '위험이 감지되었습니다!');
+          setAlertSeverity('high');
+          setAlertVisible(true);
+        } else if (data.type === 'ANSWER') {
+          Alert.alert('AI Assistant', data.message);
+          setAssistantState('speaking');
+          stopWakeWord().then(() => {
+            Tts.speak(data.message);
+          });
+        }
+      });
 
     streamRef.current.connect();
 
@@ -305,8 +326,8 @@ export default function CameraScreen({ route }: Props) {
         const filtered = isTestCam
           ? frameDetections // test: 전체 표시
           : frameDetections.filter(
-              d => d.label === 'person' || d.label === 'helmet' || d.label === 'safety_vest',
-            );
+            d => d.label === 'person' || d.label === 'helmet' || d.label === 'safety_vest',
+          );
         setDetections(filtered);
 
         // 모드별 이벤트 처리
@@ -478,6 +499,13 @@ export default function CameraScreen({ route }: Props) {
             })}
           </View>
         )}
+
+        {/* STT Text Overlay */}
+        {recognizedText !== '' && (
+          <View style={styles.sttOverlay}>
+            <Text style={styles.sttText}>{recognizedText}</Text>
+          </View>
+        )}
       </View>
 
       {/* Bottom Control Section */}
@@ -569,6 +597,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginTop: 16,
     marginHorizontal: 15,
+    overflow: 'hidden', // STT 오버레이가 카메라 영역을 벗어나지 않도록
   },
   bottomSection: {
     alignItems: 'center',
@@ -591,6 +620,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+
+  /* STT Text Overlay */
+  sttOverlay: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sttText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 
   // Modal Styles
