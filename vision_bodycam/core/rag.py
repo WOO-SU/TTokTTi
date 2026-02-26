@@ -31,18 +31,40 @@ class MemoryManager:
     def _populate_safety_rules(self):
         """Pre-loads Korean industrial safety guidelines if the DB is empty."""
         if self.safety_collection.count() == 0:
-            rules = [
-                "모든 작업자는 항상 안전모(헬멧)와 고시인성 안전 조끼를 착용해야 합니다.",
-                "사다리를 사용할 때는 항상 3점 지지(두 손과 한 발, 또는 두 발과 한 손)를 유지해야 합니다.",
-                "깊이 1.5m 이상의 굴착 작업 시에는 붕괴 방지를 위해 흙막이 지보공을 설치해야 합니다."
-            ]
+            import os
+            
+            rules = []
+            guidelines_dir = os.path.join(os.path.dirname(__file__), "..", "data", "guidelines")
+            
+            # Read from text files if they exist
+            if os.path.exists(guidelines_dir):
+                for filename in os.listdir(guidelines_dir):
+                    if filename.endswith(".txt") or filename.endswith(".md"):
+                        filepath = os.path.join(guidelines_dir, filename)
+                        with open(filepath, 'r', encoding='utf-8') as f:
+                            for line in f:
+                                cleaned_line = line.strip()
+                                if cleaned_line and not cleaned_line.startswith("#"):
+                                    rules.append(cleaned_line)
+            
+            # Fallback to defaults if no custom rules found
+            if not rules:
+                logger.info("No custom rule files found in data/guidelines. Using defaults.")
+                rules = [
+                    "모든 작업자는 항상 안전모(헬멧)와 고시인성 안전 조끼를 착용해야 합니다.",
+                    "사다리를 사용할 때는 항상 3점 지지(두 손과 한 발, 또는 두 발과 한 손)를 유지해야 합니다.",
+                    "깊이 1.5m 이상의 굴착 작업 시에는 붕괴 방지를 위해 흙막이 지보공을 설치해야 합니다."
+                ]
+            else:
+                logger.info(f"Loaded {len(rules)} custom safety rules from {guidelines_dir}")
+
             embeddings = self.embedding_model.encode(rules, show_progress_bar=False).tolist()
             self.safety_collection.add(
                 documents=rules,
                 embeddings=embeddings,
                 ids=[f"rule_{i}" for i in range(len(rules))]
             )
-            logger.info("Populated ChromaDB with default safety rules.")
+            logger.info("Populated ChromaDB with safety rules.")
 
     def add_to_short_term_memory(self, timestamp: float, caption: str):
         """Adds a new frame description to the sliding window buffer."""

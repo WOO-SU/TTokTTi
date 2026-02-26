@@ -46,8 +46,8 @@ class SafetyAnalyzer:
                 "Context: You are analyzing an egocentric video stream (from a worker's bodycam). "
                 "Evaluate DANGER based ONLY on the CURRENT frames, not the History.\n"
                 "Do NOT flag a safety violation if the frame is pitch black, empty, or no workers are seen in the frame.\n"
-                "Task 1: Describe the worker's current action in exactly one sentence (max 10 words).\n"
-                "Task 2: Evaluate safety in the current moment. If there is a violation, write 'DANGER: <reason>'. Otherwise write 'SAFE'."
+                "Task 1: Describe the worker's current action in exactly one sentence in Korean (max 10 words).\n"
+                "Task 2: Evaluate safety in the current moment. If there is a violation, write 'DANGER: <reason in Korean>'. Otherwise write 'SAFE'."
             )
 
             response = await self.client.chat.completions.create(
@@ -99,7 +99,7 @@ class SafetyAnalyzer:
                 f"Current Time: {timestamp}. Recent Events (Short-Term):\n{chr(10).join(stm)}\n\n"
                 "Context: You are analyzing an egocentric video stream (from a worker's bodycam).\n"
                 f"User Question: {question}\n"
-                "Answer the user directly based on the frames and history provided."
+                "Answer the user directly in Korean based on the frames and history provided."
             )
 
             response = await self.client.chat.completions.create(
