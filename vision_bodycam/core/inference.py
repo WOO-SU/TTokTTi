@@ -95,11 +95,11 @@ class SafetyAnalyzer:
 
             prompt = (
                 f"Safety Rules:\n{rules_text}\n\n"
-                f"Video History (Long-Term):\n{chr(10).join(ltm)}\n\n"
+                #f"Video History (Long-Term):\n{chr(10).join(ltm)}\n\n"
                 f"Current Time: {timestamp}. Recent Events (Short-Term):\n{chr(10).join(stm)}\n\n"
                 "Context: You are analyzing an egocentric video stream (from a worker's bodycam).\n"
                 f"User Question: {question}\n"
-                "Answer the user directly in Korean based on the frames and history provided."
+                "Answer the user directly in Korean based on the frames and history provided. Preferably including protecting user's safety. Since your sentence will be translated into tts, do not use emphasis. Answer in few, short sentences"
             )
 
             response = await self.client.chat.completions.create(

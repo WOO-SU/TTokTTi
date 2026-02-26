@@ -92,14 +92,14 @@ async def process_job(queue_name, payload):
                 }))
                 asyncio.create_task(report_to_django(client_id, result["danger_reason"], now_iso))
 
-            # --- 5-Second Slow Loop (LTM Compression) ---
-            if relative_time - state["last_compression_time"] >= 5.0:
-                if state["stm"]:
-                    summary = await analyzer.compress_memory(state["stm"])
-                    time_bracket = f"[{state['last_compression_time']:.0f}s-{relative_time:.0f}s]"
-                    state["ltm"].append(f"{time_bracket} {summary}")
-                    state["last_compression_time"] = relative_time
-                    logger.info(f"[{client_id}] LTM Logged: {summary}")
+            # # --- 5-Second Slow Loop (LTM Compression) ---
+            # if relative_time - state["last_compression_time"] >= 5.0:
+            #     if state["stm"]:
+            #         summary = await analyzer.compress_memory(state["stm"])
+            #         time_bracket = f"[{state['last_compression_time']:.0f}s-{relative_time:.0f}s]"
+            #         state["ltm"].append(f"{time_bracket} {summary}")
+            #         state["last_compression_time"] = relative_time
+            #         logger.info(f"[{client_id}] LTM Logged: {summary}")
 
     except Exception as e:
         logger.error(f"Job Error: {e}", exc_info=True)
