@@ -252,3 +252,5 @@ vision_fullcam/data/*
 *.pv
 best_saved_model/
 trans_model.py
+
+**/chroma_data/

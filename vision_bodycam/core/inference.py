@@ -165,7 +165,7 @@ import logging
 from typing import Dict, Any, List, AsyncGenerator
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
-from vision_bodycam.core.rag import MemoryManager
+from .rag import MemoryManager
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -179,10 +179,12 @@ class SafetyAnalyzer:
         
         # Initialize Dual-Memory RAG System
         self.memory_manager = MemoryManager()
-        
-        # [VINCI INTEGRATION] Periodic Memory Generation
-        # Start async worker to consolidate short-term history into long-term memory every 30s
-        self.consolidation_task = asyncio.create_task(self._memory_consolidation_worker(interval=30))
+        self.consolidation_task = None
+
+    def start_background_tasks(self):
+        """Starts the background memory consolidation worker. MUST be called inside a running event loop."""
+        if self.consolidation_task is None:
+            self.consolidation_task = asyncio.create_task(self._memory_consolidation_worker(interval=30))
 
     async def _memory_consolidation_worker(self, interval: int):
         """Background loop to periodically summarize and embed the short-term buffer."""
