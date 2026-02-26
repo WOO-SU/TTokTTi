@@ -4,7 +4,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # .env 파일 자동 로드 (config.py와 같은 폴더의 .env)
-load_dotenv(Path(__file__).resolve().parent / ".env")
+load_dotenv(Path(__file__).resolve().parent / ".env", override=True)
 
 
 class Config:
@@ -32,7 +32,7 @@ class Config:
     AZURE_CONTAINER = os.getenv("AZURE_BLOB_CONTAINER", "images")
 
     # ── YOLO Model ──
-    MODEL_PATH = os.getenv("MODEL_PATH", "best.onnx")
+    MODEL_PATH = os.getenv("MODEL_PATH", "best_0222.pt")
     CONFIDENCE = float(os.getenv("CONFIDENCE", "0.4"))
 
     # 클래스 매핑 (모델 학습 시 정의한 클래스 인덱스)
