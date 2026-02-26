@@ -28,7 +28,7 @@ load_dotenv()
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG")
+DEBUG = os.getenv("DEBUG", False)
 
 JETSON_API_KEY = os.getenv("JETSON_API_KEY", "jetson-special-key-2024")
 
@@ -228,4 +228,14 @@ CORS_ALLOW_CREDENTIALS = False
 
 CSRF_TRUSTED_ORIGINS = [
     "https://web-riskpulse.delightfulglacier-38eeee86.koreacentral.azurecontainerapps.io",
+    "http://localhost:3000",
 ]
+
+# settings.py
+
+if DEBUG:
+    CSRF_COOKIE_DOMAIN = None 
+    CSRF_COOKIE_SECURE = False
+else:
+    CSRF_COOKIE_SECURE = True
+    CSRF_COOKIE_HTTPONLY = True

@@ -1,0 +1,13 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: compliance_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    command: redis-server --protected-mode no --appendonly yes
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:

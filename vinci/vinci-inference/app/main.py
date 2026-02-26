@@ -40,9 +40,9 @@ async def internval_inference(req: data.InternvlInferenceRequest):
     finally:
         chat_lock.release()
 
-@router.post("/inference/seine", response_model=data.SeineInferenceResponse)
-async def seine_inference(req: data.SeineInferenceRequest):
-    return service.seine_inference(req.prompt, req.base64_image, req.image)
+# @router.post("/inference/seine", response_model=data.SeineInferenceResponse)
+# async def seine_inference(req: data.SeineInferenceRequest):
+#     return service.seine_inference(req.prompt, req.base64_image, req.image)
 
 def build_app():
     fast_kwargs = {
