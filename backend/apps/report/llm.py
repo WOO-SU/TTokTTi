@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Any, Dict
 import json
 import re
+import os
 
 from openai import OpenAI
 
@@ -67,7 +68,10 @@ def _extract_json(s: str) -> str:
 
 
 def generate_report_json(input_package: Dict[str, Any]) -> Dict[str, Any]:
-    client = OpenAI()
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY is not set")
+    client = OpenAI(api_key=api_key)
 
     user = USER_TEMPLATE.format(
         input_json=json.dumps(input_package, ensure_ascii=False)
