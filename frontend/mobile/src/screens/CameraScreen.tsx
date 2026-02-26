@@ -193,10 +193,15 @@ export default function CameraScreen({ route }: Props) {
 
       // 3. Init Porcupine
       try {
+        const keywordPath = 'ttoktti_android.ppn';
+        const modelPath = 'porcupine_params_ko.pv';
+
         porcupineManagerRef.current = await PorcupineManager.fromKeywordPaths(
-          'YOUR_PICOVOICE_ACCESS_KEY', // TODO: Insert your actual Access Key here
-          ['path/to/ttoktti.ppn'],     // TODO: Insert local path/require to the generated .ppn file
-          wakeWordCallback
+          'Ng4sw9Y25q+jDsw5aX7l2JuaaEy1nJDTuxF21nQy/QYhGoaRNd31wQ==', // PICOVOICE_ACCESS_KEY
+          [keywordPath],     // TODO: Insert local path/require to the generated .ppn file
+          wakeWordCallback,
+          (error) => { console.error("Porcupine Error: ", error); },
+          modelPath
         );
         await startWakeWord();
       } catch (error) {

@@ -13,7 +13,6 @@ import redis.asyncio as redis
 from dotenv import load_dotenv
 
 from core.inference import SafetyAnalyzer
-from core.rag import DynamicRetriever
 
 load_dotenv()
 
@@ -26,7 +25,7 @@ VLLM_URL = os.getenv("VLLM_URL", "http://localhost:8889/v1")
 DJANGO_API_URL = os.getenv("DJANGO_API_URL", "http://localhost:8000/api/incidents/")
 DJANGO_API_KEY = os.getenv("DJANGO_API_KEY", "secret_internal_key")
 
-# --- Short-Term Memory Cache ---
+# --- Short-Term Memory Cache (Now only tracks frames, not text context) ---
 class FIFOSafeCache:
     def __init__(self, capacity: int):
         self.cache = OrderedDict()
@@ -54,8 +53,7 @@ client_memory_cache = FIFOSafeCache(capacity=100)
 
 # Initialize Logic Modules
 redis_client = redis.from_url(REDIS_URL, decode_responses=True)
-analyzer = SafetyAnalyzer(api_url=VLLM_URL) # Connects to local vLLM
-retriever = DynamicRetriever()
+analyzer = SafetyAnalyzer(api_url=VLLM_URL) # Now contains built-in MemoryManager
 shutdown_event = asyncio.Event()
 
 async def report_to_django(user_id: str, reason: str, timestamp: str):
@@ -63,13 +61,10 @@ async def report_to_django(user_id: str, reason: str, timestamp: str):
     async with httpx.AsyncClient() as client:
         try:
             session_meta = await redis_client.hgetall(f"session_meta:{user_id}")
-            # We removed the heavy base64 image!
-            # Once your Blob storage is set up, you will just add: "image_url": blob_url
             payload = {
                 "user_id": user_id, 
                 "description": reason, 
                 "timestamp": timestamp,
-                # Inject the cached data
                 "worksession_id": session_meta.get("worksession_id"),
                 "risk_type_id": session_meta.get("risk_type_id"),
                 "video_path": session_meta.get("video_path")
@@ -106,9 +101,7 @@ async def process_job(queue_name, payload):
         if not state:
             state = {
                 "frame_count": 0,
-                "current_rule": retriever.get_context("general work"),
-                "recent_frames": deque(maxlen=MAX_RECENT_FRAMES),
-                "memory_history": [] # Chronological actions
+                "recent_frames": deque(maxlen=MAX_RECENT_FRAMES)
             }
 
         state["frame_count"] += 1
@@ -122,50 +115,28 @@ async def process_job(queue_name, payload):
             user_text = content.get("text", "What do you see?")
             logger.info(f"Processing Question for {client_id}: {user_text}")
 
-            context_text = "Recent observations: "
-
-            if recent_memory:
-                context_text += " | ".join([m["observation"] for m in recent_memory])
-            else:
-                context_text += "No recent context available."
-
-            # --- Stream Async chunks via Redis PubSub ---
-            async for chunk in analyzer.answer_question(frames_list, user_text, context_text):
+            # Removed manual context_text building; analyzer fetches it internally
+            async for chunk in analyzer.answer_question(frames_list, user_text):
                 await redis_client.publish(f"alerts:{client_id}", json.dumps({
                     "type": "ANSWER_CHUNK",
                     "message": chunk
                 }))
 
-            # Signal Completion
             await redis_client.publish(f"alerts:{client_id}", json.dumps({"type": "ANSWER_DONE"}))
                         
-            
         elif queue_name == "video_frames":
-            # --- THE SLOW LOOP: Action Recognition & Memory Sync ---
+            # --- THE SLOW LOOP: Action Recognition ---
             if state["frame_count"] % FRAMES_BETWEEN_ACTION_CHECKS == 1:
                 current_action = await analyzer.detect_action(frames_list)
-                new_rule = retriever.get_context(scene_type=current_action)
-                state["current_rule"] = new_rule
-                
-                state["memory_history"].append({
-                    "timestamp": current_time_t,
-                    "action": current_action,
-                    "observation": "Monitored safely"
-                })
-                client_memory_cache.put(client_id, state)
                 logger.info(f"[{client_id}] T={current_time_t} | Action: {current_action}")
 
-            # --- THE FAST LOOP: RAG Safety Check ---
-            result = await analyzer.detect_danger(frames_list, state["current_rule"])
+            # --- THE FAST LOOP: Dual-Memory RAG Safety Check ---
+            # Removed the manual current_rule argument; context and logging are handled internally
+            result = await analyzer.detect_danger(frames_list)
 
             if result["is_danger"]:
                 now_iso = datetime.now(timezone.utc).isoformat()
                 logger.warning(f"DANGER DETECTED: {client_id} - {result['details']}")
-                
-                # Update recent event in the timeline
-                if state["memory_history"]:
-                    state["memory_history"][-1]["observation"] = result["details"]
-                    client_memory_cache.put(client_id, state)
 
                 await redis_client.publish(f"alerts:{client_id}", json.dumps({
                     "type": "DANGER",
@@ -180,6 +151,10 @@ async def process_job(queue_name, payload):
 
 async def main():
     logger.info("GPU Worker Started... Waiting for Redis jobs.")
+    
+    # 1. START THE BACKGROUND TASK HERE
+    analyzer.start_background_tasks()
+    
     def handle_shutdown():
         shutdown_event.set()
 
