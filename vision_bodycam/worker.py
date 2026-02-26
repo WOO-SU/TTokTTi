@@ -13,7 +13,6 @@ import redis.asyncio as redis
 from dotenv import load_dotenv
 
 from core.inference import SafetyAnalyzer
-# Removed DynamicRetriever import as SafetyAnalyzer handles RAG internally now
 
 load_dotenv()
 
