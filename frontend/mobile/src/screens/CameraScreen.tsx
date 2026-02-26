@@ -15,6 +15,8 @@ import {
   Camera,
   useCameraDevice,
   useCameraFormat,
+  useCameraPermission,
+  useMicrophonePermission,
 } from 'react-native-vision-camera';
 import BaseCamera from '../components/BaseCamera';
 import RNFS from 'react-native-fs';
@@ -25,13 +27,22 @@ import TopHeader from '../components/TopHeader';
 
 import { useWorkSession } from '../context/WorkSessionContext';
 import SafetyStream, { StreamResponse } from '../api/stream';
+
 import { useVisionEngine } from '../vision/hooks/useVisionEngine';
 import { preprocessImageForYOLO } from '../vision/utils/imagePreprocess';
+
+import { PorcupineManager } from '@picovoice/porcupine-react-native';
+import Voice, { SpeechResultsEvent } from '@react-native-voice/voice';
+import Tts from 'react-native-tts';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Camera'>;
   route: RouteProp<RootStackParamList, 'Camera'>;
 };
+
+type AssistantState = 'idle' | 'listening_for_wakeword' | 'listening_for_question' | 'speaking';
+
+
 
 /* ──────── Configuration ──────── */
 
@@ -87,6 +98,9 @@ export default function CameraScreen({ route }: Props) {
   const [detections, setDetections] = useState<any[]>([]);
   const [previewSize, setPreviewSize] = useState({ width: 0, height: 0 });
 
+  // Voice Assistant
+  const [assistantState, setAssistantState] = useState<AssistantState>('idle');
+
   // Vision Engine (mode=all 전용)
   const vision = useVisionEngine();
   const [visionStatus, setVisionStatus] = useState<string>('');
@@ -95,6 +109,110 @@ export default function CameraScreen({ route }: Props) {
   const cameraRef = useRef<Camera>(null);
   const streamRef = useRef<SafetyStream | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const porcupineManagerRef = useRef<PorcupineManager | null>(null);
+
+  // Permissions:
+  const {hasPermission, requestPermission} = useCameraPermission();
+  const {hasPermission: hasMicPermission, requestPermission: requestMicPermission} = useMicrophonePermission();
+
+  useEffect(() => {
+    if (!hasPermission) requestPermission();
+    if (!hasMicPermission) requestMicPermission();
+  }, [hasPermission, requestPermission, hasMicPermission, requestMicPermission]);
+
+  // Wake Word Callbacks
+  const startWakeWord = async () => {
+    try {
+      if (porcupineManagerRef.current) {
+        setAssistantState('listening_for_wakeword');
+        await porcupineManagerRef.current.start();
+      }
+    } catch (e) {
+      console.error("Wake word start error:", e);
+    }
+  };
+
+  const stopWakeWord = async () => {
+    try {
+      if (porcupineManagerRef.current) {
+        await porcupineManagerRef.current.stop();
+      }
+    } catch (e) {
+      console.error("Wake word stop error:", e);
+    }
+  };
+
+  const wakeWordCallback = async (keywordIndex: number) => {
+    if (keywordIndex === 0) {
+      // Wake word detected! Stop Porcupine and start listening to user's question
+      await stopWakeWord();
+      setAssistantState('listening_for_question');
+      try {
+        await Voice.start('ko-KR');
+      } catch (e) {
+        console.error("Voice start error:", e);
+        startWakeWord();
+      }
+    }
+  };
+
+  // Voice Assistant Setup
+  useEffect(() => {
+    const initVoiceAssistant = async () => {
+      // 1. Init TTS
+      Tts.setDefaultLanguage('ko-KR');
+      Tts.setDefaultRate(0.5); // Adjust rate as needed
+      
+      // Prevent TTS audio clash with camera/voice recordings on iOS
+      Tts.setDefaultCategory('ios.audio.category.PLAY_AND_RECORD', {
+        defaultToSpeaker: true,
+        duckOthers: true, // Lowers background audio when speaking
+        interruptSpokenAudioAndMixWithOthers: true,
+      });
+
+      Tts.addEventListener('tts-finish', () => {
+        // Resume wake word listener after speaking finishes
+        startWakeWord();
+      });
+
+      // 2. Init STT (Voice)
+      Voice.onSpeechResults = (e: SpeechResultsEvent) => {
+        const text = e.value?.[0] || '';
+        if (text && streamRef.current) {
+          const timestamp = new Date().toISOString();
+          streamRef.current.sendQuestion(text, timestamp);
+        }
+        // Fallback: Restart wake word (will be overridden if an ANSWER triggers TTS quickly)
+        startWakeWord(); 
+      };
+
+      Voice.onSpeechError = (e: any) => {
+        console.error('Voice Error:', e);
+        startWakeWord();
+      };
+
+      // 3. Init Porcupine
+      try {
+        porcupineManagerRef.current = await PorcupineManager.fromKeywordPaths(
+          'YOUR_PICOVOICE_ACCESS_KEY', // TODO: Insert your actual Access Key here
+          ['path/to/ttoktti.ppn'],     // TODO: Insert local path/require to the generated .ppn file
+          wakeWordCallback
+        );
+        await startWakeWord();
+      } catch (error) {
+        console.error('Porcupine Initialization Error:', error);
+      }
+    };
+
+    initVoiceAssistant();
+
+    return () => {
+      // Cleanup Voice Assistant engines
+      Tts.stop();
+      Voice.destroy().then(Voice.removeAllListeners);
+      porcupineManagerRef.current?.delete();
+    };
+  }, []);
 
   // mode=worker: 기존 WebSocket 스트리밍
   useEffect(() => {
@@ -115,6 +233,10 @@ export default function CameraScreen({ route }: Props) {
         setAlertVisible(true);
       } else if (data.type === 'ANSWER') {
         Alert.alert('AI Assistant', data.message);
+        setAssistantState('speaking');
+        stopWakeWord().then(() => {
+          Tts.speak(data.message);
+        });
       }
     });
 
