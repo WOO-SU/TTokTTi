@@ -176,12 +176,20 @@ export default function CameraScreen({ route }: Props) {
         isGreetingRef.current = false;
         setAssistantState('listening_for_question');
         setRecognizedText('듣고 있습니다...');
-        Voice.start('ko-KR').catch(e => {
-          console.error("Voice start error:", e);
-          startWakeWord();
-        });
+
+        // Give Android Audio Focus a brief moment to transition from text-to-speech 
+        // back to the STT listener.
+        setTimeout(async () => {
+          try {
+            await Voice.start('ko-KR');
+            console.log('[Voice Debug] STT started successfully');
+          } catch (e) {
+            console.error("Voice start error:", e);
+            startWakeWord();
+          }
+        }, 500);
       } else {
-        startWakeWord();
+        setTimeout(() => startWakeWord(), 500);
       }
     };
 
@@ -229,9 +237,9 @@ export default function CameraScreen({ route }: Props) {
       };
 
       Voice.onSpeechError = (e: any) => {
-        console.error('Voice Error:', e);
+        console.error('Voice Error:', JSON.stringify(e));
         setRecognizedText(''); // 에러 시 초기화
-        startWakeWord();
+        setTimeout(() => startWakeWord(), 500); // 딜레이를 주어 Porcupine으로 안전하게 복귀
       };
 
       // 3. Init Porcupine
