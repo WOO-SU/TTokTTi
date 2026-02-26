@@ -35,7 +35,14 @@ def main():
     cfg = Config()
 
     # 초기화
-    r = redis.Redis(host=cfg.REDIS_HOST, port=cfg.REDIS_PORT, decode_responses=True)
+    r = redis.Redis(
+        host=cfg.REDIS_HOST,
+        port=cfg.REDIS_PORT,
+        password=cfg.REDIS_PASSWORD,
+        ssl=cfg.REDIS_SSL,
+        ssl_cert_reqs=None,
+        decode_responses=True,
+    )
     blob = BlobClient(cfg)
     detector = ComplianceDetector(cfg)
     api = APIClient(cfg)
