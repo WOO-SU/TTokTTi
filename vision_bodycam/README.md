@@ -48,10 +48,20 @@ sudo docker start riskpulse-redis || sudo docker run -d --name riskpulse-redis -
 conda activate bodycam
 
 # Start vLLM 
+# vllm serve cyankiwi/Qwen3-VL-8B-Instruct-AWQ-4bit \
+#   --quantization compressed-tensors \
+#   --max-model-len 16384 \
+#   --limit-mm-per-prompt '{"video":1,"image":5}' \
+#   --port 8889
+
+# Start vLLM (Optimized for 16GB VRAM)
 vllm serve cyankiwi/Qwen3-VL-8B-Instruct-AWQ-4bit \
   --quantization compressed-tensors \
-  --max-model-len 16384 \
+  --max-model-len 8192 \
   --limit-mm-per-prompt '{"video":1,"image":5}' \
+  --gpu-memory-utilization 0.95 \
+  --enforce-eager \
+  --kv-cache-dtype fp8 \
   --port 8889
 ```
 

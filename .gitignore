@@ -248,5 +248,7 @@ vision_fullcam/data/*
 *.mp4
 *.avi
 *.npy
+*.ppn
+*.pv
 best_saved_model/
 trans_model.py
