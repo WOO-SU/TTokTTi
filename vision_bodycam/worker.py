@@ -32,10 +32,13 @@ async def report_to_django(user_id: str, reason: str, timestamp: str):
 async def process_job(queue_name, payload):
     try:
         data = json.loads(payload)
+        if queue_name == "questions":
+            logger.info(f"Incoming Job on {queue_name}: {payload}")
         client_id = data["client_id"]
         content = data["data"]
         image_b64 = content.get("image")
-        if not image_b64: return
+        if queue_name == "video_frames" and not image_b64: 
+            return
 
         # 1. Initialize/Retrieve Session State
         if client_id not in client_states:
@@ -50,16 +53,23 @@ async def process_job(queue_name, payload):
         state = client_states[client_id]
         relative_time = time.time() - state["start_time"]
         timestamp_str = f"T+{relative_time:.1f}s"
-        state["recent_frames"].append(image_b64)
+        if image_b64:
+            state["recent_frames"].append(image_b64)
         frames_list = list(state["recent_frames"])
 
         # 2. Branch Logic
         if queue_name == "questions":
             user_text = content.get("text", "What do you see?")
             logger.info(f"[{client_id}] Received question payload: {user_text}")
+            
+            full_answer = ""
             async for chunk in analyzer.answer_question(frames_list, user_text, list(state["ltm"]), state["stm"], timestamp_str):
-                await redis_client.publish(f"alerts:{client_id}", json.dumps({"type": "ANSWER_CHUNK", "message": chunk}))
-            await redis_client.publish(f"alerts:{client_id}", json.dumps({"type": "ANSWER_DONE"}))
+                full_answer += chunk
+                
+            await redis_client.publish(f"alerts:{client_id}", json.dumps({
+                "type": "ANSWER", 
+                "message": full_answer
+            }))
 
         elif queue_name == "video_frames":
             # --- Combined Fast Loop ---

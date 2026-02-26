@@ -36,7 +36,7 @@ class MemoryManager:
                 "사다리를 사용할 때는 항상 3점 지지(두 손과 한 발, 또는 두 발과 한 손)를 유지해야 합니다.",
                 "깊이 1.5m 이상의 굴착 작업 시에는 붕괴 방지를 위해 흙막이 지보공을 설치해야 합니다."
             ]
-            embeddings = self.embedding_model.encode(rules).tolist()
+            embeddings = self.embedding_model.encode(rules, show_progress_bar=False).tolist()
             self.safety_collection.add(
                 documents=rules,
                 embeddings=embeddings,
@@ -73,7 +73,7 @@ class MemoryManager:
             return
             
         timestamp = time.time()
-        embedding = self.embedding_model.encode([summary_text]).tolist()[0]
+        embedding = self.embedding_model.encode([summary_text], show_progress_bar=False).tolist()[0]
         
         self.long_term_collection.add(
             documents=[summary_text],
@@ -88,7 +88,7 @@ class MemoryManager:
         [VINCI INTEGRATION] Temporal Grounding & Context Retrieval
         Embeds the query and fetches both past historical summaries and safety guidelines.
         """
-        query_embedding = self.embedding_model.encode([query_text]).tolist()
+        query_embedding = self.embedding_model.encode([query_text], show_progress_bar=False).tolist()
         
         # Retrieve past events
         lt_results = self.long_term_collection.query(
