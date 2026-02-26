@@ -59,19 +59,19 @@ export default function TTSTestScreen({ navigation }: Props) {
             }
         };
 
-        Tts.addEventListener('tts-start', onStart);
-        Tts.addEventListener('tts-finish', onFinish);
-        Tts.addEventListener('tts-error', onError);
-        Tts.addEventListener('tts-cancel', onFinish);
+        const startListener = Tts.addEventListener('tts-start', onStart) as any;
+        const finishListener = Tts.addEventListener('tts-finish', onFinish) as any;
+        const errorListener = Tts.addEventListener('tts-error', onError) as any;
+        const cancelListener = Tts.addEventListener('tts-cancel', onFinish) as any;
 
         return () => {
             isMounted = false;
             Tts.stop();
-            // 리스너 해제
-            Tts.removeEventListener('tts-start', onStart);
-            Tts.removeEventListener('tts-finish', onFinish);
-            Tts.removeEventListener('tts-error', onError);
-            Tts.removeEventListener('tts-cancel', onFinish);
+            // 리스너 해제 (RN 0.65+ 대응)
+            startListener?.remove();
+            finishListener?.remove();
+            errorListener?.remove();
+            cancelListener?.remove();
         };
     }, []);
 

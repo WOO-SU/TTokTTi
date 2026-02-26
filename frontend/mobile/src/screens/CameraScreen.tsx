@@ -165,11 +165,13 @@ export default function CameraScreen({ route }: Props) {
       startWakeWord();
     };
 
+    let ttsFinishListener: any;
+
     const initVoiceAssistant = async () => {
       // 1. Init TTS
       Tts.setDefaultLanguage('ko-KR');
       Tts.setDefaultRate(0.5);
-      Tts.addEventListener('tts-finish', onTtsFinish);
+      ttsFinishListener = Tts.addEventListener('tts-finish', onTtsFinish) as any;
 
       // 2. Init STT (Voice)
       Voice.onSpeechStart = (e: any) => {
@@ -233,7 +235,7 @@ export default function CameraScreen({ route }: Props) {
 
     return () => {
       Tts.stop();
-      Tts.removeEventListener('tts-finish', onTtsFinish);
+      ttsFinishListener?.remove();
       Voice.stop().catch(() => { });
       Voice.destroy().then(Voice.removeAllListeners).catch(() => { });
       porcupineManagerRef.current?.delete();
