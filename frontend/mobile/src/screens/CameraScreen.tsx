@@ -506,7 +506,7 @@ export default function CameraScreen({ route }: Props) {
           ref={cameraRef}
           isActive={isCameraActive}
           video={true}
-          audio={!useVision}
+          audio={false}
           format={streamFormat || undefined}
           isRecording={isRecording}
           onCapture={useVision ? undefined : handleToggleRecording}
