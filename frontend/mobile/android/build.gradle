@@ -20,22 +20,22 @@ buildscript {
 
 apply plugin: "com.facebook.react.rootproject"
 
-// Add this to the bottom of android/build.gradle to fix legacy React Native modules for Gradle 10
-subprojects { subproject ->
-    afterEvaluate {
-        if (subproject.plugins.hasPlugin('com.android.library')) {
-            def androidBlock = subproject.extensions.findByType(com.android.build.gradle.LibraryExtension)
-            if (androidBlock != null && androidBlock.namespace == null) {
-                def manifestFile = subproject.file('src/main/AndroidManifest.xml')
-                if (manifestFile.exists()) {
-                    def text = manifestFile.text
-                    def matcher = text =~ /package="([^"]+)"/
-                    if (matcher.find()) {
-                        // Dynamically assign the namespace required by Gradle 10
-                        androidBlock.namespace = matcher.group(1)
-                    }
-                }
-            }
-        }
-    }
-}
+// // Add this to the bottom of android/build.gradle to fix legacy React Native modules for Gradle 10
+// subprojects { subproject ->
+//     afterEvaluate {
+//         if (subproject.plugins.hasPlugin('com.android.library')) {
+//             def androidBlock = subproject.extensions.findByType(com.android.build.gradle.LibraryExtension)
+//             if (androidBlock != null && androidBlock.namespace == null) {
+//                 def manifestFile = subproject.file('src/main/AndroidManifest.xml')
+//                 if (manifestFile.exists()) {
+//                     def text = manifestFile.text
+//                     def matcher = text =~ /package="([^"]+)"/
+//                     if (matcher.find()) {
+//                         // Dynamically assign the namespace required by Gradle 10
+//                         androidBlock.namespace = matcher.group(1)
+//                     }
+//                 }
+//             }
+//         }
+//     }
+// }

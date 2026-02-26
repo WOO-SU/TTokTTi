@@ -105,6 +105,12 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# Azure Container Apps runs behind a load balancer (proxy)
+# This tells Django the real protocol is HTTPS via the forwarded header
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# Do NOT redirect HTTP → HTTPS at Django level (Azure proxy handles it)
+SECURE_SSL_REDIRECT = False
+
 ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
@@ -199,6 +205,8 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # The URL of your cloud frontend
+# CORS_ALLOW_ALL_ORIGINS = True allows React Native APK (no browser origin) to connect
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWED_ORIGINS = [
     "https://web-riskpulse.delightfulglacier-38eeee86.koreacentral.azurecontainerapps.io",
     "http://localhost:3000", # Keep for local testing
@@ -214,9 +222,9 @@ CORS_ALLOW_HEADERS = [
     "x-requested-with",
 ]
 
-# If you use cookies for JWT (optional), set this to True. 
-# For standard Bearer tokens in LocalStorage, False is fine.
-CORS_ALLOW_CREDENTIALS = True
+# CORS_ALLOW_CREDENTIALS must be False when CORS_ALLOW_ALL_ORIGINS = True
+# React Native APK uses Bearer tokens, not cookies, so this is fine
+CORS_ALLOW_CREDENTIALS = False
 
 CSRF_TRUSTED_ORIGINS = [
     "https://web-riskpulse.delightfulglacier-38eeee86.koreacentral.azurecontainerapps.io",

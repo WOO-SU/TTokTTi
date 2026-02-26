@@ -66,6 +66,14 @@ export default function SelectModeScreen({ navigation }: Props) {
             imageStyle={styles.cardImage1}
             onPress={() => navigation.navigate('Camera', { mode: 'test' })}
           />
+
+          {/* Card 4: STT 테스트 */}
+          <MenuBanner
+            title="STT 테스트"
+            imageSource={ladderImage} // 적당한 이미지 사용
+            imageStyle={styles.cardImage2}
+            onPress={() => navigation.navigate('STTTest')}
+          />
         </View>
       </ScrollView>
     </View>

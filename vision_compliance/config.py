@@ -4,12 +4,12 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # .env 파일 자동 로드 (config.py와 같은 폴더의 .env)
-load_dotenv(Path(__file__).resolve().parent / ".env")
+load_dotenv(Path(__file__).resolve().parent / ".env", override=True)
 
 
 class Config:
     # ── Backend API ──
-    BACKEND_URL = os.getenv("BACKEND_URL", "http://100.120.43.34:8000")
+    BACKEND_URL = os.getenv("BACKEND_URL", "https://api-riskpulse.delightfulglacier-38eeee86.koreacentral.azurecontainerapps.io")
     API_LOGIN = "/api/user/login/"
     API_CHECK_UPLOAD = "/api/check/upload/"
     JETSON_API_KEY = os.getenv("JETSON_API_KEY", "jetson-special-key-2024")
@@ -19,12 +19,12 @@ class Config:
     SERVICE_PASSWORD = os.getenv("SERVICE_PASSWORD", "jetson1234")
 
     # ── Redis ──
-    REDIS_HOST = os.getenv("REDIS_HOST", "100.120.43.34")
-    REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+    REDIS_HOST = os.getenv("REDIS_HOST", "rp.redis.cache.windows.net")
+    REDIS_PORT = int(os.getenv("REDIS_PORT", "6380"))
     REDIS_QUEUE = os.getenv("REDIS_QUEUE", "compliance:queue")
     REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", None)
     # Azure Redis typically uses SSL (port 6380); Local uses non-SSL (port 6379)
-    REDIS_SSL = os.getenv("REDIS_SSL", "False").lower() in ("true", "1", "t")
+    REDIS_SSL = os.getenv("REDIS_SSL", "True").lower() in ("true", "1", "t")
 
     # ── Azure Blob ──
     AZURE_ACCOUNT_NAME = os.getenv("AZURE_STORAGE_ACCOUNT_NAME", "striskpulse")
@@ -32,7 +32,7 @@ class Config:
     AZURE_CONTAINER = os.getenv("AZURE_BLOB_CONTAINER", "images")
 
     # ── YOLO Model ──
-    MODEL_PATH = os.getenv("MODEL_PATH", "best.onnx")
+    MODEL_PATH = os.getenv("MODEL_PATH", "best_0222.pt")
     CONFIDENCE = float(os.getenv("CONFIDENCE", "0.4"))
 
     # 클래스 매핑 (모델 학습 시 정의한 클래스 인덱스)

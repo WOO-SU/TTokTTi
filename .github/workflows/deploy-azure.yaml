@@ -68,7 +68,7 @@ jobs:
               --container-name ${{ env.BACKEND_IMAGE }} \
               --image ${{ env.ACR_LOGIN_SERVER }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }} \
               --set-env-vars \
-                "AUTO_SEED_DB=True" \
+                "AUTO_SEED_DB=False" \
                 "DB_NAME=riskpulse_db" \
                 "DB_USER=${{ vars.DB_USER }}" \
                 "DB_HOST=${{ secrets.MYSQL_HOST }}" \
@@ -80,8 +80,10 @@ jobs:
                 "MYSQL_USER=${{ vars.DB_USER }}" \
                 "MYSQL_PASSWORD=${{ secrets.DB_PASSWORD }}" \
                 "DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}" \
-                "REDIS_HOST=${{ secrets.REDIS_HOST }}" \
+                "REDIS_HOST=rp.redis.cache.windows.net" \
                 "REDIS_PORT=6380" \
+                "REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}" \
+                "REDIS_SSL=True" \
                 "AZURE_STORAGE_ACCOUNT_NAME=striskpulse" \
                 "AZURE_STORAGE_ACCOUNT_KEY=${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}" \
                 "AZURE_BLOB_CONTAINER=images" \
