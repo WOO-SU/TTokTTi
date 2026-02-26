@@ -71,6 +71,9 @@ const HAZARD_LABEL: Record<string, string> = {
   ELECTRIC: '감전',
   PINCH: '끼임',
   ERGO: '인체공학',
+  LADDER: '사다리',
+  FIRE: '화재',
+  COLLAPSE: '붕괴',
 };
 
 type TabKey = 'risk' | 'equipment' | 'logs' | 'photos';
@@ -341,11 +344,11 @@ export default function WorkSessionDetailScreen() {
                             <div style={styles.overallBody}>
                               <div style={styles.overallMetric}>
                                 <span style={styles.overallMetricLabel}>위험 점수</span>
-                                <span style={{ ...styles.overallMetricValue, color: gc.text }}>{o.overall_max_R ?? '-'}</span>
+                                <span style={{ ...styles.overallMetricValue, color: gc.text }}>{o.overall_max_R != null ? o.overall_max_R : '-'}</span>
                               </div>
                               <div style={styles.overallMetric}>
                                 <span style={styles.overallMetricLabel}>작업 허가</span>
-                                <span style={styles.overallMetricValue}>{o.work_permission ?? '-'}</span>
+                                <span style={styles.overallMetricValue}>{typeof o.work_permission === 'boolean' ? (o.work_permission ? '작업 가능' : '조치 전 작업 금지') : (o.work_permission ?? '-')}</span>
                               </div>
                             </div>
                             {Array.isArray(o.urgent_fix_before_work) && o.urgent_fix_before_work.length > 0 && (
@@ -444,7 +447,11 @@ export default function WorkSessionDetailScreen() {
                                   <div style={styles.hazardRow}>
                                     <span style={styles.hazardLabel}>위험도 (L×S)</span>
                                     <span style={styles.hazardValue}>
-                                      {h.likelihood_L_1_5 ?? '-'} × {h.severity_S_1_5 ?? '-'} = {h.risk_R_1_25 ?? '-'}
+                                      {h.likelihood_L_1_5 && h.severity_S_1_5
+                                        ? `${h.likelihood_L_1_5} × ${h.severity_S_1_5} = ${h.likelihood_L_1_5 * h.severity_S_1_5}`
+                                        : h.risk_R_1_25 != null
+                                          ? `R = ${h.risk_R_1_25}`
+                                          : '-'}
                                     </span>
                                   </div>
                                   {Array.isArray(h.mitigations_before_work) && h.mitigations_before_work.length > 0 && (
@@ -460,7 +467,11 @@ export default function WorkSessionDetailScreen() {
                                   <div style={styles.hazardRow}>
                                     <span style={styles.hazardLabel}>잔여 위험도</span>
                                     <span style={styles.hazardValue}>
-                                      {h.residual_likelihood_L_1_5 ?? '-'} × {h.residual_severity_S_1_5 ?? '-'} = {h.residual_risk_R_1_25 ?? '-'}
+                                      {h.residual_likelihood_L_1_5 && h.residual_severity_S_1_5
+                                        ? `${h.residual_likelihood_L_1_5} × ${h.residual_severity_S_1_5} = ${h.residual_likelihood_L_1_5 * h.residual_severity_S_1_5}`
+                                        : h.residual_risk_R_1_25 != null
+                                          ? `R = ${h.residual_risk_R_1_25}`
+                                          : '-'}
                                       <span style={{ ...styles.riskLevelBadge, backgroundColor: rgc.bg, color: rgc.text, marginLeft: 8, fontSize: 10 }}>
                                         {riskGradeLabel[residualGrade] ?? residualGrade}
                                       </span>

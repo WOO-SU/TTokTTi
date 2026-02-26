@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../api/client';
+import useComplianceNotifications from '../hooks/useComplianceNotifications';
+import ComplianceToast from './ComplianceToast';
 import managerImg from '../assets/manager.jpg';
 import ladderCharImg from '../assets/ladder-character.png';
 
@@ -80,7 +82,7 @@ const sidebarItems = [
   { label: '알림 로그 확인', icon: '🔔', path: '/alert-logs' },
 ];
 
-const POLL_INTERVAL = 10_000;
+const POLL_INTERVAL = 3_000;
 const READ_ALERTS_KEY = 'rp_read_alerts';
 
 function getReadAlertIds(): Set<number> {
@@ -130,7 +132,7 @@ function formatSessionTime(isoStr: string): string {
 function getAlertDescription(log: AdminLog): string {
   if (log.source === 'MANUAL') {
     const cat = log.compliance_category ? COMPLIANCE_LABEL[log.compliance_category] ?? log.compliance_category : '장비';
-    return `수동 점검 · ${cat}`;
+    return `수동 · ${cat}`;
   }
   return log.risk_type_name ?? '위험 감지';
 }
@@ -168,7 +170,7 @@ function AlertDetailModal({
         .then(json => {
           if (json.ok && json.data) setManualDetail(json.data);
         })
-        .catch(() => {})
+        .catch(() => { })
         .finally(() => setDetailLoading(false));
     } else {
       apiFetch(`/detect/admin/request/${log.id}/`)
@@ -176,7 +178,7 @@ function AlertDetailModal({
         .then(json => {
           if (json.ok && json.data) setAutoDetail(json.data);
         })
-        .catch(() => {})
+        .catch(() => { })
         .finally(() => setDetailLoading(false));
     }
   }, [log.id, log.source]);
@@ -195,7 +197,7 @@ function AlertDetailModal({
       .then(data => {
         if (data) setResolvedImageUrl(data.download_url ?? data.url ?? null);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [manualDetail?.original_image]);
 
   // original_video blob_name → SAS URL 변환 (videolog 컨테이너)
@@ -211,7 +213,7 @@ function AlertDetailModal({
       .then(data => {
         if (data) setResolvedVideoUrl(data.download_url ?? data.url ?? null);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [autoDetail?.original_video]);
 
   const isManual = log.source === 'MANUAL';
@@ -429,7 +431,7 @@ function WorkSiteCardComponent({
       }}
       onMouseEnter={() => onHoverChange(true)}
       onMouseLeave={() => onHoverChange(false)}
-      onClick={() => onCardClick(card)} 
+      onClick={() => onCardClick(card)}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
@@ -463,7 +465,7 @@ function WorkSiteCardComponent({
                   style={styles.memberBtn}
                   onClick={(e) => {
                     e.stopPropagation();
-                    if(m.employee_id) onMemberClick(m.employee_id, card.name);
+                    if (m.employee_id) onMemberClick(m.employee_id, card.name);
                   }}
                 >
                   {m.name || "알수없음"}
@@ -582,7 +584,7 @@ function AlertRowComponent({
         borderLeftColor: borderColor,
       }}
       onClick={onClick}>
-      
+
       <div style={styles.alertTopRow}>
         <span style={styles.alertTime}>{formatAlertTime(log.created_at)}</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -604,9 +606,9 @@ function AlertRowComponent({
           }} />}
         </div>
       </div>
-      
+
       <span style={{ ...styles.alertSite, color: titleColor }}>{log.worksession_name}</span>
-      
+
       <div style={styles.alertBottomRow}>
         <span style={{ ...styles.alertType, color: descColor }}>
           {description}
@@ -617,6 +619,8 @@ function AlertRowComponent({
             fontWeight: 700,
             fontSize: 11,
             color: isRead ? '#A0A3AB' : statusInfo.color,
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
           }}>
             {statusInfo.text}
           </span>
@@ -648,8 +652,20 @@ export default function HomeScreen() {
   const [readIds, setReadIds] = useState<Set<number>>(getReadAlertIds);
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
-  
+
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Real-time compliance notification ──
+  const { alerts: complianceAlerts, dismissAlert: dismissComplianceAlert } =
+    useComplianceNotifications({
+      onNewAlert: (alert) => {
+        // Also merge into logs if not already present
+        setLogs(prev => {
+          if (prev.some(l => l.id === alert.log.id)) return prev;
+          return [alert.log, ...prev];
+        });
+      },
+    });
 
   const fetchLogs = useCallback(async () => {
     try {
@@ -676,7 +692,7 @@ export default function HomeScreen() {
     try {
       setApiError(null);
       let rawArray: any[] = [];
-      
+
       const res = await apiFetch('/worksession/admin/today/');
       if (res.ok) {
         const json = await res.json();
@@ -737,7 +753,7 @@ export default function HomeScreen() {
       return next;
     });
 
-    apiFetch(`/detect/admin/logs/${logId}/read/`, { method: 'PATCH' }).catch(() => {});
+    apiFetch(`/detect/admin/logs/${logId}/read/`, { method: 'PATCH' }).catch(() => { });
   }, []);
 
   const handleApprove = useCallback(async (logId: number, approval: boolean) => {
@@ -767,7 +783,7 @@ export default function HomeScreen() {
                 detected_image: '',
                 is_complied: true,
               }),
-            }).catch(() => {});
+            }).catch(() => { });
           }
         }
       }
@@ -924,7 +940,7 @@ export default function HomeScreen() {
               <span style={styles.alertBadge}>{localUnreadCount > 99 ? '99+' : localUnreadCount}</span>
             )}
           </div>
-          
+
           <div style={styles.alertList}>
             {sortedLogs.length === 0 ? (
               <div style={styles.alertEmpty}>
@@ -944,6 +960,13 @@ export default function HomeScreen() {
           </div>
         </aside>
       </div>
+
+      {/* ── Real-time Compliance Toast ── */}
+      <ComplianceToast
+        alerts={complianceAlerts}
+        onDismiss={dismissComplianceAlert}
+        onClickAlert={(log) => setSelectedLog(log as AdminLog)}
+      />
 
       {/* ── Alert Detail Modal ── */}
       {selectedLog && (
@@ -1343,7 +1366,7 @@ const styles: Record<string, React.CSSProperties> = {
 
   // ✨ Alert Panel 
   alertPanel: {
-    width: 260,
+    width: 600,
     flexShrink: 0,
     backgroundColor: '#F8F9FA',
     borderLeft: '1px solid #E8E9EB',
@@ -1429,23 +1452,31 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 700,
     fontSize: 15,
+    wordBreak: 'keep-all',
+    overflowWrap: 'break-word',
   },
   alertBottomRow: {
-    display: 'flex', 
-    justifyContent: 'space-between', 
-    alignItems: 'flex-end',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginTop: 2,
+    gap: 8,
+    flexWrap: 'nowrap',
   },
   alertType: {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 600,
     fontSize: 13,
+    wordBreak: 'keep-all',
+    overflowWrap: 'break-word',
   },
   alertActionText: {
     fontFamily: 'Inter, sans-serif',
     fontWeight: 700,
     fontSize: 11,
     color: '#FFB800',
+    whiteSpace: 'nowrap',
+    flexShrink: 0,
   },
   alertEmpty: {
     display: 'flex',

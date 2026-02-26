@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../api/client';
 import useUnreadAlertCount from '../hooks/useUnreadAlertCount';
+import useComplianceNotifications from '../hooks/useComplianceNotifications';
+import ComplianceToast from './ComplianceToast';
 import managerImg from '../assets/manager.jpg';
 
 // ── Types ──
@@ -61,7 +63,7 @@ const sidebarItems = [
   { label: '알림 로그 확인', icon: '🔔', path: '/alert-logs' },
 ];
 
-const POLL_INTERVAL = 10_000;
+const POLL_INTERVAL = 3_000;
 const READ_ALERTS_KEY = 'rp_read_alerts';
 
 function getReadAlertIds(): Set<number> {
@@ -123,7 +125,7 @@ function LogDetailModal({
         .then(json => {
           if (json.ok && json.data) setManualDetail(json.data);
         })
-        .catch(() => {})
+        .catch(() => { })
         .finally(() => setDetailLoading(false));
     } else {
       apiFetch(`/detect/admin/request/${log.id}/`)
@@ -131,7 +133,7 @@ function LogDetailModal({
         .then(json => {
           if (json.ok && json.data) setAutoDetail(json.data);
         })
-        .catch(() => {})
+        .catch(() => { })
         .finally(() => setDetailLoading(false));
     }
   }, [log.id, log.source]);
@@ -149,7 +151,7 @@ function LogDetailModal({
       .then(data => {
         if (data) setResolvedImageUrl(data.download_url ?? data.url ?? null);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [manualDetail?.original_image]);
 
   // original_video blob_name → SAS URL 변환 (videolog 컨테이너)
@@ -165,7 +167,7 @@ function LogDetailModal({
       .then(data => {
         if (data) setResolvedVideoUrl(data.download_url ?? data.url ?? null);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [autoDetail?.original_video]);
 
   const isManual = log.source === 'MANUAL';
@@ -348,6 +350,18 @@ export default function AlertLogScreen() {
   const [readIds, setReadIds] = useState<Set<number>>(getReadAlertIds);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // ── Real-time compliance notification ──
+  const { alerts: complianceAlerts, dismissAlert: dismissComplianceAlert } =
+    useComplianceNotifications({
+      onNewAlert: (alert) => {
+        // Merge into local logs if not already present
+        setLogs(prev => {
+          if (prev.some(l => l.id === alert.log.id)) return prev;
+          return [alert.log, ...prev];
+        });
+      },
+    });
+
   const fetchLogs = useCallback(async () => {
     try {
       const res = await apiFetch('/detect/admin/logs/');
@@ -395,7 +409,7 @@ export default function AlertLogScreen() {
                 detected_image: '',
                 is_complied: true,
               }),
-            }).catch(() => {});
+            }).catch(() => { });
           }
         }
       }
@@ -582,6 +596,13 @@ export default function AlertLogScreen() {
           </div>
         </main>
       </div>
+
+      {/* ── Real-time Compliance Toast ── */}
+      <ComplianceToast
+        alerts={complianceAlerts}
+        onDismiss={dismissComplianceAlert}
+        onClickAlert={(log) => { markAsRead(log.id); setSelectedLog(log as AdminLog); }}
+      />
 
       {selectedLog && (
         <LogDetailModal
