@@ -1,6 +1,8 @@
 # TTokTTi
-
 ** README will be updated soon
+
+![4팀_수정](https://github.com/user-attachments/assets/500f32d5-aacc-4f0e-b477-37287aabf0ba)
+
 ## Manual Video
 https://drive.google.com/file/d/1zjroz1Cni2MDa6PSe0AQ4Y9y739frgUG/view?usp=sharing
 
