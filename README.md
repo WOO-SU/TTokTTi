@@ -1,4 +1,8 @@
-# RiskPulse
+# TTokTTi
+
+** README will be updated soon
+## Manual Video
+https://drive.google.com/file/d/1zjroz1Cni2MDa6PSe0AQ4Y9y739frgUG/view?usp=sharing
 
 ## Now working (`2/21` 12:50)
 - images: `riskpulse_db`, `riskpulse_redis`, `riskpulse_be`, `riskpulse_fe_web`
